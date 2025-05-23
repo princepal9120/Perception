@@ -1,10 +1,9 @@
- 
-"use client"
+"use client";
 
 import Header from '../components/Header';
 import InputBar from '../components/InputBar';
 import MessageArea from '../components/MessageArea';
-import React, { useState } from 'react';
+import React, { useState, FormEvent } from 'react';
 
 interface SearchInfo {
   stages: string[];
@@ -22,22 +21,54 @@ interface Message {
   searchInfo?: SearchInfo;
 }
 
-const Home = () => {
+// Define the possible event data types
+interface CheckpointEventData {
+  type: 'checkpoint';
+  checkpoint_id: string;
+}
+
+interface ContentEventData {
+  type: 'content';
+  content: string;
+}
+
+interface SearchStartEventData {
+  type: 'search_start';
+  query: string;
+}
+
+interface SearchResultsEventData {
+  type: 'search_results';
+  urls: string | string[];
+}
+
+interface SearchErrorEventData {
+  type: 'search_error';
+  error: string;
+}
+
+interface EndEventData {
+  type: 'end';
+}
+
+type EventData = CheckpointEventData | ContentEventData | SearchStartEventData | SearchResultsEventData | SearchErrorEventData | EndEventData;
+
+const Home: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
-      content: 'Hi there! I\'m your AI assistant. How can I help you today?',
+      content: "Hi there! I'm your AI assistant. How can I help you today?",
       isUser: false,
-      type: 'message'
-    }
+      type: 'message',
+    },
   ]);
-  const [currentMessage, setCurrentMessage] = useState("");
-  const [checkpointId, setCheckpointId] = useState(null);
 
-  const handleSubmit = async (e) => {
+  const [currentMessage, setCurrentMessage] = useState<string>("");
+  const [checkpointId, setCheckpointId] = useState<string | null>(null);
+
+  const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (currentMessage.trim()) {
-      // First add the user message to the chat
       const newMessageId = messages.length > 0 ? Math.max(...messages.map(msg => msg.id)) + 1 : 1;
 
       setMessages(prev => [
@@ -46,16 +77,16 @@ const Home = () => {
           id: newMessageId,
           content: currentMessage,
           isUser: true,
-          type: 'message'
-        }
+          type: 'message',
+        },
       ]);
 
       const userInput = currentMessage;
-      setCurrentMessage(""); // Clear input field immediately
+      setCurrentMessage("");
 
       try {
-        // Create AI response placeholder
         const aiResponseId = newMessageId + 1;
+
         setMessages(prev => [
           ...prev,
           {
@@ -67,35 +98,29 @@ const Home = () => {
             searchInfo: {
               stages: [],
               query: "",
-              urls: []
-            }
-          }
+              urls: [],
+            },
+          },
         ]);
+
         let url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/chat_stream/${encodeURIComponent(userInput)}`;
         if (checkpointId) {
           url += `?checkpoint_id=${encodeURIComponent(checkpointId)}`;
         }
 
-        // Connect to SSE endpoint using EventSource
         const eventSource = new EventSource(url);
         let streamedContent = "";
-        let searchData = null;
-        let hasReceivedContent = false;
+        let searchData: SearchInfo | null = null;
 
-        // Process incoming messages
-        eventSource.onmessage = (event) => {
+        eventSource.onmessage = (event: MessageEvent) => {
           try {
-            const data = JSON.parse(event.data);
+            const data = JSON.parse(event.data) as EventData;
 
             if (data.type === 'checkpoint') {
-              // Store the checkpoint ID for future requests
               setCheckpointId(data.checkpoint_id);
-            }
-            else if (data.type === 'content') {
+            } else if (data.type === 'content') {
               streamedContent += data.content;
-              hasReceivedContent = true;
 
-              // Update message with accumulated content
               setMessages(prev =>
                 prev.map(msg =>
                   msg.id === aiResponseId
@@ -103,17 +128,14 @@ const Home = () => {
                     : msg
                 )
               );
-            }
-            else if (data.type === 'search_start') {
-              // Create search info with 'searching' stage
-              const newSearchInfo = {
+            } else if (data.type === 'search_start') {
+              const newSearchInfo: SearchInfo = {
                 stages: ['searching'],
                 query: data.query,
-                urls: []
+                urls: [],
               };
               searchData = newSearchInfo;
 
-              // Update the AI message with search info
               setMessages(prev =>
                 prev.map(msg =>
                   msg.id === aiResponseId
@@ -121,21 +143,17 @@ const Home = () => {
                     : msg
                 )
               );
-            }
-            else if (data.type === 'search_results') {
+            } else if (data.type === 'search_results') {
               try {
-                // Parse URLs from search results
-                const urls = typeof data.urls === 'string' ? JSON.parse(data.urls) : data.urls;
+                const urls: string[] = typeof data.urls === 'string' ? JSON.parse(data.urls) : data.urls;
 
-                // Update search info to add 'reading' stage (don't replace 'searching')
-                const newSearchInfo = {
+                const newSearchInfo: SearchInfo = {
                   stages: searchData ? [...searchData.stages, 'reading'] : ['reading'],
                   query: searchData?.query || "",
-                  urls: urls
+                  urls,
                 };
                 searchData = newSearchInfo;
 
-                // Update the AI message with search info
                 setMessages(prev =>
                   prev.map(msg =>
                     msg.id === aiResponseId
@@ -146,14 +164,12 @@ const Home = () => {
               } catch (err) {
                 console.error("Error parsing search results:", err);
               }
-            }
-            else if (data.type === 'search_error') {
-              // Handle search error
-              const newSearchInfo = {
+            } else if (data.type === 'search_error') {
+              const newSearchInfo: SearchInfo = {
                 stages: searchData ? [...searchData.stages, 'error'] : ['error'],
                 query: searchData?.query || "",
                 error: data.error,
-                urls: []
+                urls: [],
               };
               searchData = newSearchInfo;
 
@@ -164,13 +180,11 @@ const Home = () => {
                     : msg
                 )
               );
-            }
-            else if (data.type === 'end') {
-              // When stream ends, add 'writing' stage if we had search info
+            } else if (data.type === 'end') {
               if (searchData) {
-                const finalSearchInfo = {
+                const finalSearchInfo: SearchInfo = {
                   ...searchData,
-                  stages: [...searchData.stages, 'writing']
+                  stages: [...searchData.stages, 'writing'],
                 };
 
                 setMessages(prev =>
@@ -189,12 +203,10 @@ const Home = () => {
           }
         };
 
-        // Handle errors
-        eventSource.onerror = (error) => {
+        eventSource.onerror = (error: Event) => {
           console.error("EventSource error:", error);
           eventSource.close();
 
-          // Only update with error if we don't have content yet
           if (!streamedContent) {
             setMessages(prev =>
               prev.map(msg =>
@@ -206,7 +218,6 @@ const Home = () => {
           }
         };
 
-        // Listen for end event
         eventSource.addEventListener('end', () => {
           eventSource.close();
         });
@@ -219,8 +230,8 @@ const Home = () => {
             content: "Sorry, there was an error connecting to the server.",
             isUser: false,
             type: 'message',
-            isLoading: false
-          }
+            isLoading: false,
+          },
         ]);
       }
     }
@@ -228,18 +239,15 @@ const Home = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 flex items-center justify-center">
-      {/* Animated background elements */}
+      {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-blue-400/20 to-purple-600/20 rounded-full blur-3xl animate-pulse"></div>
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-emerald-400/20 to-blue-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
-      {/* Main chat container - Made much wider */}
+      {/* Main Chat UI */}
       <div className="relative w-full max-w-7xl h-[85vh] bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden flex flex-col">
-        {/* Glassmorphism overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-white/5 pointer-events-none"></div>
-
-        {/* Content */}
         <div className="relative z-10 flex flex-col h-full">
           <Header />
           <MessageArea messages={messages} />

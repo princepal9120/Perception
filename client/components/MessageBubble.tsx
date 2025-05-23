@@ -1,7 +1,5 @@
- 
-import React from 'react';
+import React, { useState } from 'react';
 import { User, Bot, Loader2, Copy, Check } from 'lucide-react';
-import { useState } from 'react';
 
 interface SearchInfo {
     stages: string[];
@@ -37,8 +35,7 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLast }) => {
         }
     };
 
-    const formatContent = (content: string) => {
-        // Simple markdown-like formatting
+    const formatContent = (content: string): string => {
         return content
             .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
             .replace(/\*(.*?)\*/g, '<em>$1</em>')
@@ -53,7 +50,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLast }) => {
                         <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white px-6 py-3 rounded-2xl rounded-br-md shadow-lg">
                             <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                         </div>
-                        {/* Tail */}
                         <div className="absolute bottom-0 right-0 w-0 h-0 border-l-8 border-l-blue-600 border-t-8 border-t-transparent transform translate-x-1"></div>
                     </div>
                     <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center shadow-md flex-shrink-0">
@@ -93,7 +89,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLast }) => {
                                     </div>
                                 )}
 
-                                {/* Copy button */}
                                 {message.content && !message.isLoading && (
                                     <button
                                         onClick={handleCopy}
@@ -110,7 +105,6 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ message, isLast }) => {
                             </>
                         )}
                     </div>
-                    {/* Tail */}
                     <div className="absolute top-4 -left-1 w-0 h-0 border-r-8 border-r-white border-t-8 border-t-transparent"></div>
                     <div className="absolute top-4 -left-2 w-0 h-0 border-r-8 border-r-gray-200 border-t-8 border-t-transparent"></div>
                 </div>

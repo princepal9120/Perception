@@ -1,6 +1,12 @@
- 
 import React from 'react';
-import { Search, FileText, PenTool, AlertCircle, CheckCircle, Globe } from 'lucide-react';
+import {
+    Search,
+    FileText,
+    PenTool,
+    AlertCircle,
+    CheckCircle,
+    Globe,
+} from 'lucide-react';
 
 interface SearchInfo {
     stages: string[];
@@ -14,9 +20,16 @@ interface SearchProgressProps {
 }
 
 const SearchProgress: React.FC<SearchProgressProps> = ({ searchInfo }) => {
-    const { stages, query, urls, error } = searchInfo;
+    const { stages = [], query = '', urls = [], error } = searchInfo;
 
-    const getStageInfo = (stage: string) => {
+    const getStageInfo = (stage: string): {
+        icon: React.ComponentType<{ className?: string }>;
+        label: string;
+        description: string;
+        color: string;
+        bgColor: string;
+        borderColor: string;
+    } => {
         switch (stage) {
             case 'searching':
                 return {
@@ -25,7 +38,7 @@ const SearchProgress: React.FC<SearchProgressProps> = ({ searchInfo }) => {
                     description: `Searching for: "${query}"`,
                     color: 'text-blue-600',
                     bgColor: 'bg-blue-50',
-                    borderColor: 'border-blue-200'
+                    borderColor: 'border-blue-200',
                 };
             case 'reading':
                 return {
@@ -34,7 +47,7 @@ const SearchProgress: React.FC<SearchProgressProps> = ({ searchInfo }) => {
                     description: `Reading ${urls.length} sources`,
                     color: 'text-orange-600',
                     bgColor: 'bg-orange-50',
-                    borderColor: 'border-orange-200'
+                    borderColor: 'border-orange-200',
                 };
             case 'writing':
                 return {
@@ -43,7 +56,7 @@ const SearchProgress: React.FC<SearchProgressProps> = ({ searchInfo }) => {
                     description: 'Generating response',
                     color: 'text-green-600',
                     bgColor: 'bg-green-50',
-                    borderColor: 'border-green-200'
+                    borderColor: 'border-green-200',
                 };
             case 'error':
                 return {
@@ -52,7 +65,7 @@ const SearchProgress: React.FC<SearchProgressProps> = ({ searchInfo }) => {
                     description: error || 'An error occurred',
                     color: 'text-red-600',
                     bgColor: 'bg-red-50',
-                    borderColor: 'border-red-200'
+                    borderColor: 'border-red-200',
                 };
             default:
                 return {
@@ -61,7 +74,7 @@ const SearchProgress: React.FC<SearchProgressProps> = ({ searchInfo }) => {
                     description: '',
                     color: 'text-gray-600',
                     bgColor: 'bg-gray-50',
-                    borderColor: 'border-gray-200'
+                    borderColor: 'border-gray-200',
                 };
         }
     };
@@ -99,13 +112,16 @@ const SearchProgress: React.FC<SearchProgressProps> = ({ searchInfo }) => {
                     const active = isActive(stage, index);
 
                     return (
-                        <div key={`${stage}-${index}`} className="flex items-center space-x-2 flex-shrink-0">
+                        <div
+                            key={`${stage}-${index}`}
+                            className="flex items-center space-x-2 flex-shrink-0"
+                        >
                             <div
                                 className={`flex items-center space-x-2 px-3 py-2 rounded-lg border transition-all duration-300 ${completed
-                                        ? 'bg-green-50 border-green-200 text-green-700'
-                                        : active
-                                            ? `${stageInfo.bgColor} ${stageInfo.borderColor} ${stageInfo.color}`
-                                            : 'bg-gray-100 border-gray-200 text-gray-500'
+                                    ? 'bg-green-50 border-green-200 text-green-700'
+                                    : active
+                                        ? `${stageInfo.bgColor} ${stageInfo.borderColor} ${stageInfo.color}`
+                                        : 'bg-gray-100 border-gray-200 text-gray-500'
                                     }`}
                             >
                                 <div className="relative">
@@ -122,7 +138,10 @@ const SearchProgress: React.FC<SearchProgressProps> = ({ searchInfo }) => {
 
                             {/* Connector line */}
                             {index < stages.length - 1 && (
-                                <div className={`w-8 h-0.5 ${completed ? 'bg-green-300' : 'bg-gray-300'} transition-colors duration-300`} />
+                                <div
+                                    className={`w-8 h-0.5 ${completed ? 'bg-green-300' : 'bg-gray-300'
+                                        } transition-colors duration-300`}
+                                />
                             )}
                         </div>
                     );
@@ -146,11 +165,16 @@ const SearchProgress: React.FC<SearchProgressProps> = ({ searchInfo }) => {
                 <div className="mt-3 pt-3 border-t border-gray-200">
                     <div className="flex items-center space-x-2 mb-2">
                         <Globe className="w-3 h-3 text-gray-500" />
-                        <span className="text-xs font-medium text-gray-600">Sources ({urls.length})</span>
+                        <span className="text-xs font-medium text-gray-600">
+                            Sources ({urls.length})
+                        </span>
                     </div>
                     <div className="grid grid-cols-1 gap-1 max-h-20 overflow-y-auto">
                         {urls.slice(0, 3).map((url, index) => (
-                            <div key={index} className="text-xs text-blue-600 hover:text-blue-800 truncate">
+                            <div
+                                key={index}
+                                className="text-xs text-blue-600 hover:text-blue-800 truncate"
+                            >
                                 {url}
                             </div>
                         ))}

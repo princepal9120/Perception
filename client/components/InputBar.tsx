@@ -1,4 +1,5 @@
- 
+"use client";
+
 import React, { useRef, useEffect } from 'react';
 import { Send, Paperclip, Mic, Smile } from 'lucide-react';
 
@@ -8,8 +9,13 @@ interface InputBarProps {
   onSubmit: (e: React.FormEvent) => void;
 }
 
-const InputBar: React.FC<InputBarProps> = ({ currentMessage, setCurrentMessage, onSubmit }) => {
+const InputBar: React.FC<InputBarProps> = ({
+  currentMessage,
+  setCurrentMessage,
+  onSubmit,
+}) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const formRef = useRef<HTMLFormElement>(null);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -20,10 +26,11 @@ const InputBar: React.FC<InputBarProps> = ({ currentMessage, setCurrentMessage, 
     }
   }, [currentMessage]);
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      onSubmit(e as any);
+      // Programmatically trigger form submit
+      formRef.current?.requestSubmit();
     }
   };
 
@@ -36,28 +43,16 @@ const InputBar: React.FC<InputBarProps> = ({ currentMessage, setCurrentMessage, 
 
   return (
     <div className="border-t border-gray-200/50 bg-white/70 backdrop-blur-sm p-4">
-      <form onSubmit={handleSubmit} className="flex items-end space-x-3">
+      <form ref={formRef} onSubmit={handleSubmit} className="flex items-end space-x-3">
         {/* Additional action buttons */}
         <div className="flex space-x-1 pb-2">
-          <button
-            type="button"
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200 group"
-            title="Attach file"
-          >
+          <button type="button" className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200 group" title="Attach file">
             <Paperclip className="w-5 h-5 group-hover:rotate-12 transition-transform duration-200" />
           </button>
-          <button
-            type="button"
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200 group"
-            title="Voice message"
-          >
+          <button type="button" className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200 group" title="Voice message">
             <Mic className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
           </button>
-          <button
-            type="button"
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200 group"
-            title="Add emoji"
-          >
+          <button type="button" className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-all duration-200 group" title="Add emoji">
             <Smile className="w-5 h-5 group-hover:scale-110 transition-transform duration-200" />
           </button>
         </div>
@@ -74,8 +69,6 @@ const InputBar: React.FC<InputBarProps> = ({ currentMessage, setCurrentMessage, 
               className="w-full px-4 py-3 pr-12 bg-transparent border-none outline-none resize-none text-gray-800 placeholder-gray-500 text-sm leading-relaxed max-h-[120px] min-h-[48px]"
               rows={1}
             />
-            
-            {/* Character count (optional) */}
             {currentMessage.length > 200 && (
               <div className="absolute bottom-1 left-3 text-xs text-gray-400">
                 {currentMessage.length} characters
@@ -91,11 +84,10 @@ const InputBar: React.FC<InputBarProps> = ({ currentMessage, setCurrentMessage, 
         <button
           type="submit"
           disabled={!currentMessage.trim()}
-          className={`p-3 rounded-xl transition-all duration-200 flex items-center justify-center min-w-[48px] min-h-[48px] ${
-            currentMessage.trim()
+          className={`p-3 rounded-xl transition-all duration-200 flex items-center justify-center min-w-[48px] min-h-[48px] ${currentMessage.trim()
               ? 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95'
               : 'bg-gray-200 text-gray-400 cursor-not-allowed'
-          }`}
+            }`}
           title="Send message"
         >
           <Send className={`w-5 h-5 ${currentMessage.trim() ? 'animate-pulse' : ''}`} />
@@ -106,9 +98,9 @@ const InputBar: React.FC<InputBarProps> = ({ currentMessage, setCurrentMessage, 
       <div className="mt-3 flex flex-wrap gap-2">
         {[
           "What's the weather like?",
-          "Tell me a joke",
-          "Help me with coding",
-          "Explain quantum physics"
+          'Tell me a joke',
+          'Help me with coding',
+          'Explain quantum physics',
         ].map((suggestion, index) => (
           <button
             key={index}

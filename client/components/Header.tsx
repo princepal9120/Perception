@@ -1,8 +1,9 @@
- 
+"use client";
+
 import React from 'react';
 import { MessageCircle, Sparkles, Settings, Menu } from 'lucide-react';
 
-const Header = () => {
+const Header: React.FC = () => {
   return (
     <div className="relative border-b border-gray-200/50 bg-white/70 backdrop-blur-sm">
       {/* Header content */}
