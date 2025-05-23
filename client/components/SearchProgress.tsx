@@ -1,4 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
+ 
 import React from 'react';
 import { Search, FileText, PenTool, AlertCircle, CheckCircle, Globe } from 'lucide-react';
 
