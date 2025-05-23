@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React from 'react';
 import { User, Bot, Loader2, Copy, Check } from 'lucide-react';
 import { useState } from 'react';

@@ -1,3 +1,4 @@
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import React, { useEffect, useRef } from 'react';
 import MessageBubble from './MessageBubble';
 import SearchProgress from './SearchProgress';
