@@ -1,6 +1,5 @@
 "use client"
 
-
 import Header from '../components/Header';
 import InputBar from '../components/InputBar';
 import MessageArea from '../components/MessageArea';
@@ -71,7 +70,7 @@ const Home = () => {
             }
           }
         ]);
-        let url = `https://perplexity-api.onrender.com/chat_stream/${encodeURIComponent(userInput)}`;
+        let url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/chat_stream/${encodeURIComponent(userInput)}`;
         if (checkpointId) {
           url += `?checkpoint_id=${encodeURIComponent(checkpointId)}`;
         }
@@ -234,8 +233,8 @@ const Home = () => {
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-emerald-400/20 to-blue-600/20 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
-      {/* Main chat container */}
-      <div className="relative w-full max-w-4xl h-[85vh] bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden flex flex-col">
+      {/* Main chat container - Made much wider */}
+      <div className="relative w-full max-w-7xl h-[85vh] bg-white/80 backdrop-blur-xl rounded-2xl shadow-2xl border border-white/20 overflow-hidden flex flex-col">
         {/* Glassmorphism overlay */}
         <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-white/5 pointer-events-none"></div>
 
