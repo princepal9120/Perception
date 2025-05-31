@@ -103,7 +103,7 @@ const Home: React.FC = () => {
           },
         ]);
 
-        let url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/chat_stream/${encodeURIComponent(userInput)}`;
+        let url = `https://perception-latest.onrender.com/chat_stream/${encodeURIComponent(userInput)}`;
         if (checkpointId) {
           url += `?checkpoint_id=${encodeURIComponent(checkpointId)}`;
         }
@@ -114,7 +114,19 @@ const Home: React.FC = () => {
 
         eventSource.onmessage = (event: MessageEvent) => {
           try {
-            const data = JSON.parse(event.data) as EventData;
+            console.log('Raw event data:', event.data);
+
+            // Try to sanitize the JSON string before parsing
+            let sanitizedData = event.data;
+
+          
+            sanitizedData = sanitizedData
+              .replace(/\\/g, '\\\\') // Fix single backslashes
+              .replace(/\n/g, '\\n')   // Fix unescaped newlines
+              .replace(/\r/g, '\\r')   // Fix unescaped carriage returns
+              .replace(/\t/g, '\\t');  // Fix unescaped tabs
+
+            const data = JSON.parse(sanitizedData) as EventData;
 
             if (data.type === 'checkpoint') {
               setCheckpointId(data.checkpoint_id);
