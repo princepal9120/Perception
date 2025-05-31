@@ -114,19 +114,7 @@ const Home: React.FC = () => {
 
         eventSource.onmessage = (event: MessageEvent) => {
           try {
-            console.log('Raw event data:', event.data);
-
-            // Try to sanitize the JSON string before parsing
-            let sanitizedData = event.data;
-
-          
-            sanitizedData = sanitizedData
-              .replace(/\\/g, '\\\\') // Fix single backslashes
-              .replace(/\n/g, '\\n')   // Fix unescaped newlines
-              .replace(/\r/g, '\\r')   // Fix unescaped carriage returns
-              .replace(/\t/g, '\\t');  // Fix unescaped tabs
-
-            const data = JSON.parse(sanitizedData) as EventData;
+            const data = JSON.parse(event.data) as EventData;
 
             if (data.type === 'checkpoint') {
               setCheckpointId(data.checkpoint_id);
