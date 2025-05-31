@@ -103,7 +103,7 @@ const Home: React.FC = () => {
           },
         ]);
 
-        let url = `https://perception-latest.onrender.com/chat_stream/${encodeURIComponent(userInput)}`;
+        let url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/chat_stream/${encodeURIComponent(userInput)}`;
         if (checkpointId) {
           url += `?checkpoint_id=${encodeURIComponent(checkpointId)}`;
         }
