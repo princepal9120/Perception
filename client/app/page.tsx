@@ -103,7 +103,8 @@ const Home: React.FC = () => {
           },
         ]);
 
-        let url = `http://localhost:8000/chat_stream/${encodeURIComponent(userInput)}`;
+        let url = `${process.env.NEXT_PUBLIC_BACKEND_URL}/chat_stream/${encodeURIComponent(userInput)}`;
+
         if (checkpointId) {
           url += `?checkpoint_id=${encodeURIComponent(checkpointId)}`;
         }
