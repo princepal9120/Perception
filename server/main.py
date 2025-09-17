@@ -6,11 +6,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from uuid import uuid4
 import json
-import sqlite3
+import os
+from contextlib import asynccontextmanager
 
 # LangGraph / LangChain
 from langgraph.graph import StateGraph, END, add_messages
-from langgraph.checkpoint.sqlite import SqliteSaver
+from langgraph.checkpoint.postgres import PostgresSaver
 from langchain_core.messages import HumanMessage, AIMessageChunk, ToolMessage, BaseMessage
 from langchain_groq import ChatGroq
 
@@ -32,7 +33,15 @@ llm = ChatGroq(model="meta-llama/llama-4-scout-17b-16e-instruct")
 llm_with_tools = llm.bind_tools(tools)
 
 # -------------------
-# 3. Nodes
+# 3. PostgreSQL Connection and Checkpointer (MOVED UP)
+# -------------------
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://neondb_owner:npg_E6bDXzO7MKqu@ep-young-art-ads98otc-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require")
+
+# We'll initialize the saver in the lifespan function
+saver = None
+
+# -------------------
+# 4. Nodes
 # -------------------
 async def chat_node(state: ChatState):
     result = await llm_with_tools.ainvoke(state["messages"])
@@ -71,14 +80,9 @@ async def tool_node(state: ChatState):
     return {"messages": tool_messages}
 
 # -------------------
-# 4. Checkpointer
+# 5. Graph (MOVED AFTER SAVER DEFINITION)
 # -------------------
-conn = sqlite3.connect("chatbot.db", check_same_thread=False)
-checkpointer = SqliteSaver(conn=conn)
-
-# -------------------
-# 5. Graph
-# -------------------
+# We'll compile the graph in the lifespan function after saver is initialized
 graph_builder = StateGraph(ChatState)
 graph_builder.add_node("chat_node", chat_node)
 graph_builder.add_node("tool_node", tool_node)
@@ -86,12 +90,47 @@ graph_builder.set_entry_point("chat_node")
 graph_builder.add_conditional_edges("chat_node", tools_router)
 graph_builder.add_edge("tool_node", "chat_node")
 
-graph = graph_builder.compile(checkpointer=checkpointer)
+# Graph will be compiled in lifespan
+graph = None
 
 # -------------------
-# 6. FastAPI App
+# 6. Lifespan Context Manager
 # -------------------
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global saver, graph
+    # --- Startup logic ---
+    print("🔄 Connecting to Neon PostgreSQL…")
+    try:
+        # Initialize PostgresSaver with context manager
+        async with PostgresSaver.from_conn_string(DATABASE_URL) as postgres_saver:
+            await postgres_saver.setup()
+            saver = postgres_saver
+            print("✅ PostgreSQL tables set up successfully")
+            
+            # Compile graph with the initialized saver
+            graph = graph_builder.compile(checkpointer=saver)
+            print("✅ Graph compiled with PostgreSQL checkpointer")
+            
+            yield
+            
+    except Exception as e:
+        print(f"❌ Failed to setup PostgreSQL: {e}")
+        print("⚠️  Using in-memory checkpointer as fallback")
+        # Fallback to in-memory checkpointer
+        from langgraph.checkpoint.memory import MemorySaver
+        saver = MemorySaver()
+        graph = graph_builder.compile(checkpointer=saver)
+        print("✅ Graph compiled with in-memory checkpointer")
+        yield
+    finally:
+        # --- Shutdown logic ---
+        print("👋 Application shutting down")
+
+# -------------------
+# 7. FastAPI App
+# -------------------
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -100,6 +139,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# REMOVED: Duplicate startup event handler (already handled by lifespan)
 
 def serialise_ai_message_chunk(chunk):
     if isinstance(chunk, AIMessageChunk):
@@ -142,5 +183,7 @@ async def chat_stream(message: str, checkpoint_id: Optional[str] = Query(None)):
         media_type="text/event-stream"
     )
 
+# REMOVED: Duplicate shutdown event handler (already handled by lifespan)
 
-print(generate_chat_responses("Hello, today new"))
+if __name__ == "__main__":
+    print("Application started with Neon PostgreSQL backend")
