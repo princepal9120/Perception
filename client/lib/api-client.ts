@@ -186,10 +186,40 @@ export interface StreamingChatEvent {
 // Base URL for the FastAPI backend
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
 
-export async function* streamChatMessage(
+// Check if backend is reachable
+export async function checkBackendHealth(): Promise<boolean> {
+  try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 5000)
+
+    // Try to reach the backend - if no health endpoint, try the chat endpoint
+    const response = await fetch(`${BACKEND_URL}/health`, {
+      method: 'GET',
+      signal: controller.signal,
+    }).catch(() =>
+      // Fallback: try to reach the main endpoint
+      fetch(`${BACKEND_URL}/`, {
+        method: 'GET',
+        signal: controller.signal,
+      })
+    )
+
+    clearTimeout(timeoutId)
+    return response.ok
+  } catch (error) {
+    console.warn('Backend health check failed:', error)
+    return false
+  }
+} export async function* streamChatMessage(
   message: string,
   checkpointId?: string
 ): AsyncGenerator<StreamingChatEvent, void, unknown> {
+  // First check if backend is reachable
+  const isHealthy = await checkBackendHealth()
+  if (!isHealthy) {
+    throw new Error('Backend server is not reachable. Please make sure it is running.')
+  }
+
   const url = new URL(`${BACKEND_URL}/chat_stream/${encodeURIComponent(message)}`)
   if (checkpointId) {
     url.searchParams.append('checkpoint_id', checkpointId)
@@ -198,7 +228,7 @@ export async function* streamChatMessage(
   const request: ApiRequest = {
     url: url.toString(),
     method: "GET",
-    headers: {},
+    headers: { 'Accept': 'text/event-stream' },
     body: null,
     timestamp: new Date(),
   }
@@ -207,16 +237,22 @@ export async function* streamChatMessage(
   apiClient['listeners'].forEach((listener) => listener(request))
 
   try {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
         'Accept': 'text/event-stream',
         'Cache-Control': 'no-cache',
       },
+      signal: controller.signal,
     })
 
+    clearTimeout(timeoutId)
+
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`)
+      throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`)
     }
 
     const reader = response.body?.getReader()
@@ -228,30 +264,41 @@ export async function* streamChatMessage(
 
     let buffer = ''
 
-    while (true) {
-      const { done, value } = await reader.read()
+    try {
+      while (true) {
+        const { done, value } = await reader.read()
 
-      if (done) break
+        if (done) break
 
-      buffer += decoder.decode(value, { stream: true })
+        buffer += decoder.decode(value, { stream: true })
 
-      // Process complete lines
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || '' // Keep incomplete line in buffer
+        // Process complete lines
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || '' // Keep incomplete line in buffer
 
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          try {
-            const data = JSON.parse(line.slice(6)) as StreamingChatEvent
-            yield data
-          } catch (e) {
-            console.warn('Failed to parse SSE data:', line)
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6)) as StreamingChatEvent
+              yield data
+            } catch (e) {
+              console.warn('Failed to parse SSE data:', line)
+            }
           }
         }
       }
+    } finally {
+      reader.releaseLock()
     }
   } catch (error) {
     console.error('Streaming error:', error)
+    if (error instanceof Error) {
+      if (error.name === 'AbortError') {
+        throw new Error('Request timed out. The server may be overloaded.')
+      } else if (error.message.includes('Failed to fetch')) {
+        throw new Error('Cannot connect to server. Please check if the backend is running.')
+      }
+    }
     throw error
   }
 }
@@ -284,12 +331,65 @@ export async function createNewChat(): Promise<{ id: string; title: string }> {
 }
 
 export async function getChatHistory(chatId: string): Promise<ChatMessage[]> {
-  // For now, return empty array as the backend maintains conversation state
-  // through checkpoints
+  // Load from localStorage for now - in production you'd load from backend
+  try {
+    const stored = localStorage.getItem(`chat_${chatId}`)
+    if (stored) {
+      return JSON.parse(stored)
+    }
+  } catch (error) {
+    console.warn('Failed to load chat history:', error)
+  }
   return []
 }
 
+export async function saveChatHistory(chatId: string, messages: ChatMessage[]): Promise<void> {
+  // Save to localStorage for now - in production you'd save to backend
+  try {
+    localStorage.setItem(`chat_${chatId}`, JSON.stringify(messages))
+  } catch (error) {
+    console.warn('Failed to save chat history:', error)
+  }
+}
+
+export async function getAllChatIds(): Promise<string[]> {
+  // Get all chat IDs from localStorage
+  try {
+    const chatIds: string[] = []
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key?.startsWith('chat_')) {
+        chatIds.push(key.replace('chat_', ''))
+      }
+    }
+    return chatIds.sort((a, b) => parseInt(b) - parseInt(a)) // Sort by newest first
+  } catch (error) {
+    console.warn('Failed to get chat IDs:', error)
+    return []
+  }
+}
+
 export async function updateChatTitle(chatId: string, title: string): Promise<void> {
-  // Placeholder for future implementation
-  return Promise.resolve()
+  // Save chat metadata
+  try {
+    const metaKey = `chat_meta_${chatId}`
+    const existingMeta = localStorage.getItem(metaKey)
+    const meta = existingMeta ? JSON.parse(existingMeta) : {}
+    meta.title = title
+    meta.updatedAt = new Date().toISOString()
+    localStorage.setItem(metaKey, JSON.stringify(meta))
+  } catch (error) {
+    console.warn('Failed to update chat title:', error)
+  }
+}
+
+export async function getChatMeta(chatId: string): Promise<{ title?: string; updatedAt?: string }> {
+  try {
+    const metaKey = `chat_meta_${chatId}`
+    const stored = localStorage.getItem(metaKey)
+    return stored ? JSON.parse(stored) : {}
+  } catch (error) {
+    console.warn('Failed to get chat meta:', error)
+    return {}
+  }
 }

@@ -9,8 +9,9 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Send, Menu } from "lucide-react"
 import { MessageBubble } from "@/components/message-bubble"
 import { TypingIndicator } from "@/components/typing-indicator"
-import { ApiMonitor } from "@/components/api-monitor"
-import { streamChatMessage, type ChatMessage } from "@/lib/api-client"
+
+import { SearchProgress, type SearchStep } from "@/components/search-progress"
+import { streamChatMessage, type ChatMessage, checkBackendHealth, getChatHistory, saveChatHistory } from "@/lib/api-client"
 
 interface Message {
   id: string
@@ -27,17 +28,14 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ chatId, isSidebarOpen, onToggleSidebar }: ChatInterfaceProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content: "Hello! How can I help you today?",
-      role: "assistant",
-      timestamp: new Date(Date.now() - 1000 * 60 * 5),
-    },
-  ])
+  const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState("")
   const [isTyping, setIsTyping] = useState(false)
   const [currentCheckpointId, setCurrentCheckpointId] = useState<string | null>(null)
+  const [searchSteps, setSearchSteps] = useState<SearchStep[]>([])
+  const [showSearchProgress, setShowSearchProgress] = useState(false)
+  const [connectionError, setConnectionError] = useState<string | null>(null)
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false)
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
 
@@ -51,13 +49,92 @@ export function ChatInterface({ chatId, isSidebarOpen, onToggleSidebar }: ChatIn
     }
   }, [messages, isTyping])
 
-  // Focus input on mount
+  // Load chat history when chatId changes
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      if (chatId) {
+        setIsLoadingHistory(true)
+        try {
+          const history = await getChatHistory(chatId)
+          const convertedMessages: Message[] = history.map((msg, index) => ({
+            id: `${chatId}_${index}`,
+            content: msg.content,
+            role: msg.role,
+            timestamp: new Date(Date.now() - (history.length - index) * 1000),
+          }))
+          setMessages(convertedMessages.length > 0 ? convertedMessages : [
+            {
+              id: "welcome",
+              content: "Hello! How can I help you today?",
+              role: "assistant",
+              timestamp: new Date(),
+            }
+          ])
+        } catch (error) {
+          console.error('Failed to load chat history:', error)
+          setMessages([{
+            id: "welcome",
+            content: "Hello! How can I help you today?",
+            role: "assistant",
+            timestamp: new Date(),
+          }])
+        } finally {
+          setIsLoadingHistory(false)
+        }
+      } else {
+        // New chat
+        setMessages([{
+          id: "welcome",
+          content: "Hello! How can I help you today?",
+          role: "assistant",
+          timestamp: new Date(),
+        }])
+      }
+    }
+
+    loadChatHistory()
+  }, [chatId])
+
+  // Save chat history whenever messages change
+  useEffect(() => {
+    const saveChatHistoryDebounced = async () => {
+      if (chatId && messages.length > 1) { // Don't save just the welcome message
+        const chatMessages: ChatMessage[] = messages
+          .filter(msg => msg.id !== "welcome") // Exclude welcome message
+          .map(msg => ({
+            role: msg.role,
+            content: msg.content,
+          }))
+
+        if (chatMessages.length > 0) {
+          await saveChatHistory(chatId, chatMessages)
+        }
+      }
+    }
+
+    const timeoutId = setTimeout(saveChatHistoryDebounced, 1000) // Debounce saves
+    return () => clearTimeout(timeoutId)
+  }, [messages, chatId])
+
+  // Focus input on mount and check backend health
   useEffect(() => {
     inputRef.current?.focus()
+
+    // Check backend health on mount
+    checkBackendHealth().then((isHealthy) => {
+      if (!isHealthy) {
+        setConnectionError('Cannot connect to backend server. Please start the server.')
+      } else {
+        setConnectionError(null)
+      }
+    })
   }, [])
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
+
+    // Clear any previous connection errors
+    setConnectionError(null)
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -69,6 +146,17 @@ export function ChatInterface({ chatId, isSidebarOpen, onToggleSidebar }: ChatIn
     setMessages((prev) => [...prev, userMessage])
     setInputValue("")
     setIsTyping(true)
+
+    // Initialize search progress
+    const initialSteps: SearchStep[] = [
+      { id: '1', title: 'Connecting to AI', status: 'active', description: 'Establishing connection...' },
+      { id: '2', title: 'Processing Query', status: 'pending', description: 'Analyzing your message' },
+      { id: '3', title: 'Searching Knowledge', status: 'pending', description: 'Finding relevant information' },
+      { id: '4', title: 'Generating Response', status: 'pending', description: 'Crafting the answer' }
+    ]
+
+    setSearchSteps(initialSteps)
+    setShowSearchProgress(true)
 
     // Create a placeholder message for streaming
     const assistantMessageId = (Date.now() + 1).toString()
@@ -84,12 +172,44 @@ export function ChatInterface({ chatId, isSidebarOpen, onToggleSidebar }: ChatIn
 
     try {
       let accumulatedContent = ""
+      let stepIndex = 0
 
       for await (const event of streamChatMessage(userMessage.content, currentCheckpointId || undefined)) {
         if (event.type === "checkpoint" && event.checkpoint_id) {
           setCurrentCheckpointId(event.checkpoint_id)
+
+          // Update step 1 to completed
+          setSearchSteps(prev => prev.map(step =>
+            step.id === '1' ? { ...step, status: 'completed', duration: 500 } : step
+          ))
+
+          // Activate step 2
+          setSearchSteps(prev => prev.map(step =>
+            step.id === '2' ? { ...step, status: 'active' } : step
+          ))
+
+        } else if (event.type === "tool_output" && event.output) {
+          // Handle tool outputs for search progress
+          console.log("Tool output:", event.output)
+
+          // Update step 2 to completed and activate step 3
+          setSearchSteps(prev => prev.map(step => {
+            if (step.id === '2') return { ...step, status: 'completed', duration: 800 }
+            if (step.id === '3') return { ...step, status: 'active' }
+            return step
+          }))
+
         } else if (event.type === "content" && event.content) {
           accumulatedContent += event.content
+
+          // First content means we're generating response
+          if (accumulatedContent.length === event.content.length) {
+            setSearchSteps(prev => prev.map(step => {
+              if (step.id === '3') return { ...step, status: 'completed', duration: 1200 }
+              if (step.id === '4') return { ...step, status: 'active' }
+              return step
+            }))
+          }
 
           // Update the streaming message
           setMessages((prev) =>
@@ -99,10 +219,12 @@ export function ChatInterface({ chatId, isSidebarOpen, onToggleSidebar }: ChatIn
                 : msg
             )
           )
-        } else if (event.type === "tool_output" && event.output) {
-          // You can handle tool outputs here if needed
-          console.log("Tool output:", event.output)
         } else if (event.type === "end") {
+          // Complete all steps
+          setSearchSteps(prev => prev.map(step =>
+            step.status !== 'completed' ? { ...step, status: 'completed', duration: step.id === '4' ? 1500 : 500 } : step
+          ))
+
           // Streaming finished
           setMessages((prev) =>
             prev.map((msg) =>
@@ -111,11 +233,26 @@ export function ChatInterface({ chatId, isSidebarOpen, onToggleSidebar }: ChatIn
                 : msg
             )
           )
+
+          // Hide search progress after a delay
+          setTimeout(() => {
+            setShowSearchProgress(false)
+          }, 2000)
+
           break
         }
       }
     } catch (error) {
       console.error("Failed to send message:", error)
+
+      // Update search steps to show error
+      setSearchSteps(prev => prev.map(step =>
+        step.status === 'active' ? { ...step, status: 'error' } : step
+      ))
+
+      // Set connection error message
+      const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred'
+      setConnectionError(errorMessage)
 
       // Replace the streaming message with an error message
       setMessages((prev) =>
@@ -123,12 +260,17 @@ export function ChatInterface({ chatId, isSidebarOpen, onToggleSidebar }: ChatIn
           msg.id === assistantMessageId
             ? {
               ...msg,
-              content: "Sorry, I encountered an error. Please try again.",
+              content: `Error: ${errorMessage}`,
               isStreaming: false
             }
             : msg
         )
       )
+
+      // Hide search progress after showing error
+      setTimeout(() => {
+        setShowSearchProgress(false)
+      }, 3000)
     } finally {
       setIsTyping(false)
     }
@@ -143,6 +285,20 @@ export function ChatInterface({ chatId, isSidebarOpen, onToggleSidebar }: ChatIn
 
   return (
     <div className="flex flex-col h-full flex-1">
+      {/* Connection Error Alert */}
+      {connectionError && (
+        <div className="bg-destructive/10 border border-destructive/20 text-destructive p-3 m-4 rounded-lg text-sm">
+          <strong>Connection Error:</strong> {connectionError}
+        </div>
+      )}
+
+      {/* Search Progress */}
+      <SearchProgress
+        isVisible={showSearchProgress}
+        steps={searchSteps}
+        onClose={() => setShowSearchProgress(false)}
+      />
+
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center gap-3">
@@ -175,11 +331,11 @@ export function ChatInterface({ chatId, isSidebarOpen, onToggleSidebar }: ChatIn
                 onKeyPress={handleKeyPress}
                 placeholder="Message Chatbot..."
                 className="min-h-[44px] pr-12 resize-none rounded-2xl border-input bg-background"
-                disabled={isTyping}
+                disabled={isTyping || !!connectionError}
               />
               <Button
                 onClick={handleSendMessage}
-                disabled={!inputValue.trim() || isTyping}
+                disabled={!inputValue.trim() || isTyping || !!connectionError}
                 size="icon"
                 className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-lg"
               >
@@ -193,7 +349,7 @@ export function ChatInterface({ chatId, isSidebarOpen, onToggleSidebar }: ChatIn
         </div>
       </div>
 
-      <ApiMonitor />
+
     </div>
   )
 }
