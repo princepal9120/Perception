@@ -19,6 +19,12 @@ class UserCreate(UserBase):
     """Schema for user registration/signup requests."""
     password: str = Field(..., min_length=8, max_length=128, description="User password")
     confirm_password: str = Field(..., description="Password confirmation")
+    
+    def validate_passwords_match(self):
+        """Validate that passwords match."""
+        if self.password != self.confirm_password:
+            raise ValueError("Passwords do not match")
+        return True
 
 
 class UserLogin(BaseModel):

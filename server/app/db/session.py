@@ -26,6 +26,11 @@ engine = create_async_engine(
     pool_recycle=3600,  # Recycle connections every hour
     pool_size=10,  # Connection pool size
     max_overflow=20,  # Maximum overflow connections
+    connect_args={
+        "server_settings": {
+            "application_name": "perception_auth_api",
+        }
+    }
 )
 
 # Create async session factory

@@ -63,7 +63,8 @@ class Settings(BaseSettings):
         elif v.startswith("postgresql+asyncpg://"):
             return v
         else:
-            raise ValueError("DATABASE_URL must start with postgresql://")
+            # For other database URLs, return as-is
+            return v
     
     @field_validator("JWT_SECRET_KEY")
     @classmethod
@@ -76,6 +77,7 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "ignore"  # Ignore extra fields from .env file
 
 
 # Global settings instance

@@ -158,8 +158,15 @@ async def signup(
         HTTPException: If email already exists or validation fails
     """
     try:
+        # Validate passwords match
+        if user_data.password != user_data.confirm_password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Passwords do not match"
+            )
+        
         # Check if user already exists
-        result = await db.execute(select(User).where(User.email == user_data.email))
+        result = await db.execute(select(User).where(User.email == user_data.email.lower()))
         existing_user = result.scalar_one_or_none()
         
         if existing_user:
@@ -235,7 +242,7 @@ async def login(
         HTTPException: If credentials are invalid
     """
     # Get user by email
-    result = await db.execute(select(User).where(User.email == user_credentials.email))
+    result = await db.execute(select(User).where(User.email == user_credentials.email.lower()))
     user = result.scalar_one_or_none()
     
     if not user:
