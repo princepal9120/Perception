@@ -40,7 +40,7 @@ export const ChatInput = () => {
       <div className="w-full max-w-5xl mx-auto space-y-2">
         {/* Deep Research Mode Toggle */}
         {!isStreaming && (
-          <motion.div 
+          <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
@@ -52,11 +52,10 @@ export const ChatInput = () => {
                   variant={deepResearchMode ? "default" : "outline"}
                   size="sm"
                   onClick={() => setDeepResearchMode(!deepResearchMode)}
-                  className={`gap-2 h-8 text-xs transition-all ${
-                    deepResearchMode 
-                      ? "gradient-primary shadow-glow text-white" 
+                  className={`gap-2 h-8 text-xs transition-all ${deepResearchMode
+                      ? "gradient-primary shadow-glow text-white"
                       : "hover:bg-muted"
-                  }`}
+                    }`}
                 >
                   <Zap className={`w-3.5 h-3.5 ${deepResearchMode ? "fill-white" : ""}`} />
                   <span>Deep Research</span>
@@ -69,9 +68,9 @@ export const ChatInput = () => {
                 <p className="text-xs">Enable web search and multi-source analysis</p>
               </TooltipContent>
             </Tooltip>
-            
+
             {deepResearchMode && (
-              <motion.p 
+              <motion.p
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 className="text-xs text-muted-foreground hidden sm:block"
@@ -81,7 +80,7 @@ export const ChatInput = () => {
             )}
           </motion.div>
         )}
-        
+
         <div className="flex gap-1.5 sm:gap-2 items-end">
           {/* Upload Button - Hidden on mobile */}
           <Button
@@ -100,12 +99,11 @@ export const ChatInput = () => {
               onKeyDown={handleKeyDown}
               placeholder={deepResearchMode ? "Ask a question to research..." : "Ask anything..."}
               disabled={isStreaming}
-              className={`min-h-[44px] sm:min-h-[52px] max-h-[120px] sm:max-h-[200px] resize-none rounded-xl sm:rounded-2xl text-sm sm:text-base py-2.5 sm:py-3 px-3 sm:px-4 pr-10 sm:pr-12 bg-background transition-all ${
-                deepResearchMode ? "border-primary/50 focus-visible:ring-primary/50" : ""
-              }`}
+              className={`min-h-[44px] sm:min-h-[52px] max-h-[120px] sm:max-h-[200px] resize-none rounded-xl sm:rounded-2xl text-sm sm:text-base py-2.5 sm:py-3 px-3 sm:px-4 pr-10 sm:pr-12 bg-background transition-all ${deepResearchMode ? "border-primary/50 focus-visible:ring-primary/50" : ""
+                }`}
             />
             {deepResearchMode && (
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 className="absolute top-2 right-2 sm:right-3"
@@ -157,11 +155,11 @@ export const ChatInput = () => {
         </div>
 
         <p className="text-[10px] sm:text-xs text-muted-foreground text-center px-2">
-          {isStreaming 
-            ? "⚡ Generating response..." 
+          {isStreaming
+            ? "⚡ Generating response..."
             : deepResearchMode
-            ? "🌐 Deep research mode active • Web search enabled • Shift + Enter for new line"
-            : "💬 Quick answer mode • Shift + Enter for new line"
+              ? "🌐 Deep research mode active • Web search enabled • Shift + Enter for new line"
+              : "💬 Quick answer mode • Shift + Enter for new line"
           }
         </p>
       </div>
