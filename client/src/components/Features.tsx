@@ -29,7 +29,7 @@ const features = [
   },
   {
     icon: Sparkles,
-    title: "Agentic Tools",
+    title: "Perception Tools",
     description: "AI that can use tools, run web searches, summarize content, and orchestrate complex multi-step tasks.",
   },
 ];
@@ -54,7 +54,7 @@ export const Features = () => {
     <section className="py-24 px-4 bg-card relative overflow-hidden">
       {/* Subtle gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-b from-background/50 to-background pointer-events-none" />
-      
+
       <div className="container mx-auto max-w-7xl relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}

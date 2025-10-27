@@ -8,7 +8,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* Agentic Design System - Calm Professional Palette */
+    /* Perception Design System - Calm Professional Palette */
     --background: 210 20% 98%;
     --foreground: 222 47% 11%;
 
@@ -20,7 +20,7 @@ All colors MUST be HSL.
 
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-    
+
     --primary-glow: 199 89% 48%;
 
     --secondary: 215 16% 47%;
@@ -44,7 +44,7 @@ All colors MUST be HSL.
     /* Custom gradient stops */
     --gradient-primary-start: 217 91% 60%;
     --gradient-primary-end: 199 89% 48%;
-    
+
     /* Shadows with accent glow */
     --shadow-glow: 0 10px 40px -10px hsl(217 91% 60% / 0.3);
     --shadow-elegant: 0 4px 16px -4px hsl(222 47% 11% / 0.08);
@@ -71,7 +71,7 @@ All colors MUST be HSL.
 
     --primary: 217 91% 60%;
     --primary-foreground: 0 0% 100%;
-    
+
     --primary-glow: 199 89% 48%;
 
     --secondary: 215 16% 47%;
@@ -83,13 +83,16 @@ All colors MUST be HSL.
     --accent: 199 89% 48%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 63% 31%;
+    --destructive: 0 62% 50%;
     --destructive-foreground: 210 20% 98%;
 
     --border: 217 33% 17%;
     --input: 217 33% 17%;
     --ring: 217 91% 60%;
-    
+
+    --shadow-glow: 0 10px 40px -10px hsl(217 91% 60% / 0.4);
+    --shadow-elegant: 0 4px 16px -4px hsl(0 0% 0% / 0.3);
+
     --sidebar-background: 222 47% 11%;
     --sidebar-foreground: 210 20% 98%;
     --sidebar-primary: 217 91% 60%;
@@ -109,40 +112,85 @@ All colors MUST be HSL.
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
-  
-  h1, h2, h3, h4, h5, h6 {
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-semibold tracking-tight;
+  }
+
+  /* Smooth theme transitions */
+  * {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+
+  /* Better scrollbar for dark mode */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-background;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground;
+  }
+
+  /* Firefox scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted)) hsl(var(--background));
   }
 }
 
 @layer utilities {
   .gradient-primary {
-    background: linear-gradient(135deg, hsl(var(--gradient-primary-start)), hsl(var(--gradient-primary-end)));
+    background: linear-gradient(
+      135deg,
+      hsl(var(--gradient-primary-start)),
+      hsl(var(--gradient-primary-end))
+    );
   }
-  
+
   .gradient-shine {
-    background: linear-gradient(135deg, hsl(var(--gradient-primary-start)), hsl(var(--gradient-primary-end)));
+    background: linear-gradient(
+      135deg,
+      hsl(var(--gradient-primary-start)),
+      hsl(var(--gradient-primary-end))
+    );
     background-size: 200% 200%;
     animation: gradient-shift 8s ease infinite;
   }
-  
+
   .shadow-glow {
     box-shadow: var(--shadow-glow);
   }
-  
+
   .shadow-elegant {
     box-shadow: var(--shadow-elegant);
   }
-  
+
   @keyframes gradient-shift {
-    0%, 100% {
+    0%,
+    100% {
       background-position: 0% 50%;
     }
     50% {
       background-position: 100% 50%;
     }
   }
-  
+
   @keyframes shimmer {
     0% {
       transform: translateX(-100%);
@@ -151,7 +199,7 @@ All colors MUST be HSL.
       transform: translateX(100%);
     }
   }
-  
+
   .animate-shimmer {
     animation: shimmer 2s infinite;
   }

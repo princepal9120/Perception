@@ -7,30 +7,42 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useNavigate } from "react-router-dom";
+import { ThemeToggle } from "@/components/theme-toggle";
 
-export const ChatHeader = () => {
+interface ChatHeaderProps {
+  onToggleSidebar?: () => void;
+}
+
+export const ChatHeader = ({ onToggleSidebar }: ChatHeaderProps) => {
   const navigate = useNavigate();
 
   return (
-    <header className="h-16 border-b border-border flex items-center justify-between px-6 bg-card">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" size="icon">
-          <Menu className="w-5 h-5" />
+    <header className="h-14 sm:h-16 border-b border-border flex items-center justify-between px-3 sm:px-6 bg-card/80 backdrop-blur-sm sticky top-0 z-10">
+      <div className="flex items-center gap-2 sm:gap-4">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 sm:h-10 sm:w-10"
+          onClick={onToggleSidebar}
+        >
+          <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
         </Button>
-        <h1 className="text-xl font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Agentic
+        <h1 className="text-base sm:text-xl font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+          Perception
         </h1>
       </div>
 
-      <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon">
-          <Settings className="w-5 h-5" />
+      <div className="flex items-center gap-1 sm:gap-2">
+        <ThemeToggle />
+
+        <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
+          <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
         </Button>
-        
+
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <User className="w-5 h-5" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
+              <User className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
