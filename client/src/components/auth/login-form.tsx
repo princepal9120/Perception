@@ -55,7 +55,7 @@ export function LoginForm() {
                 <CardTitle className="text-center">Sign In</CardTitle>
             </CardHeader>
             <CardContent>
-                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+                <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
                     <div className="space-y-2">
                         <Label htmlFor="email">Email</Label>
                         <Input
@@ -63,7 +63,7 @@ export function LoginForm() {
                             type="email"
                             {...register('email')}
                             disabled={isLoading}
-                            placeholder="your@email.com"
+                            placeholder="you@example.com"
                             className={errors.email ? 'border-red-500' : ''}
                         />
                         {errors.email && (

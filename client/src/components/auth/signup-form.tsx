@@ -29,8 +29,7 @@ export function SignupForm() {
       email: '',
       password: '',
       confirm_password: '',
-      first_name: '',
-      last_name: '',
+      full_name: '',
     },
   });
 
@@ -43,12 +42,11 @@ export function SignupForm() {
         email: data.email,
         password: data.password,
         confirm_password: data.confirm_password,
-        first_name: data.first_name,
-        last_name: data.last_name,
+        full_name: data.full_name,
       });
       setSuccess(true);
       reset();
-      
+
       // Redirect to login after successful signup
       setTimeout(() => {
         navigate('/login');
@@ -81,45 +79,30 @@ export function SignupForm() {
         <CardTitle className="text-center">Create Account</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="first_name">First Name</Label>
-              <Input
-                id="first_name"
-                type="text"
-                {...register('first_name')}
-                disabled={isLoading}
-                className={errors.first_name ? 'border-red-500' : ''}
-              />
-              {errors.first_name && (
-                <p className="text-sm text-red-500 mt-1">
-                  {errors.first_name.message}
-                </p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="last_name">Last Name</Label>
-              <Input
-                id="last_name"
-                type="text"
-                {...register('last_name')}
-                disabled={isLoading}
-                className={errors.last_name ? 'border-red-500' : ''}
-              />
-              {errors.last_name && (
-                <p className="text-sm text-red-500 mt-1">
-                  {errors.last_name.message}
-                </p>
-              )}
-            </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          <div>
+            <Label htmlFor="full_name">Full Name</Label>
+            <Input
+              id="full_name"
+              type="text"
+              placeholder="John Doe"
+              {...register('full_name')}
+              disabled={isLoading}
+              className={errors.full_name ? 'border-red-500' : ''}
+            />
+            {errors.full_name && (
+              <p className="text-sm text-red-500 mt-1">
+                {errors.full_name.message}
+              </p>
+            )}
           </div>
-          
+
           <div>
             <Label htmlFor="email">Email</Label>
             <Input
               id="email"
               type="email"
+              placeholder="you@example.com"
               {...register('email')}
               disabled={isLoading}
               className={errors.email ? 'border-red-500' : ''}
@@ -130,12 +113,13 @@ export function SignupForm() {
               </p>
             )}
           </div>
-          
+
           <div>
             <Label htmlFor="password">Password</Label>
             <Input
               id="password"
               type="password"
+              placeholder="••••••••"
               {...register('password')}
               disabled={isLoading}
               className={errors.password ? 'border-red-500' : ''}
@@ -145,13 +129,15 @@ export function SignupForm() {
                 {errors.password.message}
               </p>
             )}
+            <p className="text-xs text-gray-500 mt-1">Must be at least 8 characters</p>
           </div>
-          
+
           <div>
             <Label htmlFor="confirm_password">Confirm Password</Label>
             <Input
               id="confirm_password"
               type="password"
+              placeholder="••••••••"
               {...register('confirm_password')}
               disabled={isLoading}
               className={errors.confirm_password ? 'border-red-500' : ''}
@@ -162,17 +148,17 @@ export function SignupForm() {
               </p>
             )}
           </div>
-          
+
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          
+
           <Button type="submit" className="w-full" disabled={isLoading}>
             {isLoading ? 'Creating account...' : 'Create account'}
           </Button>
-          
+
           <p className="text-center text-sm text-gray-600">
             Already have an account?{' '}
             <button

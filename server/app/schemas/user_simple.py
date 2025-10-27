@@ -11,6 +11,7 @@ from datetime import datetime
 class UserBase(BaseModel):
     """Base user schema with common fields."""
     email: EmailStr = Field(..., description="User's email address")
+    full_name: Optional[str] = Field(None, min_length=2, max_length=100, description="User's full name")
     first_name: Optional[str] = Field(None, min_length=1, max_length=100, description="User's first name")
     last_name: Optional[str] = Field(None, min_length=1, max_length=100, description="User's last name")
 
@@ -37,12 +38,14 @@ class UserLogin(BaseModel):
 class UserResponse(UserBase):
     """Schema for user data in API responses."""
     id: int = Field(..., description="User's unique identifier")
+    first_name: Optional[str] = Field(None, description="User's first name")
+    last_name: Optional[str] = Field(None, description="User's last name")
+    full_name: Optional[str] = Field(None, description="User's full name")
     is_active: bool = Field(..., description="Whether the user account is active")
     is_verified: bool = Field(..., description="Whether the user email is verified")
     created_at: datetime = Field(..., description="Account creation timestamp")
     updated_at: datetime = Field(..., description="Last account update timestamp")
     last_login: Optional[datetime] = Field(None, description="Last login timestamp")
-    full_name: Optional[str] = Field(None, description="User's full name")
     
     class Config:
         from_attributes = True

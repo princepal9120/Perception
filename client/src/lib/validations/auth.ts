@@ -14,24 +14,17 @@ const passwordSchema = z
 // Signup validation schema
 export const signupSchema = z
   .object({
+    full_name: z
+      .string()
+      .min(1, 'Full name is required')
+      .min(2, 'Full name must be at least 2 characters')
+      .max(100, 'Full name must not exceed 100 characters'),
     email: z
       .string()
       .min(1, 'Email is required')
       .email('Please enter a valid email address'),
     password: passwordSchema,
     confirm_password: z.string().min(1, 'Please confirm your password'),
-    first_name: z
-      .string()
-      .optional()
-      .refine((val) => !val || val.trim().length > 0, {
-        message: 'First name cannot be empty if provided',
-      }),
-    last_name: z
-      .string()
-      .optional()
-      .refine((val) => !val || val.trim().length > 0, {
-        message: 'Last name cannot be empty if provided',
-      }),
   })
   .refine((data) => data.password === data.confirm_password, {
     message: 'Passwords do not match',
