@@ -1,29 +1,24 @@
-# app/core/security.py
 """
-Security utilities for authentication and authorization.
-Handles JWT token creation/validation and password hashing/verification.
+Security utilities for password hashing and JWT token management.
 """
-
 from datetime import datetime, timedelta
-from typing import Optional, Union
+from typing import Optional, Dict, Any
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from passlib.hash import bcrypt
 from fastapi import HTTPException, status
+from app.core.config import settings
 
-from .config import settings
 
-
-# Password hashing context using bcrypt
+# Password hashing context
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def hash_password(password: str) -> str:
     """
-    Hash a plain text password using bcrypt.
+    Hash a password using bcrypt.
     
     Args:
-        password: Plain text password to hash
+        password: Plain text password
         
     Returns:
         Hashed password string
@@ -33,11 +28,11 @@ def hash_password(password: str) -> str:
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """
-    Verify a plain text password against a hashed password.
+    Verify a password against its hash.
     
     Args:
-        plain_password: The plain text password to verify
-        hashed_password: The hashed password to verify against
+        plain_password: Plain text password to verify
+        hashed_password: Hashed password to check against
         
     Returns:
         True if password matches, False otherwise
@@ -45,12 +40,12 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:
     """
-    Create a JWT access token with user data.
+    Create a JWT access token.
     
     Args:
-        data: Dictionary containing user data (typically user_id, email)
+        data: Data to encode in the token
         expires_delta: Optional custom expiration time
         
     Returns:
@@ -58,35 +53,50 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     """
     to_encode = data.copy()
     
-    # Set expiration time
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=settings.JWT_EXPIRY_MINUTES)
+        expire = datetime.utcnow() + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     
-    # Add expiration and issued-at claims
     to_encode.update({
         "exp": expire,
         "iat": datetime.utcnow(),
-        "type": "access_token"
+        "type": "access"
     })
     
-    # Encode the JWT token
-    encoded_jwt = jwt.encode(
-        to_encode, 
-        settings.JWT_SECRET_KEY, 
-        algorithm=settings.JWT_ALGORITHM
-    )
-    
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
     return encoded_jwt
 
 
-def verify_access_token(token: str) -> dict:
+def create_refresh_token(data: Dict[str, Any]) -> str:
     """
-    Verify and decode a JWT access token.
+    Create a JWT refresh token.
     
     Args:
-        token: The JWT token to verify
+        data: Data to encode in the token
+        
+    Returns:
+        Encoded JWT refresh token string
+    """
+    to_encode = data.copy()
+    expire = datetime.utcnow() + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
+    
+    to_encode.update({
+        "exp": expire,
+        "iat": datetime.utcnow(),
+        "type": "refresh"
+    })
+    
+    encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    return encoded_jwt
+
+
+def decode_token(token: str) -> Dict[str, Any]:
+    """
+    Decode and verify a JWT token.
+    
+    Args:
+        token: JWT token string
         
     Returns:
         Decoded token payload
@@ -94,126 +104,32 @@ def verify_access_token(token: str) -> dict:
     Raises:
         HTTPException: If token is invalid or expired
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    
     try:
-        # Decode the JWT token
-        payload = jwt.decode(
-            token, 
-            settings.JWT_SECRET_KEY, 
-            algorithms=[settings.JWT_ALGORITHM]
-        )
-        
-        # Verify token type
-        token_type: str = payload.get("type")
-        if token_type != "access_token":
-            raise credentials_exception
-            
-        # Get user identifier
-        user_id: str = payload.get("sub")
-        if user_id is None:
-            raise credentials_exception
-            
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         return payload
-        
-    except JWTError:
-        raise credentials_exception
+    except JWTError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Could not validate credentials: {str(e)}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 
-def create_refresh_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
+def verify_token_type(payload: Dict[str, Any], expected_type: str) -> None:
     """
-    Create a JWT refresh token for token renewal.
+    Verify that a token is of the expected type.
     
     Args:
-        data: Dictionary containing user data
-        expires_delta: Optional custom expiration time
+        payload: Decoded token payload
+        expected_type: Expected token type ('access' or 'refresh')
         
-    Returns:
-        Encoded JWT refresh token string
+    Raises:
+        HTTPException: If token type doesn't match
     """
-    to_encode = data.copy()
-    
-    # Refresh tokens have longer expiry (7 days default)
-    if expires_delta:
-        expire = datetime.utcnow() + expires_delta
-    else:
-        expire = datetime.utcnow() + timedelta(days=7)
-    
-    to_encode.update({
-        "exp": expire,
-        "iat": datetime.utcnow(),
-        "type": "refresh_token"
-    })
-    
-    encoded_jwt = jwt.encode(
-        to_encode,
-        settings.JWT_SECRET_KEY,
-        algorithm=settings.JWT_ALGORITHM
-    )
-    
-    return encoded_jwt
-
-
-def get_password_strength_score(password: str) -> int:
-    """
-    Calculate password strength score (0-100).
-    
-    Args:
-        password: Password to evaluate
-        
-    Returns:
-        Password strength score
-    """
-    score = 0
-    
-    # Length check
-    if len(password) >= 8:
-        score += 25
-    if len(password) >= 12:
-        score += 15
-        
-    # Character variety checks
-    if any(c.isupper() for c in password):
-        score += 15
-    if any(c.islower() for c in password):
-        score += 15
-    if any(c.isdigit() for c in password):
-        score += 15
-    if any(c in "!@#$%^&*()_+-=[]{}|;:,.<>?" for c in password):
-        score += 15
-        
-    return min(score, 100)
-
-
-def validate_password_strength(password: str) -> tuple[bool, str]:
-    """
-    Validate password meets minimum security requirements.
-    
-    Args:
-        password: Password to validate
-        
-    Returns:
-        Tuple of (is_valid, error_message)
-    """
-    if len(password) < 8:
-        return False, "Password must be at least 8 characters long"
-    
-    if not any(c.isupper() for c in password):
-        return False, "Password must contain at least one uppercase letter"
-    
-    if not any(c.islower() for c in password):
-        return False, "Password must contain at least one lowercase letter"
-    
-    if not any(c.isdigit() for c in password):
-        return False, "Password must contain at least one number"
-    
-    # Check for common weak passwords
-    common_weak = ["password", "123456", "qwerty", "abc123"]
-    if password.lower() in common_weak:
-        return False, "Password is too common and weak"
-    
-    return True, "Password is valid"
+    token_type = payload.get("type")
+    if token_type != expected_type:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"Invalid token type. Expected {expected_type}, got {token_type}",
+            headers={"WWW-Authenticate": "Bearer"},
+        )

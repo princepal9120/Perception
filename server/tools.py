@@ -1,4 +1,7 @@
 # tools.py
+from dotenv import load_dotenv
+load_dotenv()
+
 from langchain_core.tools import tool
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_community.tools import DuckDuckGoSearchRun

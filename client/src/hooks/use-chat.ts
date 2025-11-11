@@ -1,6 +1,6 @@
 // src/hooks/use-chat.ts
 
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { useChatStore } from "@/store/chatStore";
 import { toast } from "sonner";
 

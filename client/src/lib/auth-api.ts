@@ -1,6 +1,7 @@
 // src/lib/auth-api.ts
 
-const API_BASE_URL = import.meta.env.VITE_AUTH_URL || 'http://localhost:8002/api/v1/auth';
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
 export interface SignupData {
   email: string;
@@ -45,102 +46,106 @@ export interface APIResponse {
 class AuthAPI {
   private getHeaders(token?: string): HeadersInit {
     const headers: HeadersInit = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     };
-    
+
     if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+      headers["Authorization"] = `Bearer ${token}`;
     }
-    
+
     return headers;
   }
 
   async signup(data: SignupData): Promise<APIResponse> {
     const response = await fetch(`${API_BASE_URL}/signup`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Signup failed');
+      throw new Error(error.detail || "Signup failed");
     }
-    
+
     return response.json();
   }
 
   async login(data: LoginData): Promise<AuthToken> {
     const response = await fetch(`${API_BASE_URL}/login`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(data),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Login failed');
+      throw new Error(error.detail || "Login failed");
     }
-    
+
     return response.json();
   }
 
   async logout(token: string): Promise<APIResponse> {
     const response = await fetch(`${API_BASE_URL}/logout`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(token),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Logout failed');
+      throw new Error(error.detail || "Logout failed");
     }
-    
+
     return response.json();
   }
 
   async getProfile(token: string): Promise<User> {
     const response = await fetch(`${API_BASE_URL}/profile`, {
-      method: 'GET',
+      method: "GET",
       headers: this.getHeaders(token),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Failed to fetch profile');
+      throw new Error(error.detail || "Failed to fetch profile");
     }
-    
+
     return response.json();
   }
 
   async changePassword(
-    token: string, 
-    data: { current_password: string; new_password: string; confirm_password: string }
+    token: string,
+    data: {
+      current_password: string;
+      new_password: string;
+      confirm_password: string;
+    }
   ): Promise<APIResponse> {
     const response = await fetch(`${API_BASE_URL}/change-password`, {
-      method: 'POST',
+      method: "POST",
       headers: this.getHeaders(token),
       body: JSON.stringify(data),
     });
-    
+
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || 'Password change failed');
+      throw new Error(error.detail || "Password change failed");
     }
-    
+
     return response.json();
   }
 
   async checkHealth(): Promise<any> {
     const response = await fetch(`${API_BASE_URL}/health`, {
-      method: 'GET',
+      method: "GET",
       headers: this.getHeaders(),
     });
-    
+
     if (!response.ok) {
-      throw new Error('Health check failed');
+      throw new Error("Health check failed");
     }
-    
+
     return response.json();
   }
 }

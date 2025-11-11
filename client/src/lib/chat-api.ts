@@ -1,7 +1,7 @@
 // src/lib/chat-api.ts
 
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || "http://localhost:8002/api/v1";
+  import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
 export interface SearchInfo {
   stages: string[];

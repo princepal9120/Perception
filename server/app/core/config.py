@@ -1,97 +1,74 @@
-# app/core/config.py
 """
-Configuration module for the FastAPI application.
-Handles environment variables, database configuration, and JWT settings.
+Core configuration settings for the application.
+Loads environment variables and provides centralized configuration.
 """
-
-import os
-from typing import Optional
-from pydantic import field_validator
 from pydantic_settings import BaseSettings
+from typing import List
+import os
+from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    """
-    Application settings loaded from environment variables.
+    """Application settings loaded from environment variables."""
     
-    This class centralizes all configuration including:
-    - Database connection settings
-    - JWT authentication configuration 
-    - Application metadata
-    """
-    
-    # Database Configuration
-    DATABASE_URL: str = os.getenv(
-        "DATABASE_URL", 
-        "postgresql://postgres:password@localhost:5432/perception_db"
-    )
-    
-    # JWT Configuration
-    JWT_SECRET_KEY: str = os.getenv(
-        "JWT_SECRET_KEY", 
-        "your-super-secret-jwt-key-change-this-in-production"
-    )
-    JWT_ALGORITHM: str = "HS256"
-    JWT_EXPIRY_MINUTES: int = int(os.getenv("JWT_EXPIRY_MINUTES", "30"))
-    
-    # Session Configuration
-    SESSION_SECRET_KEY: str = os.getenv(
-        "SESSION_SECRET_KEY", 
-        "your-session-secret-key-change-this-in-production"
-    )
-    
-    # Application Configuration
-    APP_NAME: str = "Perception Authentication API"
+    # App Configuration
+    APP_NAME: str = "Perception AI Chat API"
     APP_VERSION: str = "1.0.0"
-    DEBUG: bool = os.getenv("DEBUG", "False").lower() == "true"
+    DEBUG: bool = False
     
-    # CORS Configuration
-    CORS_ORIGINS: list = [
-        "http://localhost:3000",  # Next.js development server
-        "http://localhost:8000",  # FastAPI development server
-        "https://localhost:3000",
-        "*"  # Allow all origins in development (restrict in production)
+    # Security
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 15
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+    SESSION_SECRET_KEY: str
+    
+    # Database
+    DATABASE_URL: str
+    DB_POOL_SIZE: int = 10
+    DB_MAX_OVERFLOW: int = 20
+    
+    # Redis
+    REDIS_URL: str = "redis://localhost:6379"
+    REDIS_PASSWORD: str = ""
+    REDIS_DB: int = 0
+    
+    # Rate Limiting
+    RATE_LIMIT_MESSAGES_PER_MINUTE: int = 20
+    RATE_LIMIT_WINDOW_SECONDS: int = 60
+    
+    # Cache Settings
+    CACHE_MAX_MESSAGES: int = 100
+    SESSION_CACHE_TTL: int = 3600  # 1 hour
+    
+    # CORS
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "http://localhost:5174",
     ]
     
-    @field_validator("DATABASE_URL")
-    @classmethod
-    def validate_database_url(cls, v):
-        """Ensure database URL is properly formatted for async PostgreSQL."""
-        if v.startswith("postgresql://"):
-            # Convert to asyncpg compatible URL
-            return v.replace("postgresql://", "postgresql+asyncpg://")
-        elif v.startswith("postgresql+asyncpg://"):
-            return v
-        else:
-            # For other database URLs, return as-is
-            return v
+    # LLM Configuration
+    GROQ_API_KEY: str = ""
+    TAVILY_API_KEY: str = ""
     
-    @field_validator("JWT_SECRET_KEY")
-    @classmethod
-    def validate_jwt_secret(cls, v):
-        """Ensure JWT secret key is secure enough."""
-        if len(v) < 32:
-            raise ValueError("JWT_SECRET_KEY must be at least 32 characters long")
-        return v
+    # Validation
+    MIN_USERNAME_LENGTH: int = 3
+    MAX_USERNAME_LENGTH: int = 30
+    MIN_PASSWORD_LENGTH: int = 8
+    MAX_PASSWORD_LENGTH: int = 100
     
     class Config:
         env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"  # Ignore extra fields from .env file
+        case_sensitive = True
+        extra = "allow"
+
+
+@lru_cache()
+def get_settings() -> Settings:
+    """Get cached settings instance."""
+    return Settings()
 
 
 # Global settings instance
-settings = Settings()
-
-# Database configuration helpers
-def get_database_url() -> str:
-    """Get the properly formatted database URL for SQLAlchemy."""
-    return settings.DATABASE_URL
-
-def get_jwt_settings() -> dict:
-    """Get JWT configuration as a dictionary."""
-    return {
-        "secret_key": settings.JWT_SECRET_KEY,
-        "algorithm": settings.JWT_ALGORITHM,
-        "expiry_minutes": settings.JWT_EXPIRY_MINUTES
-    }
+settings = get_settings()

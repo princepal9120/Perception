@@ -20,7 +20,13 @@ export const ChatInput = () => {
     if (message.trim() && !isStreaming) {
       const userMessage = message.trim();
       setMessage("");
-      await sendMessage(userMessage);
+      
+      // Add context about deep research mode to guide the AI
+      const enhancedMessage = deepResearchMode 
+        ? `Please research this topic thoroughly using web search and provide a comprehensive answer with sources: ${userMessage}`
+        : userMessage;
+      
+      await sendMessage(enhancedMessage);
     }
   };
 
