@@ -84,21 +84,13 @@ export const Hero = () => {
           >
             <Button
               size="lg"
-              onClick={() => navigate("/auth/signup")}
+              onClick={() => navigate("/chat")}
               className="gradient-primary text-white shadow-glow hover:scale-105 transition-transform duration-200 group"
             >
               Start Chatting
               <ArrowRight className="ml-2 w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              onClick={() => navigate("/auth/login")}
-              className="border-border hover:bg-accent/10 hover:border-accent transition-all duration-200"
-            >
-              <Zap className="mr-2 w-5 h-5" />
-              Sign In
-            </Button>
+            
           </motion.div>
 
           {/* Stats or Social Proof */}

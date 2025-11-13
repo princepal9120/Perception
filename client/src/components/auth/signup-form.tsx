@@ -29,7 +29,8 @@ export function SignupForm() {
       email: '',
       password: '',
       confirm_password: '',
-      full_name: '',
+      username: '',
+      name: '',
     },
   });
 
@@ -38,11 +39,12 @@ export function SignupForm() {
     setSuccess(false);
 
     try {
+      // Only send fields that backend expects (exclude confirm_password)
       await signup({
         email: data.email,
         password: data.password,
-        confirm_password: data.confirm_password,
-        full_name: data.full_name,
+        username: data.username,
+        name: data.name,
       });
       setSuccess(true);
       reset();
@@ -50,7 +52,7 @@ export function SignupForm() {
       // Redirect to login after successful signup
       setTimeout(() => {
         navigate('/login');
-      }, 2000);
+      },2000);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Signup failed');
     }
@@ -81,18 +83,34 @@ export function SignupForm() {
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
           <div>
-            <Label htmlFor="full_name">Full Name</Label>
+            <Label htmlFor="username">Username</Label>
             <Input
-              id="full_name"
+              id="username"
+              type="text"
+              placeholder="johndoe"
+              {...register('username')}
+              disabled={isLoading}
+              className={errors.username ? 'border-red-500' : ''}
+            />
+            {errors.username && (
+              <p className="text-sm text-red-500 mt-1">
+                {errors.username.message}
+              </p>
+            )}
+          </div>
+          <div>
+            <Label htmlFor="name">Full Name</Label>
+            <Input
+              id="name"
               type="text"
               placeholder="John Doe"
-              {...register('full_name')}
+              {...register('name')}
               disabled={isLoading}
-              className={errors.full_name ? 'border-red-500' : ''}
+              className={errors.name ? 'border-red-500' : ''}
             />
-            {errors.full_name && (
+            {errors.name && (
               <p className="text-sm text-red-500 mt-1">
-                {errors.full_name.message}
+                {errors.name.message}
               </p>
             )}
           </div>

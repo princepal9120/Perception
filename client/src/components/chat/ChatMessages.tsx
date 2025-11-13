@@ -1,33 +1,25 @@
 import { useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Bot, User } from "lucide-react";
-import { useChatStore } from "@/store/chatStore";
 import { MarkdownMessage } from "./MarkdownMessage";
 import { TypingIndicator } from "./TypingIndicator";
-import { DeepResearchDisplay } from "./DeepResearchDisplay";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { useChat } from "@/hooks/use-chat";
 
 export const ChatMessages = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const {
-    conversations,
-    currentConversationId,
+    messages,
     isStreaming,
-    streamingMessage,
-    streamingSearchInfo,
-  } = useChatStore();
+    streamingContent,
+    isLoading,
+  } = useChat();
   const { sendMessage } = useChat();
-
-  const currentConversation = conversations.find(
-    (c) => c.id === currentConversationId
-  );
-  const messages = currentConversation?.messages || [];
 
   // Auto-scroll to bottom on new messages or stream updates
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, streamingMessage]);
+  }, [messages, streamingContent]);
 
   const handleSuggestedPrompt = async (prompt: string, deepResearch?: boolean) => {
     await sendMessage(prompt);
@@ -37,7 +29,7 @@ export const ChatMessages = () => {
   const lastMessage = messages[messages.length - 1];
   const shouldRenderStreaming =
     isStreaming &&
-    streamingMessage &&
+    streamingContent &&
     (!lastMessage || lastMessage.role !== "assistant");
 
   return (
@@ -81,15 +73,7 @@ export const ChatMessages = () => {
                     }`}
                 >
                   {message.role === "assistant" ? (
-                    <>
-                      {message.searchInfo && (
-                        <DeepResearchDisplay
-                          searchInfo={message.searchInfo}
-                          isStreaming={false}
-                        />
-                      )}
-                      <MarkdownMessage content={message.content} />
-                    </>
+                    <MarkdownMessage content={message.content} />
                   ) : (
                     <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap break-words">
                       {message.content}
@@ -101,7 +85,7 @@ export const ChatMessages = () => {
           ))}
 
           {/* Streaming message (only shown when not yet finalized) */}
-          
+
           {shouldRenderStreaming && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -115,30 +99,14 @@ export const ChatMessages = () => {
 
               <div className="flex-1 max-w-full sm:max-w-[85%] md:max-w-2xl">
                 <div className="inline-block p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-card border border-border shadow-sm dark:shadow-none w-full">
-                  {streamingSearchInfo && (
-                    <DeepResearchDisplay
-                      searchInfo={streamingSearchInfo}
-                      isStreaming={true}
-                    />
-                  )}
-
-                  {/* Only show answer after research is complete (writing stage reached) */}
-                  {streamingSearchInfo && !streamingSearchInfo.stages.includes('writing') ? (
-                    // Research in progress - don't show answer yet
-                    null
-                  ) : (
-                    // Research complete or no research - show streaming answer
-                    streamingMessage && (
-                      <MarkdownMessage content={streamingMessage} isStreaming={true} />
-                    )
-                  )}
+                  <MarkdownMessage content={streamingContent} isStreaming={true} />
                 </div>
               </div>
             </motion.div>
           )}
 
           {/* Typing indicator (only when stream starting, no message yet) */}
-          {isStreaming && !streamingMessage && <TypingIndicator />}
+          {isStreaming && !streamingContent && <TypingIndicator />}
         </>
       )}
 

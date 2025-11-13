@@ -30,11 +30,22 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/auth/login" element={<Login />} />
               <Route path="/auth/signup" element={<Signup />} />
-              <Route path="/chat" element={<Chat />} />
 
               {/* New authentication routes */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/signup" element={<SignupPage />} />
+
+              {/* Protected chat route */}
+              <Route
+                path="/chat"
+                element={
+                  <ProtectedRoute>
+                    <Chat />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Protected dashboard route */}
               <Route
                 path="/dashboard"
                 element={

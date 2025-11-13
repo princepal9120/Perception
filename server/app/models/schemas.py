@@ -3,27 +3,41 @@ Pydantic schemas for request/response validation.
 """
 from datetime import datetime
 from typing import Optional, List
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from app.core.config import settings
 import re
 
 
 # ==================== Auth Schemas ====================
 
+class UserResponse(BaseModel):
+    """Schema for user response."""
+    id: int
+    username: str
+    email: str
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
 class UserSignup(BaseModel):
     """Schema for user signup request."""
     username: str = Field(..., min_length=settings.MIN_USERNAME_LENGTH, max_length=settings.MAX_USERNAME_LENGTH)
+    name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
     password: str = Field(..., min_length=settings.MIN_PASSWORD_LENGTH, max_length=settings.MAX_PASSWORD_LENGTH)
     
-    @validator("username")
+    @field_validator("username")
+    @classmethod
     def validate_username(cls, v):
         """Validate username format."""
         if not re.match(r"^[a-zA-Z0-9_-]+$", v):
             raise ValueError("Username can only contain letters, numbers, underscores, and hyphens")
         return v
     
-    @validator("password")
+    @field_validator("password")
+    @classmethod
     def validate_password(cls, v):
         """Validate password strength."""
         if not re.search(r"[a-z]", v):
@@ -54,18 +68,29 @@ class TokenRefresh(BaseModel):
     refresh_token: str
 
 
-class UserResponse(BaseModel):
-    """Schema for user response."""
-    id: int
-    username: str
-    email: str
-    created_at: datetime
-    
-    class Config:
-        from_attributes = True
-
-
 # ==================== Chat Schemas ====================
+
+
+class ChatAnswer(BaseModel):
+    """Validate chat answer type and length."""
+    answer: Annotated[str, Field(min_length=1, max_length=4096)]
+
+
+class PromptType(str, Enum):
+    CONTEXTUALIZE_QUESTION = "contextualize_question"
+    CONTEXT_QA = "context_qa"
+
+
+class UploadResponse(BaseModel):
+    session_id: str
+    indexed: bool
+    message: str | None = None
+
+
+class ChatRequest(BaseModel):
+    session_id: str
+    message: str
+
 
 class ChatCreate(BaseModel):
     """Schema for creating a new chat."""

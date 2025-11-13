@@ -1,261 +1,298 @@
 import { create } from "zustand";
-import { chatAPI, SearchInfo } from "@/lib/chat-api";
-
-export interface Message {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-  timestamp: Date;
-  searchInfo?: SearchInfo;
-}
-
-export interface Conversation {
-  id: string;
-  title: string;
-  messages: Message[];
-  createdAt: Date;
-  updatedAt: Date;
-}
+import { chatAPI, Chat, Message } from "@/lib/chat-api";
+import { useAuth } from "@/hooks/use-auth";
 
 interface ChatState {
-  conversations: Conversation[];
-  currentConversationId: string | null;
+  // State
+  chats: Chat[];
+  currentChatId: number | null;
+  messages: Message[];
+  isLoading: boolean;
   isStreaming: boolean;
-  streamingMessage: string;
-  streamingSearchInfo: SearchInfo | null;
-  checkpointId: string | null;
-  currentEventSource: EventSource | null;
+  streamingContent: string;
+  currentEventSource: (() => void) | null;
 
   // Actions
-  createNewConversation: () => void;
-  selectConversation: (id: string) => void;
-  deleteConversation: (id: string) => void;
-  addMessage: (message: Omit<Message, "id" | "timestamp">) => void;
-  updateStreamingMessage: (content: string) => void;
-  updateStreamingSearchInfo: (searchInfo: SearchInfo) => void;
-  setIsStreaming: (isStreaming: boolean) => void;
-  setCheckpointId: (checkpointId: string) => void;
-  finalizeStreamingMessage: () => void;
-  sendMessage: (message: string) => Promise<void>;
+  loadChats: () => Promise<void>;
+  createChat: (title: string) => Promise<void>;
+  selectChat: (chatId: number) => Promise<void>;
+  updateChat: (chatId: number, title: string) => Promise<void>;
+  deleteChat: (chatId: number) => Promise<void>;
+  loadMessages: (chatId: number) => Promise<void>;
+  sendMessage: (content: string) => Promise<void>;
   stopStreaming: () => void;
+  clearCurrentChat: () => void;
 }
 
+// Get token from auth context (this will be used in actions)
+const getAuthToken = () => {
+  // This is a workaround to get the token outside of React context
+  // In a real implementation, you might want to pass the token as a parameter
+  return localStorage.getItem("perception_auth_token");
+};
+
 export const useChatStore = create<ChatState>((set, get) => ({
-  conversations: [
-    {
-      id: "1",
-      title: "AI Research Best Practices",
-      messages: [
-        {
-          id: "m1",
-          role: "assistant",
-          content:
-            "Hello! I'm your AI research copilot. I can help you with web searches, document analysis, and complex research tasks. What would you like to explore today?",
-          timestamp: new Date(Date.now() - 7200000),
-        },
-      ],
-      createdAt: new Date(Date.now() - 7200000),
-      updatedAt: new Date(Date.now() - 7200000),
-    },
-  ],
-  currentConversationId: "1",
+  // Initial state
+  chats: [],
+  currentChatId: null,
+  messages: [],
+  isLoading: false,
   isStreaming: false,
-  streamingMessage: "",
-  streamingSearchInfo: null,
-  checkpointId: null,
+  streamingContent: "",
   currentEventSource: null,
 
-  createNewConversation: () => {
-    const newConversation: Conversation = {
-      id: Date.now().toString(),
-      title: "New Conversation",
-      messages: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+  // Load all chats for the user
+  loadChats: async () => {
+    const token = getAuthToken();
+    if (!token) {
+      console.error("No authentication token found");
+      return;
+    }
 
-    set((state) => ({
-      conversations: [newConversation, ...state.conversations],
-      currentConversationId: newConversation.id,
-    }));
+    try {
+      set({ isLoading: true });
+      const response = await chatAPI.listChats(token);
+      set({ chats: response.chats });
+    } catch (error) {
+      console.error("Failed to load chats:", error);
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
-  selectConversation: (id: string) => {
-    set({ currentConversationId: id });
+  // Create a new chat
+  createChat: async (title: string) => {
+    const token = getAuthToken();
+    if (!token) {
+      console.error("No authentication token found");
+      return;
+    }
+
+    try {
+      set({ isLoading: true });
+      const newChat = await chatAPI.createChat(title, token);
+      set((state) => ({
+        chats: [newChat, ...state.chats],
+        currentChatId: newChat.id,
+        messages: [],
+      }));
+    } catch (error) {
+      console.error("Failed to create chat:", error);
+      throw error;
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
-  deleteConversation: (id: string) => {
-    set((state) => {
-      const filtered = state.conversations.filter((c) => c.id !== id);
-      const newCurrentId =
-        state.currentConversationId === id
-          ? filtered[0]?.id || null
-          : state.currentConversationId;
+  // Select a chat and load its messages
+  selectChat: async (chatId: number) => {
+    const token = getAuthToken();
+    if (!token) {
+      console.error("No authentication token found");
+      return;
+    }
 
-      return {
-        conversations: filtered,
-        currentConversationId: newCurrentId,
-      };
-    });
+    try {
+      set({ isLoading: true, currentChatId: chatId });
+      await get().loadMessages(chatId);
+    } catch (error) {
+      console.error("Failed to select chat:", error);
+      throw error;
+    } finally {
+      set({ isLoading: false });
+    }
   },
 
-  addMessage: (message) => {
-    const { currentConversationId, conversations } = get();
-    if (!currentConversationId) return;
+  // Update chat title
+  updateChat: async (chatId: number, title: string) => {
+    const token = getAuthToken();
+    if (!token) {
+      console.error("No authentication token found");
+      return;
+    }
 
-    const newMessage: Message = {
-      ...message,
-      id: Date.now().toString(),
-      timestamp: new Date(),
-    };
-
-    set({
-      conversations: conversations.map((conv) => {
-        if (conv.id === currentConversationId) {
-          const updatedMessages = [...conv.messages, newMessage];
-          const title =
-            conv.title === "New Conversation" && updatedMessages.length === 1
-              ? message.content.slice(0, 50) +
-                (message.content.length > 50 ? "..." : "")
-              : conv.title;
-
-          return {
-            ...conv,
-            messages: updatedMessages,
-            title,
-            updatedAt: new Date(),
-          };
-        }
-        return conv;
-      }),
-    });
+    try {
+      const updatedChat = await chatAPI.updateChat(chatId, title, token);
+      set((state) => ({
+        chats: state.chats.map((chat) =>
+          chat.id === chatId ? updatedChat : chat
+        ),
+      }));
+    } catch (error) {
+      console.error("Failed to update chat:", error);
+      throw error;
+    }
   },
 
-  updateStreamingMessage: (content: string) => {
-    set({ streamingMessage: content });
-  },
+  // Delete a chat
+  deleteChat: async (chatId: number) => {
+    const token = getAuthToken();
+    if (!token) {
+      console.error("No authentication token found");
+      return;
+    }
 
-  updateStreamingSearchInfo: (searchInfo: SearchInfo) => {
-    set({ streamingSearchInfo: searchInfo });
-  },
+    try {
+      await chatAPI.deleteChat(chatId, token);
+      set((state) => {
+        const newChats = state.chats.filter((chat) => chat.id !== chatId);
+        const newCurrentId =
+          state.currentChatId === chatId
+            ? newChats[0]?.id || null
+            : state.currentChatId;
 
-  setIsStreaming: (isStreaming: boolean) => {
-    set({ isStreaming });
-  },
-
-  setCheckpointId: (checkpointId: string) => {
-    set({ checkpointId });
-  },
-
-  finalizeStreamingMessage: () => {
-    const { streamingMessage, streamingSearchInfo, addMessage } = get();
-    if (streamingMessage) {
-      addMessage({
-        role: "assistant",
-        content: streamingMessage,
-        searchInfo: streamingSearchInfo || undefined,
+        return {
+          chats: newChats,
+          currentChatId: newCurrentId,
+          messages: state.currentChatId === chatId ? [] : state.messages,
+        };
       });
+    } catch (error) {
+      console.error("Failed to delete chat:", error);
+      throw error;
+    }
+  },
+
+  // Load messages for a chat
+  loadMessages: async (chatId: number) => {
+    const token = getAuthToken();
+    if (!token) {
+      console.error("No authentication token found");
+      return;
+    }
+
+    try {
+      const response = await chatAPI.getMessages(chatId, token);
+      set({ messages: response.messages });
+    } catch (error) {
+      console.error("Failed to load messages:", error);
+      throw error;
+    }
+  },
+
+  // Send a message and stream the response
+  sendMessage: async (content: string) => {
+    const { currentChatId, currentEventSource } = get();
+    const token = getAuthToken();
+
+    if (!token) {
+      console.error("No authentication token found");
+      return;
+    }
+
+    if (!currentChatId) {
+      console.error("No chat selected");
+      return;
+    }
+
+    // Stop any existing stream
+    if (currentEventSource) {
+      currentEventSource();
+    }
+
+    try {
+      set({ isStreaming: true, streamingContent: "" });
+
+      // Add user message immediately
+      const userMessage: Message = {
+        id: Date.now(),
+        chat_id: currentChatId,
+        user_id: 0, // Will be filled by backend
+        role: "user",
+        content,
+        created_at: new Date().toISOString(),
+      };
+
+      set((state) => ({
+        messages: [...state.messages, userMessage],
+      }));
+
+      // Stream the response
+      const cancelFn = await chatAPI.sendMessageStream(
+        currentChatId,
+        content,
+        token,
+        {
+          onContent: (content: string) => {
+            set((state) => ({
+              streamingContent: state.streamingContent + content,
+            }));
+          },
+          onSearchStart: (query: string) => {
+            console.log("Search started:", query);
+          },
+          onSearchResults: (urls: string[]) => {
+            console.log("Search results:", urls);
+          },
+          onToolOutput: (output: any) => {
+            console.log("Tool output:", output);
+          },
+          onCheckpoint: (checkpointId: string) => {
+            console.log("Checkpoint:", checkpointId);
+          },
+          onEnd: () => {
+            // Add the complete assistant message
+            const { streamingContent } = get();
+            const assistantMessage: Message = {
+              id: Date.now() + 1,
+              chat_id: currentChatId,
+              user_id: 0, // Will be filled by backend
+              role: "assistant",
+              content: streamingContent,
+              created_at: new Date().toISOString(),
+            };
+
+            set((state) => ({
+              messages: [...state.messages, assistantMessage],
+              isStreaming: false,
+              streamingContent: "",
+              currentEventSource: null,
+            }));
+          },
+          onError: (error: Error) => {
+            console.error("Stream error:", error);
+            set({
+              isStreaming: false,
+              streamingContent: "",
+              currentEventSource: null,
+            });
+          },
+        }
+      );
+
+      set({ currentEventSource: cancelFn });
+    } catch (error) {
+      console.error("Failed to send message:", error);
       set({
-        streamingMessage: "",
-        streamingSearchInfo: null,
         isStreaming: false,
+        streamingContent: "",
+        currentEventSource: null,
+      });
+      throw error;
+    }
+  },
+
+  // Stop the current streaming response
+  stopStreaming: () => {
+    const { currentEventSource } = get();
+    if (currentEventSource) {
+      currentEventSource();
+      set({
+        isStreaming: false,
+        streamingContent: "",
         currentEventSource: null,
       });
     }
   },
 
-  sendMessage: async (message: string) => {
-    const {
-      addMessage,
-      checkpointId,
-      setIsStreaming,
-      updateStreamingMessage,
-      updateStreamingSearchInfo,
-      setCheckpointId,
-      finalizeStreamingMessage,
-    } = get();
-
-    // Add user message
-    addMessage({ role: "user", content: message });
-
-    // Start streaming
-    setIsStreaming(true);
-
-    let streamedContent = "";
-    let searchData: SearchInfo | null = null;
-
-    const eventSource = chatAPI.streamChat(message, checkpointId, {
-      onContent: (content: string) => {
-        streamedContent += content;
-        updateStreamingMessage(streamedContent);
-      },
-
-      onSearchStart: (query: string) => {
-        searchData = {
-          stages: ["searching"],
-          query,
-          urls: [],
-        };
-        updateStreamingSearchInfo(searchData);
-      },
-
-      onSearchResults: (urls: string[]) => {
-        if (searchData) {
-          searchData = {
-            ...searchData,
-            stages: [...searchData.stages, "reading"],
-            urls,
-          };
-          updateStreamingSearchInfo(searchData);
-        }
-      },
-
-      onSearchError: (error: string) => {
-        if (searchData) {
-          searchData = {
-            ...searchData,
-            stages: [...searchData.stages, "error"],
-            error,
-            urls: [],
-          };
-          updateStreamingSearchInfo(searchData);
-        }
-      },
-
-      onCheckpoint: (newCheckpointId: string) => {
-        setCheckpointId(newCheckpointId);
-      },
-
-      onEnd: () => {
-        if (searchData) {
-          const finalSearchInfo: SearchInfo = {
-            ...searchData,
-            stages: [...searchData.stages, "writing"],
-          };
-          updateStreamingSearchInfo(finalSearchInfo);
-        }
-        finalizeStreamingMessage();
-      },
-
-      onError: (error: Error) => {
-        console.error("Chat stream error:", error);
-        if (!streamedContent) {
-          streamedContent =
-            "Sorry, there was an error processing your request.";
-          updateStreamingMessage(streamedContent);
-        }
-        finalizeStreamingMessage();
-      },
+  // Clear the current chat (for new conversations)
+  clearCurrentChat: () => {
+    set({
+      currentChatId: null,
+      messages: [],
+      isStreaming: false,
+      streamingContent: "",
+      currentEventSource: null,
     });
-
-    set({ currentEventSource: eventSource });
-  },
-
-  stopStreaming: () => {
-    const { currentEventSource, finalizeStreamingMessage } = get();
-    if (currentEventSource) {
-      chatAPI.cancelStream(currentEventSource);
-      finalizeStreamingMessage();
-    }
   },
 }));

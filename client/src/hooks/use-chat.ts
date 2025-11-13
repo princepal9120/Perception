@@ -1,7 +1,6 @@
-// src/hooks/use-chat.ts
-
 import { useCallback, useEffect } from "react";
 import { useChatStore } from "@/store/chatStore";
+import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
 
 /**
@@ -10,26 +9,79 @@ import { toast } from "sonner";
  */
 export const useChat = () => {
   const {
-    conversations,
-    currentConversationId,
+    chats,
+    currentChatId,
+    messages,
+    isLoading,
     isStreaming,
-    streamingMessage,
-    streamingSearchInfo,
-    checkpointId,
+    streamingContent,
+    loadChats,
+    createChat,
+    selectChat,
+    updateChat,
+    deleteChat,
+    loadMessages,
     sendMessage,
     stopStreaming,
-    createNewConversation,
-    selectConversation,
-    deleteConversation,
+    clearCurrentChat,
   } = useChatStore();
+  
+  const { isAuthenticated, token } = useAuth();
 
-  // Get current conversation
-  const currentConversation = conversations.find(
-    (c) => c.id === currentConversationId
+  // Get current chat
+  const currentChat = chats.find((c) => c.id === currentChatId);
+
+  // Load chats when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated && token) {
+      loadChats();
+    }
+  }, [isAuthenticated, token, loadChats]);
+
+  /**
+   * Create a new chat
+   */
+  const handleCreateChat = useCallback(
+    async (title?: string) => {
+      if (!isAuthenticated) {
+        toast.error("Please login to create a chat", {
+          description: "You need to be authenticated to start a conversation."
+        });
+        return;
+      }
+
+      try {
+        await createChat(title || "New Chat");
+        toast.success("Chat created successfully", {
+          description: "Your new conversation is ready. Start typing to begin!"
+        });
+      } catch (error) {
+        console.error("Failed to create chat:", error);
+        
+        // Provide more specific error messages
+        let errorMessage = "Failed to create chat. Please try again.";
+        let errorDescription = "There was an issue creating your conversation.";
+        
+        if (error instanceof Error) {
+          if (error.message.includes("401") || error.message.includes("unauthorized")) {
+            errorMessage = "Authentication required";
+            errorDescription = "Please login again to create a chat.";
+          } else if (error.message.includes("429")) {
+            errorMessage = "Too many requests";
+            errorDescription = "Please wait a moment before creating another chat.";
+          } else if (error.message.includes("network") || error.message.includes("fetch")) {
+            errorMessage = "Network error";
+            errorDescription = "Please check your connection and try again.";
+          }
+        }
+        
+        toast.error(errorMessage, {
+          description: errorDescription
+        });
+      }
+    },
+    [createChat, isAuthenticated]
   );
-
-  // Get current messages
-  const messages = currentConversation?.messages || [];
 
   /**
    * Send a message
@@ -37,12 +89,29 @@ export const useChat = () => {
   const handleSendMessage = useCallback(
     async (message: string) => {
       if (!message.trim()) {
-        toast.error("Please enter a message");
+        toast.error("Please enter a message", {
+          description: "Type a message in the input field below."
+        });
+        return;
+      }
+
+      if (!isAuthenticated) {
+        toast.error("Please login to send messages", {
+          description: "You need to be authenticated to participate in conversations."
+        });
         return;
       }
 
       if (isStreaming) {
-        toast.warning("Please wait for the current response to complete");
+        toast.warning("Please wait for the current response to complete", {
+          description: "The AI is still responding. Please wait for it to finish."
+        });
+        return;
+      }
+
+      if (!currentChatId) {
+        // Create a new chat if none exists
+        await handleCreateChat();
         return;
       }
 
@@ -50,10 +119,33 @@ export const useChat = () => {
         await sendMessage(message);
       } catch (error) {
         console.error("Failed to send message:", error);
-        toast.error("Failed to send message. Please try again.");
+        
+        // Provide more specific error messages
+        let errorMessage = "Failed to send message. Please try again.";
+        let errorDescription = "There was an issue sending your message.";
+        
+        if (error instanceof Error) {
+          if (error.message.includes("401") || error.message.includes("unauthorized")) {
+            errorMessage = "Authentication required";
+            errorDescription = "Please login again to send messages.";
+          } else if (error.message.includes("429")) {
+            errorMessage = "Rate limit exceeded";
+            errorDescription = "You're sending messages too quickly. Please wait a moment.";
+          } else if (error.message.includes("network") || error.message.includes("fetch")) {
+            errorMessage = "Network error";
+            errorDescription = "Please check your connection and try again.";
+          } else if (error.message.includes("503")) {
+            errorMessage = "Service unavailable";
+            errorDescription = "The AI service is temporarily unavailable. Please try again later.";
+          }
+        }
+        
+        toast.error(errorMessage, {
+          description: errorDescription
+        });
       }
     },
-    [sendMessage, isStreaming]
+    [sendMessage, isStreaming, currentChatId, isAuthenticated, handleCreateChat]
   );
 
   /**
@@ -65,58 +157,84 @@ export const useChat = () => {
   }, [stopStreaming]);
 
   /**
-   * Create a new conversation
-   */
-  const handleNewConversation = useCallback(() => {
-    createNewConversation();
-    toast.success("New conversation started");
-  }, [createNewConversation]);
-
-  /**
    * Switch to a different conversation
    */
-  const handleSelectConversation = useCallback(
-    (id: string) => {
+  const handleSelectChat = useCallback(
+    async (chatId: number) => {
       if (isStreaming) {
         toast.warning("Please wait for the current response to complete");
         return;
       }
-      selectConversation(id);
+
+      try {
+        await selectChat(chatId);
+      } catch (error) {
+        console.error("Failed to select chat:", error);
+        toast.error("Failed to load chat. Please try again.");
+      }
     },
-    [selectConversation, isStreaming]
+    [selectChat, isStreaming]
   );
 
   /**
    * Delete a conversation
    */
-  const handleDeleteConversation = useCallback(
-    (id: string) => {
-      if (isStreaming && currentConversationId === id) {
-        toast.error("Cannot delete conversation while streaming");
+  const handleDeleteChat = useCallback(
+    async (chatId: number) => {
+      if (isStreaming && currentChatId === chatId) {
+        toast.error("Cannot delete chat while streaming");
         return;
       }
-      deleteConversation(id);
-      toast.success("Conversation deleted");
+
+      try {
+        await deleteChat(chatId);
+        toast.success("Chat deleted successfully");
+      } catch (error) {
+        console.error("Failed to delete chat:", error);
+        toast.error("Failed to delete chat. Please try again.");
+      }
     },
-    [deleteConversation, isStreaming, currentConversationId]
+    [deleteChat, isStreaming, currentChatId]
+  );
+
+  /**
+   * Update chat title
+   */
+  const handleUpdateChat = useCallback(
+    async (chatId: number, title: string) => {
+      if (!title.trim()) {
+        toast.error("Please enter a valid title");
+        return;
+      }
+
+      try {
+        await updateChat(chatId, title);
+        toast.success("Chat updated successfully");
+      } catch (error) {
+        console.error("Failed to update chat:", error);
+        toast.error("Failed to update chat. Please try again.");
+      }
+    },
+    [updateChat]
   );
 
   return {
     // State
-    conversations,
-    currentConversation,
-    currentConversationId,
+    chats,
+    currentChat,
+    currentChatId,
     messages,
+    isLoading,
     isStreaming,
-    streamingMessage,
-    streamingSearchInfo,
-    checkpointId,
+    streamingContent,
+    isAuthenticated,
 
     // Actions
+    createChat: handleCreateChat,
     sendMessage: handleSendMessage,
     stopStreaming: handleStopStreaming,
-    newConversation: handleNewConversation,
-    selectConversation: handleSelectConversation,
-    deleteConversation: handleDeleteConversation,
+    selectChat: handleSelectChat,
+    deleteChat: handleDeleteChat,
+    updateChat: handleUpdateChat,
   };
 };

@@ -6,31 +6,54 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Mail, Lock, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
 
 const Signup = () => {
   const navigate = useNavigate();
+  const { signup, isLoading } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState("");
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
 
+    if (!name || !email || !password || !confirmPassword) {
+      toast.error("Please fill in all fields");
+      return;
+    }
 
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success("Signup functionality will be enabled ");
-      // navigate("/chat");
-    }, 1000);
+    if (password.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    try {
+      await signup({
+        email,
+        password,
+        username: name.toLowerCase().replace(/\s+/g, '_') // Convert name to username
+      });
+      toast.success("Account created successfully!");
+      navigate("/chat");
+    } catch (error) {
+      console.error("Signup error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Signup failed";
+      toast.error(errorMessage);
+    }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
       {/* Background gradient */}
       <div className="absolute inset-0 gradient-shine opacity-5" />
-      
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -103,6 +126,23 @@ const Signup = () => {
                 />
               </div>
               <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="text-sm font-medium">Confirm Password</Label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  className="pl-10"
+                  required
+                  minLength={8}
+                />
+              </div>
             </div>
 
             <Button

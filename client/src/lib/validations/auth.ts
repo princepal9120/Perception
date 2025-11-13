@@ -14,7 +14,12 @@ const passwordSchema = z
 // Signup validation schema
 export const signupSchema = z
   .object({
-    full_name: z
+    username: z
+      .string()
+      .min(1, 'Username is required')
+      .min(2, 'Username must be at least 2 characters')
+      .max(50, 'Username must not exceed 50 characters'),
+    name: z
       .string()
       .min(1, 'Full name is required')
       .min(2, 'Full name must be at least 2 characters')

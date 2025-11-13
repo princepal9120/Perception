@@ -79,6 +79,7 @@ async def signup(
     hashed_password = hash_password(user_data.password)
     new_user = User(
         username=user_data.username,
+        name=user_data.name,
         email=user_data.email,
         password_hash=hashed_password
     )
@@ -88,8 +89,8 @@ async def signup(
     await db.refresh(new_user)
     
     # Generate tokens
-    access_token = create_access_token(data={"sub": new_user.id})
-    refresh_token = create_refresh_token(data={"sub": new_user.id})
+    access_token = create_access_token(data={"sub": str(new_user.id)})
+    refresh_token = create_refresh_token(data={"sub": str(new_user.id)})
     
     logger.info(f"User created successfully: {new_user.username} (ID: {new_user.id})")
     
@@ -137,8 +138,8 @@ async def login(
         )
     
     # Generate tokens
-    access_token = create_access_token(data={"sub": user.id})
-    refresh_token = create_refresh_token(data={"sub": user.id})
+    access_token = create_access_token(data={"sub": str(user.id)})
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
     logger.info(f"User logged in successfully: {user.username} (ID: {user.id})")
     
@@ -172,11 +173,20 @@ async def refresh_token(
     verify_token_type(payload, "refresh")
     
     # Extract user ID
-    user_id = payload.get("sub")
-    if user_id is None:
+    user_id_str = payload.get("sub")
+    if user_id_str is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload"
+        )
+    
+    # Convert string ID back to integer
+    try:
+        user_id = int(user_id_str)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid user ID in token"
         )
     
     # Verify user still exists
@@ -192,8 +202,8 @@ async def refresh_token(
         )
     
     # Generate new tokens
-    access_token = create_access_token(data={"sub": user.id})
-    refresh_token = create_refresh_token(data={"sub": user.id})
+    access_token = create_access_token(data={"sub": str(user.id)})
+    refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
     logger.info(f"Token refreshed for user: {user.username} (ID: {user.id})")
     

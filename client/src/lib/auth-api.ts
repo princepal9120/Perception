@@ -6,8 +6,8 @@ const API_BASE_URL =
 export interface SignupData {
   email: string;
   password: string;
-  confirm_password: string;
-  full_name?: string;
+  username: string;
+  name: string;
 }
 
 export interface LoginData {
@@ -19,22 +19,15 @@ export interface LoginData {
 export interface User {
   id: number;
   email: string;
-  first_name?: string;
-  last_name?: string;
-  is_active: boolean;
-  is_verified: boolean;
+  username: string;
   created_at: string;
-  updated_at: string;
-  last_login?: string;
-  full_name?: string;
 }
 
 export interface AuthToken {
   access_token: string;
-  refresh_token?: string;
+  refresh_token: string;
   token_type: string;
-  expires_in: number;
-  user: User;
+  user?: User;
 }
 
 export interface APIResponse {
@@ -56,8 +49,8 @@ class AuthAPI {
     return headers;
   }
 
-  async signup(data: SignupData): Promise<APIResponse> {
-    const response = await fetch(`${API_BASE_URL}/signup`, {
+  async signup(data: SignupData): Promise<AuthToken> {
+    const response = await fetch(`${API_BASE_URL}/auth/signup`, {
       method: "POST",
       headers: this.getHeaders(),
       body: JSON.stringify(data),
@@ -72,10 +65,13 @@ class AuthAPI {
   }
 
   async login(data: LoginData): Promise<AuthToken> {
-    const response = await fetch(`${API_BASE_URL}/login`, {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: "POST",
       headers: this.getHeaders(),
-      body: JSON.stringify(data),
+      body: JSON.stringify({
+        email: data.email,
+        password: data.password,
+      }),
     });
 
     if (!response.ok) {
@@ -87,7 +83,7 @@ class AuthAPI {
   }
 
   async logout(token: string): Promise<APIResponse> {
-    const response = await fetch(`${API_BASE_URL}/logout`, {
+    const response = await fetch(`${API_BASE_URL}/auth/logout`, {
       method: "POST",
       headers: this.getHeaders(token),
     });
@@ -101,7 +97,7 @@ class AuthAPI {
   }
 
   async getProfile(token: string): Promise<User> {
-    const response = await fetch(`${API_BASE_URL}/profile`, {
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
       method: "GET",
       headers: this.getHeaders(token),
     });
@@ -114,30 +110,24 @@ class AuthAPI {
     return response.json();
   }
 
-  async changePassword(
-    token: string,
-    data: {
-      current_password: string;
-      new_password: string;
-      confirm_password: string;
-    }
-  ): Promise<APIResponse> {
-    const response = await fetch(`${API_BASE_URL}/change-password`, {
+  async refreshToken(refreshToken: string): Promise<AuthToken> {
+    const response = await fetch(`${API_BASE_URL}/auth/token/refresh`, {
       method: "POST",
-      headers: this.getHeaders(token),
-      body: JSON.stringify(data),
+      headers: this.getHeaders(),
+      body: JSON.stringify({ refresh_token: refreshToken }),
     });
 
     if (!response.ok) {
       const error = await response.json();
-      throw new Error(error.detail || "Password change failed");
+      throw new Error(error.detail || "Token refresh failed");
     }
 
     return response.json();
   }
 
   async checkHealth(): Promise<any> {
-    const response = await fetch(`${API_BASE_URL}/health`, {
+    const baseUrl = API_BASE_URL.replace("/api/v1", "");
+    const response = await fetch(`${baseUrl}/health`, {
       method: "GET",
       headers: this.getHeaders(),
     });

@@ -6,23 +6,31 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Mail, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useAuth } from "@/hooks/use-auth";
 
 const Login = () => {
   const navigate = useNavigate();
+  const { login, isLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    
+    if (!email || !password) {
+      toast.error("Please fill in all fields");
+      return;
+    }
 
-
-    setTimeout(() => {
-      setIsLoading(false);
-      toast.success("Login functionality will be enabled");
-      // navigate("/chat");
-    }, 1000);
+    try {
+      await login({ email, password });
+      toast.success("Login successful!");
+      navigate("/chat");
+    } catch (error) {
+      console.error("Login error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Login failed";
+      toast.error(errorMessage);
+    }
   };
 
   return (

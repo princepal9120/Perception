@@ -10,8 +10,8 @@ export default function LoginPage() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    // Get the page they tried to visit, or default to dashboard
-    const from = (location.state as any)?.from?.pathname || '/dashboard';
+    // Get the page they tried to visit, or default to chat
+    const from = (location.state as any)?.from?.pathname || '/chat';
 
     useEffect(() => {
         if (isAuthenticated) {

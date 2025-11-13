@@ -27,9 +27,11 @@ export const ChatHeader = ({ onToggleSidebar }: ChatHeaderProps) => {
         >
           <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
         </Button>
-        <h1 className="text-base sm:text-xl font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+        <div onClick={()=>window.location.href = "/"}>
+           <h1 className="text-base sm:text-xl font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
           Perception
         </h1>
+        </div>
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2">

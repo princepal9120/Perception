@@ -6,6 +6,7 @@ import { authAPI, User, AuthToken, SignupData, LoginData } from '@/lib/auth-api'
 interface AuthContextType {
     user: User | null;
     token: string | null;
+    refreshToken: string | null;
     isLoading: boolean;
     isAuthenticated: boolean;
     login: (data: LoginData) => Promise<void>;
@@ -17,6 +18,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const TOKEN_KEY = 'perception_auth_token';
+const REFRESH_TOKEN_KEY = 'perception_refresh_token';
 const USER_KEY = 'perception_auth_user';
 
 interface AuthProviderProps {
@@ -26,6 +28,7 @@ interface AuthProviderProps {
 export function AuthProvider({ children }: AuthProviderProps) {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
+    const [refreshToken, setRefreshToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
     const isAuthenticated = !!user && !!token;
@@ -33,15 +36,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Load stored auth data on mount
     useEffect(() => {
         const storedToken = localStorage.getItem(TOKEN_KEY);
+        const storedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
         const storedUser = localStorage.getItem(USER_KEY);
 
         if (storedToken && storedUser) {
             try {
                 setToken(storedToken);
+                setRefreshToken(storedRefreshToken);
                 setUser(JSON.parse(storedUser));
             } catch (error) {
                 console.error('Failed to parse stored user data:', error);
                 localStorage.removeItem(TOKEN_KEY);
+                localStorage.removeItem(REFRESH_TOKEN_KEY);
                 localStorage.removeItem(USER_KEY);
             }
         }
@@ -62,11 +68,22 @@ export function AuthProvider({ children }: AuthProviderProps) {
             const authResponse: AuthToken = await authAPI.login(data);
 
             setToken(authResponse.access_token);
-            setUser(authResponse.user);
+            setRefreshToken(authResponse.refresh_token);
+
+            // Use user data from response if available, otherwise fetch profile
+            let userData: User;
+            if (authResponse.user) {
+                userData = authResponse.user;
+            } else {
+                // Fallback to fetching profile if not included in response
+                userData = await authAPI.getProfile(authResponse.access_token);
+            }
+            setUser(userData);
 
             // Store in localStorage
             localStorage.setItem(TOKEN_KEY, authResponse.access_token);
-            localStorage.setItem(USER_KEY, JSON.stringify(authResponse.user));
+            localStorage.setItem(REFRESH_TOKEN_KEY, authResponse.refresh_token);
+            localStorage.setItem(USER_KEY, JSON.stringify(userData));
 
         } catch (error) {
             console.error('Login failed:', error);
@@ -79,8 +96,25 @@ export function AuthProvider({ children }: AuthProviderProps) {
     const signup = async (data: SignupData) => {
         try {
             setIsLoading(true);
-            await authAPI.signup(data);
-            // Note: After signup, user needs to login separately
+            const authResponse: AuthToken = await authAPI.signup(data);
+
+            setToken(authResponse.access_token);
+            setRefreshToken(authResponse.refresh_token);
+
+            // Use user data from response if available, otherwise fetch profile
+            let userData: User;
+            if (authResponse.user) {
+                userData = authResponse.user;
+            } else {
+                // Fallback to fetching profile if not included in response
+                userData = await authAPI.getProfile(authResponse.access_token);
+            }
+            setUser(userData);
+
+            // Store in localStorage
+            localStorage.setItem(TOKEN_KEY, authResponse.access_token);
+            localStorage.setItem(REFRESH_TOKEN_KEY, authResponse.refresh_token);
+            localStorage.setItem(USER_KEY, JSON.stringify(userData));
         } catch (error) {
             console.error('Signup failed:', error);
             throw error;
@@ -102,7 +136,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
             // Clear local state
             setUser(null);
             setToken(null);
+            setRefreshToken(null);
             localStorage.removeItem(TOKEN_KEY);
+            localStorage.removeItem(REFRESH_TOKEN_KEY);
             localStorage.removeItem(USER_KEY);
             setIsLoading(false);
         }
@@ -129,6 +165,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
             value={{
                 user,
                 token,
+                refreshToken,
                 isLoading,
                 isAuthenticated,
                 login,
