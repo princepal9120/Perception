@@ -42,7 +42,8 @@ class LLMClient:
     async def stream_chat_response(
         self,
         message: str,
-        checkpoint_id: Optional[str] = None
+        checkpoint_id: Optional[str] = None,
+        document_context: Optional[dict] = None
     ) -> AsyncGenerator[str, None]:
         """
         Stream chat responses from LangGraph.
@@ -50,6 +51,7 @@ class LLMClient:
         Args:
             message: User message
             checkpoint_id: Optional checkpoint ID for continuing conversation
+            document_context: Optional document context information
             
         Yields:
             Server-Sent Events formatted strings
@@ -78,9 +80,17 @@ class LLMClient:
                 config = {"configurable": {"thread_id": checkpoint_id}}
                 logger.info(f"Continuing chat with checkpoint: {checkpoint_id}")
             
+            # Prepare enhanced message with document context
+            enhanced_content = message
+            if document_context and document_context.get('has_documents'):
+                doc_names = document_context.get('document_names', [])
+                if doc_names:
+                    doc_list = ', '.join(doc_names)
+                    enhanced_content = f"{message}\n\nContext: The user has uploaded the following documents: {doc_list}. Please consider these documents in your response."
+            
             # Stream events from graph
             events = self.graph.astream_events(
-                {"messages": [HumanMessage(content=message)]},
+                {"messages": [HumanMessage(content=enhanced_content)]},
                 version="v2",
                 config=config
             )

@@ -28,6 +28,7 @@ from tools import tools, tavily_tool, duck_tool, calculator, get_stock_price
 # Authentication and route imports
 from app.routes.auth_routes import router as auth_router
 from app.routes.chat_routes import router as chat_router, set_llm_client
+from app.routes.document_routes import router as document_router
 from app.db.session import create_tables, check_database_connection, close_database_connection
 from app.core.config import settings
 from app.services.redis_utils import redis_client
@@ -352,6 +353,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
+app.include_router(document_router, prefix="/api/v1")
 
 # Add root endpoint
 @app.get("/")
@@ -378,6 +380,15 @@ async def root():
                 "delete": "DELETE /api/v1/chats/{id}",
                 "messages": "GET /api/v1/chats/{id}/messages",
                 "send_message": "POST /api/v1/chats/{id}/message"
+            },
+            "documents": {
+                "upload": "POST /api/v1/documents/upload/{chat_id}",
+                "list": "GET /api/v1/documents",
+                "chat_documents": "GET /api/v1/documents/chat/{chat_id}",
+                "get": "GET /api/v1/documents/{id}",
+                "delete": "DELETE /api/v1/documents/{id}",
+                "batch_delete": "POST /api/v1/documents/batch-delete",
+                "health": "GET /api/v1/documents/health"
             },
             "services": {
                 "health": "/api/v1/services/health",

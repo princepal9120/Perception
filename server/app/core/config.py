@@ -55,6 +55,19 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str = ""
     TAVILY_API_KEY: str = ""
     
+    # Document Management
+    UPLOAD_DIR: str = "uploads"
+    FAISS_INDEX_DIR: str = "faiss_index"
+    MAX_FILE_SIZE: int = 50 * 1024 * 1024  # 50MB
+    MAX_FILES_PER_UPLOAD: int = 10
+    SUPPORTED_FILE_EXTENSIONS: List[str] = [".pdf", ".docx", ".txt", ".md"]
+    
+    # Vector Database Configuration
+    EMBEDDING_MODEL: str = "sentence-transformers/all-MiniLM-L6-v2"
+    CHUNK_SIZE: int = 1000
+    CHUNK_OVERLAP: int = 200
+    VECTOR_SEARCH_K: int = 5
+    
     # Validation
     MIN_USERNAME_LENGTH: int = 3
     MAX_USERNAME_LENGTH: int = 30

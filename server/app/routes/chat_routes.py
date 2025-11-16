@@ -317,14 +317,23 @@ async def send_message(
     # Verify chat exists and user owns it
     chat = await service.get_chat(chat_id)
     
-    # Save user message to database
-    user_message = await service.create_message(
+    # Save user message to database with document context
+    user_message = await service.create_message_with_docs(
         chat_id=chat_id,
         role="user",
         content=message_data.content
     )
     
-    logger.info(f"User {current_user.id} sent message in chat {chat_id}")
+    # Get document context for LLM
+    documents = await service.get_chat_documents(chat_id)
+    document_context = {
+        'has_documents': len(documents) > 0,
+        'document_count': len(documents),
+        'document_names': [doc.filename for doc in documents] if documents else [],
+        'document_ids': [doc.id for doc in documents] if documents else []
+    }
+    
+    logger.info(f"User {current_user.id} sent message in chat {chat_id} with {len(documents)} documents")
     
     # Stream AI response
     async def generate_response():
@@ -332,10 +341,11 @@ async def send_message(
         assistant_content = []
         
         try:
-            # Stream from LLM
+            # Stream from LLM with document context
             async for event in llm_client.stream_chat_response(
                 message_data.content,
-                chat.checkpoint_id
+                chat.checkpoint_id,
+                document_context
             ):
                 yield event
                 

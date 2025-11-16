@@ -26,6 +26,7 @@ class User(SQLModel, table=True):
     # Relationships
     chats: List["Chat"] = Relationship(back_populates="user", cascade_delete=True)
     messages: List["Message"] = Relationship(back_populates="user", cascade_delete=True)
+    documents: List["Document"] = Relationship(back_populates="user", cascade_delete=True)
 
 
 class Chat(SQLModel, table=True):
@@ -53,6 +54,7 @@ class Chat(SQLModel, table=True):
     # Relationships
     user: User = Relationship(back_populates="chats")
     messages: List["Message"] = Relationship(back_populates="chat", cascade_delete=True)
+    documents: List["Document"] = Relationship(back_populates="chat", cascade_delete=True)
     
     __table_args__ = (
         Index("ix_chats_user_created", "user_id", "created_at"),
@@ -81,4 +83,46 @@ class Message(SQLModel, table=True):
     
     __table_args__ = (
         Index("ix_messages_chat_created", "chat_id", "created_at"),
+    )
+
+
+class Document(SQLModel, table=True):
+    """Document table for uploaded files."""
+    
+    __tablename__ = "documents"
+    
+    id: Optional[int] = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="users.id", index=True)
+    chat_id: int = Field(foreign_key="chats.id", index=True)
+    filename: str = Field(max_length=255)
+    original_filename: str = Field(max_length=255)
+    file_path: str = Field(max_length=500)
+    file_size: int = Field(default=0)  # Size in bytes
+    file_type: str = Field(max_length=100)  # MIME type
+    file_extension: str = Field(max_length=10)
+    session_id: str = Field(max_length=255, index=True)  # For vector store identification
+    checksum: str = Field(max_length=64, index=True)  # SHA-256 hash for deduplication
+    chunk_count: int = Field(default=0)  # Number of chunks after splitting
+    indexed: bool = Field(default=False)  # Whether document is indexed in vector store
+    created_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=Column(DateTime(timezone=True), server_default=func.now())
+    )
+    updated_at: datetime = Field(
+        default_factory=datetime.utcnow,
+        sa_column=Column(
+            DateTime(timezone=True),
+            server_default=func.now(),
+            onupdate=func.now()
+        )
+    )
+    
+    # Relationships
+    user: User = Relationship(back_populates="documents")
+    chat: Chat = Relationship(back_populates="documents")
+    
+    __table_args__ = (
+        Index("ix_documents_user_created", "user_id", "created_at"),
+        Index("ix_documents_chat_created", "chat_id", "created_at"),
+        Index("ix_documents_session", "session_id"),
     )

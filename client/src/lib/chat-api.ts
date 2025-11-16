@@ -44,6 +44,43 @@ export interface MessageListResponse {
   chat_id: number;
 }
 
+// ==================== Document Interfaces ====================
+
+export interface Document {
+  id: number;
+  user_id: number;
+  chat_id: number;
+  filename: string;
+  original_filename: string;
+  file_size: number;
+  file_type: string;
+  file_extension: string;
+  session_id: string;
+  chunk_count: number;
+  indexed: boolean;
+  status: 'uploading' | 'processing' | 'completed' | 'failed';
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DocumentListResponse {
+  documents: Document[];
+  total: number;
+  chat_id?: number;
+}
+
+export interface DocumentUploadResponse {
+  documents: Document[];
+  session_id: string;
+  indexed: boolean;
+  message: string;
+}
+
+export interface DocumentDeleteResponse {
+  message: string;
+  document_id: number;
+}
+
 // ==================== Streaming Interfaces ====================
 
 export interface SearchInfo {
@@ -378,6 +415,150 @@ class ChatAPI {
    */
   cancelStream(cancelFn: () => void): void {
     cancelFn();
+  }
+
+  // ==================== Document Management ====================
+
+  async uploadDocuments(
+    chatId: number,
+    files: File[],
+    token: string
+  ): Promise<DocumentUploadResponse> {
+    const formData = new FormData();
+    
+    // Add files to form data
+    files.forEach((file) => {
+      formData.append("files", file);
+    });
+
+    const response = await fetch(
+      `${API_BASE_URL}/documents/upload/${chatId}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          // Don't set Content-Type for FormData - browser sets it automatically with boundary
+        },
+        body: formData,
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to upload documents");
+    }
+
+    return response.json();
+  }
+
+  async getChatDocuments(
+    chatId: number,
+    token: string,
+    skip: number = 0,
+    limit: number = 50
+  ): Promise<DocumentListResponse> {
+    const response = await fetch(
+      `${API_BASE_URL}/documents/chat/${chatId}?skip=${skip}&limit=${limit}`,
+      {
+        method: "GET",
+        headers: this.getHeaders(token),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to fetch chat documents");
+    }
+
+    return response.json();
+  }
+
+  async getUserDocuments(
+    token: string,
+    skip: number = 0,
+    limit: number = 50
+  ): Promise<DocumentListResponse> {
+    const response = await fetch(
+      `${API_BASE_URL}/documents?skip=${skip}&limit=${limit}`,
+      {
+        method: "GET",
+        headers: this.getHeaders(token),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to fetch user documents");
+    }
+
+    return response.json();
+  }
+
+  async getDocument(
+    documentId: number,
+    token: string
+  ): Promise<Document> {
+    const response = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
+      method: "GET",
+      headers: this.getHeaders(token),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to fetch document");
+    }
+
+    return response.json();
+  }
+
+  async deleteDocument(
+    documentId: number,
+    token: string
+  ): Promise<DocumentDeleteResponse> {
+    const response = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
+      method: "DELETE",
+      headers: this.getHeaders(token),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to delete document");
+    }
+
+    return response.json();
+  }
+
+  async batchDeleteDocuments(
+    documentIds: number[],
+    token: string
+  ): Promise<DocumentDeleteResponse[]> {
+    const response = await fetch(`${API_BASE_URL}/documents/batch-delete`, {
+      method: "POST",
+      headers: this.getHeaders(token),
+      body: JSON.stringify(documentIds),
+    });
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to batch delete documents");
+    }
+
+    return response.json();
+  }
+
+  /**
+   * Check document service health
+   */
+  async checkDocumentHealth(): Promise<{ status: string; service: string }> {
+    const response = await fetch(`${API_BASE_URL}/documents/health`, {
+      method: "GET",
+    });
+
+    if (!response.ok) {
+      throw new Error("Document service health check failed");
+    }
+
+    return response.json();
   }
 }
 

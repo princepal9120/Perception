@@ -2,7 +2,8 @@
 Pydantic schemas for request/response validation.
 """
 from datetime import datetime
-from typing import Optional, List
+from typing import Optional, List, Annotated
+from enum import Enum
 from pydantic import BaseModel, EmailStr, Field, field_validator
 from app.core.config import settings
 import re
@@ -157,6 +158,49 @@ class StreamEvent(BaseModel):
     type: str  # 'checkpoint', 'content', 'tool_output', 'search_start', 'search_results', 'end', 'error'
     data: Optional[dict] = None
     content: Optional[str] = None
+
+
+# ==================== Document Schemas ====================
+
+class DocumentResponse(BaseModel):
+    """Schema for document response."""
+    id: int
+    user_id: int
+    chat_id: int
+    filename: str
+    original_filename: str
+    file_size: int
+    file_type: str
+    file_extension: str
+    session_id: str
+    chunk_count: int
+    indexed: bool
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class DocumentListResponse(BaseModel):
+    """Schema for list of documents."""
+    documents: List[DocumentResponse]
+    total: int
+    chat_id: Optional[int] = None
+
+
+class DocumentUploadResponse(BaseModel):
+    """Schema for document upload response."""
+    documents: List[DocumentResponse]
+    session_id: str
+    indexed: bool
+    message: str
+
+
+class DocumentDeleteResponse(BaseModel):
+    """Schema for document deletion response."""
+    message: str
+    document_id: int
 
 
 # ==================== Error Schemas ====================

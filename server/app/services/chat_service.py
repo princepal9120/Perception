@@ -7,11 +7,12 @@ from typing import List, Optional, Tuple
 from datetime import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, delete
-from app.models.tables import Chat, Message, User
+from app.models.tables import Chat, Message, User, Document
 from app.models.schemas import MessageResponse
 from app.services.redis_utils import redis_client
 from app.core.config import settings
 from fastapi import HTTPException, status
+from sqlalchemy import select
 
 
 logger = logging.getLogger(__name__)
@@ -325,3 +326,63 @@ class ChatService:
         query = select(func.count(Message.id)).where(Message.chat_id == chat_id)
         count = await self.db.scalar(query)
         return count or 0
+    
+    async def get_chat_documents(self, chat_id: int) -> List[Document]:
+        """
+        Get all documents for a chat.
+        
+        Args:
+            chat_id: Chat ID
+            
+        Returns:
+            List of documents
+        """
+        # Verify chat ownership
+        await self.get_chat(chat_id)
+        
+        query = (
+            select(Document)
+            .where(Document.chat_id == chat_id)
+            .where(Document.indexed == True)
+            .order_by(Document.created_at.desc())
+        )
+        
+        result = await self.db.execute(query)
+        documents = result.scalars().all()
+        
+        return documents
+    
+    async def create_message_with_docs(
+        self, 
+        chat_id: int, 
+        role: str, 
+        content: str,
+        metadata: Optional[dict] = None
+    ) -> Message:
+        """
+        Create a new message with document context.
+        
+        Args:
+            chat_id: Chat ID
+            role: Message role ('user', 'assistant', 'system', 'tool')
+            content: Message content
+            metadata: Optional metadata JSON
+            
+        Returns:
+            Created message
+        """
+        # Get chat documents for context
+        documents = await self.get_chat_documents(chat_id)
+        
+        # Add document info to metadata
+        if metadata is None:
+            metadata = {}
+        
+        metadata['has_documents'] = len(documents) > 0
+        metadata['document_count'] = len(documents)
+        if documents:
+            metadata['document_names'] = [doc.filename for doc in documents]
+            metadata['document_ids'] = [doc.id for doc in documents]
+        
+        # Create message with enhanced metadata
+        return await self.create_message(chat_id, role, content, metadata)

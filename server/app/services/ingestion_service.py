@@ -1,17 +1,17 @@
 from __future__ import annotations
 from pathlib import Path
 from typing import Iterable, List, Optional, Dict, Any
-from langchain.schema import Document
+from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
-from multi_doc_chat.utils.model_loader import ModelLoader
-from multi_doc_chat.logger import GLOBAL_LOGGER as log
-from multi_doc_chat.exception.custom_exception import DocumentPortalException
+from app.utils.model_loder import ModelLoader
+from app.logger.custom_logger import GLOBAL_LOGGER as log
+from app.logger.custom_exception import DocumentPortalException
 import json
 import uuid
 from datetime import datetime
-from multi_doc_chat.utils.file_io import save_uploaded_files
-from multi_doc_chat.utils.document_ops import load_documents
+from app.utils.file_io import save_uploaded_files
+from app.utils.document_operation import load_documents
 import hashlib
 import sys
 

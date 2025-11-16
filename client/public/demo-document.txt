@@ -1,0 +1,22 @@
+This is a demo document for testing the multi-document upload functionality.
+
+Key Features Implemented:
+
+1. **ChatGPT-Style Interface**: Documents appear inline below the chat input
+2. **Drag & Drop Upload**: Simply drag files into the upload area
+3. **Multiple File Support**: Upload PDF, DOCX, TXT, and MD files
+4. **Real-time Progress**: See upload and processing status
+5. **Document Context**: AI responses consider uploaded documents
+6. **File Management**: View, remove, and manage attachments
+
+Usage:
+- Click the paperclip icon or drag files into the upload area
+- Supported formats: PDF, DOCX, TXT, MD
+- Maximum file size: 50MB per file
+- Maximum files: 10 per chat
+
+The documents are automatically processed and indexed for semantic search.
+When you send a message, the AI will reference the uploaded documents
+to provide more accurate and context-aware responses.
+
+This demo document will be indexed and searchable once uploaded.

@@ -4,9 +4,24 @@ import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ChatInput } from "@/components/chat/ChatInput";
+import { DocumentManager } from "@/components/chat/DocumentManager";
+import { useAuth } from "@/hooks/use-auth";
+import { useChat } from "@/hooks/use-chat";
 
 const Chat = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default closed on mobile
+  const [isDocumentManagerOpen, setIsDocumentManagerOpen] = useState(false);
+  const { token } = useAuth();
+  const { currentChat } = useChat();
+
+  // Listen for custom event to open document manager
+  useState(() => {
+    const handleOpenDocumentManager = () => setIsDocumentManagerOpen(true);
+    window.addEventListener('openDocumentManager', handleOpenDocumentManager);
+    return () => {
+      window.removeEventListener('openDocumentManager', handleOpenDocumentManager);
+    };
+  });
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -18,7 +33,10 @@ const Chat = () => {
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
-        <ChatHeader onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)} />
+        <ChatHeader 
+          onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
+          onToggleDocumentManager={() => setIsDocumentManagerOpen(true)}
+        />
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden">
           <ChatMessages />
@@ -26,6 +44,16 @@ const Chat = () => {
 
         <ChatInput />
       </div>
+
+      {/* Document Manager */}
+      {token && currentChat && (
+        <DocumentManager
+          isOpen={isDocumentManagerOpen}
+          onClose={() => setIsDocumentManagerOpen(false)}
+          chatId={currentChat.id}
+          token={token}
+        />
+      )}
     </div>
   );
 };

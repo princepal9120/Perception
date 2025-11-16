@@ -1,20 +1,32 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Mic, Paperclip, Square, Zap } from "lucide-react";
-import { motion } from "framer-motion";
+import { Send, Mic, Paperclip, Square, Zap, X } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useChat } from "@/hooks/use-chat";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { DocumentUpload } from "./DocumentUpload";
+import { DocumentAttachments } from "./DocumentAttachments";
+import { DocumentMessage, CompactDocumentList } from "./DocumentMessage";
+import { Document } from "@/lib/chat-api";
+import { useAuth } from "@/hooks/use-auth";
+import { chatAPI } from "@/lib/chat-api";
 
 export const ChatInput = () => {
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [deepResearchMode, setDeepResearchMode] = useState(false);
-  const { sendMessage, isStreaming, stopStreaming } = useChat();
+  const [attachedDocuments, setAttachedDocuments] = useState<Document[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [showDocumentManager, setShowDocumentManager] = useState(false);
+  
+  const { sendMessage, isStreaming, stopStreaming, currentChat } = useChat();
+  const { token } = useAuth();
 
   const handleSend = async () => {
     if (message.trim() && !isStreaming) {
@@ -41,9 +53,66 @@ export const ChatInput = () => {
     }
   };
 
+  // Document upload handlers
+  const handleDocumentUpload = async (files: FileList) => {
+    if (!currentChat || !token) return;
+
+    setIsUploading(true);
+    const fileArray = Array.from(files);
+    
+    try {
+      // Convert files to File objects for API
+      const response = await chatAPI.uploadDocuments(currentChat.id, fileArray, token);
+      
+      // Add uploaded documents to attached documents
+      setAttachedDocuments(prev => [...prev, ...response.documents]);
+      
+      // Clear upload progress
+      setUploadProgress({});
+      
+    } catch (error) {
+      console.error('Upload failed:', error);
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDocumentRemove = (documentId: number) => {
+    setAttachedDocuments(prev => prev.filter(doc => doc.id !== documentId));
+  };
+
+  const loadChatDocuments = async () => {
+    if (!currentChat || !token) return;
+
+    try {
+      const response = await chatAPI.getChatDocuments(currentChat.id, token);
+      setAttachedDocuments(response.documents);
+    } catch (error) {
+      console.error('Failed to load documents:', error);
+    }
+  };
+
+  // Load documents when chat changes
+  useEffect(() => {
+    if (currentChat && token) {
+      loadChatDocuments();
+    }
+  }, [currentChat, token]);
+
   return (
     <div className="border-t border-border bg-card/80 backdrop-blur-sm p-3 sm:p-4 sticky bottom-0">
       <div className="w-full max-w-5xl mx-auto space-y-2">
+        {/* Document Attachments - ChatGPT Style */}
+        <DocumentAttachments
+          documents={attachedDocuments}
+          onUpload={handleDocumentUpload}
+          onRemove={handleDocumentRemove}
+          isUploading={isUploading}
+          uploadProgress={uploadProgress}
+          disabled={isStreaming}
+          maxFiles={10}
+        />
+
         {/* Deep Research Mode Toggle */}
         {!isStreaming && (
           <motion.div
@@ -88,14 +157,22 @@ export const ChatInput = () => {
         )}
 
         <div className="flex gap-1.5 sm:gap-2 items-end">
-          {/* Upload Button - Hidden on mobile */}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hidden sm:flex flex-shrink-0 hover:bg-accent/10 h-9 w-9"
-          >
-            <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
-          </Button>
+          {/* Upload Button - Only show when not streaming and has current chat */}
+          {!isStreaming && currentChat && token && (
+            <motion.div
+              whileTap={{ scale: 0.95 }}
+              className="hidden sm:flex flex-shrink-0"
+            >
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => window.dispatchEvent(new CustomEvent('openDocumentManager'))}
+                className="hover:bg-accent/10 h-9 w-9"
+              >
+                <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
+              </Button>
+            </motion.div>
+          )}
 
           {/* Message Input */}
           <div className="flex-1 relative">
