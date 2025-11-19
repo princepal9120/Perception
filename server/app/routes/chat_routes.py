@@ -345,7 +345,8 @@ async def send_message(
             async for event in llm_client.stream_chat_response(
                 message_data.content,
                 chat.checkpoint_id,
-                document_context
+                document_context,
+                chat_id=chat_id
             ):
                 yield event
                 

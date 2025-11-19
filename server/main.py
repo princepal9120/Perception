@@ -33,6 +33,7 @@ from app.db.session import create_tables, check_database_connection, close_datab
 from app.core.config import settings
 from app.services.redis_utils import redis_client
 from app.services.llm_service import LLMService
+from app.services.ingestion_service import ChatIngestor
 
 # Configure logging
 logging.basicConfig(
@@ -134,9 +135,13 @@ async def tools_router(state: ChatState):
         return "tool_node"
     return END
 
-async def tool_node(state: ChatState):
+async def tool_node(state: ChatState, config):
     tool_calls = state["messages"][-1].tool_calls
     tool_messages = []
+    
+    # Get chat_id from config
+    chat_id = config.get("configurable", {}).get("chat_id")
+    
     for call in tool_calls:
         tool_name = call["name"]
         tool_args = call["args"]
@@ -160,6 +165,48 @@ async def tool_node(state: ChatState):
             )
         elif tool_name == "get_stock_price":
             result = get_stock_price.invoke(tool_args)
+            tool_messages.append(
+                ToolMessage(content=str(result), tool_call_id=tool_id, name=tool_name)
+            )
+        elif tool_name == "search_documents":
+            logger.info(f"🔍 Executing search_documents tool. Chat ID: {chat_id}")
+            if not chat_id:
+                logger.error("❌ Chat context missing for search_documents")
+                result = {"error": "Chat context required for document search"}
+            else:
+                try:
+                    session_id = f"chat_{chat_id}"
+                    logger.info(f"🔍 Initializing ChatIngestor for session: {session_id}")
+                    
+                    # Initialize ingestor with existing session
+                    ingestor = ChatIngestor(
+                        session_id=session_id,
+                        use_session_dirs=True
+                    )
+                    
+                    # Get retriever (passing empty list to load existing index)
+                    logger.info("🔍 Building retriever...")
+                    retriever = ingestor.built_retriver([])
+                    
+                    # Search
+                    query = tool_args.get("query", "")
+                    logger.info(f"🔍 Searching for: '{query}'")
+                    docs = await retriever.ainvoke(query)
+                    logger.info(f"✅ Found {len(docs)} documents")
+                    
+                    # Format results
+                    results = []
+                    for doc in docs:
+                        results.append({
+                            "content": doc.page_content,
+                            "source": doc.metadata.get("source", "unknown"),
+                            "page": doc.metadata.get("page", 0)
+                        })
+                    result = {"results": results}
+                except Exception as e:
+                    logger.error(f"❌ Search failed: {str(e)}", exc_info=True)
+                    result = {"error": f"Search failed: {str(e)}"}
+            
             tool_messages.append(
                 ToolMessage(content=str(result), tool_call_id=tool_id, name=tool_name)
             )
@@ -261,35 +308,39 @@ async def lifespan(app: FastAPI):
         
         # Initialize PostgresSaver with context manager for chat
         logger.info("🔄 Connecting to PostgreSQL for LangGraph checkpointing...")
+        # Initialize PostgresSaver with manual context manager handling
+        logger.info("🔄 Connecting to PostgreSQL for LangGraph checkpointing...")
+        postgres_cm = None
         try:
-            postgres_saver = await PostgresSaver.from_conn_string(DATABASE_URL)
-            await postgres_saver.setup()
-            saver = postgres_saver
+            postgres_cm = PostgresSaver.from_conn_string(DATABASE_URL)
+            saver = await postgres_cm.__aenter__()
+            await saver.setup()
             logger.info("✅ LangGraph checkpoint tables set up successfully")
             
             # Compile graph with the initialized saver
             graph = graph_builder.compile(checkpointer=saver)
             logger.info("✅ Graph compiled with PostgreSQL checkpointer")
+            
+            # Initialize industry-grade services
+            await service_manager.initialize(graph)
+            
+            logger.info("🎉 Industry-grade application startup completed successfully")
+            yield
+            
         except Exception as e:
             logger.error(f"❌ Failed to setup PostgreSQL: {e}")
             logger.warning("⚠️  Using in-memory checkpointer as fallback")
-            # Fallback to in-memory checkpointer
-            from langgraph.checkpoint.memory import MemorySaver
-            saver = MemorySaver()
-            graph = graph_builder.compile(checkpointer=saver)
-            logger.info("✅ Graph compiled with in-memory checkpointer")
-        
-        # Initialize industry-grade services
-        await service_manager.initialize(graph)
-        
-        logger.info("🎉 Industry-grade application startup completed successfully")
-        yield
             
-    except Exception as e:
-        logger.error(f"❌ Failed to setup PostgreSQL: {e}")
-        logger.warning("⚠️  Using in-memory checkpointer as fallback")
-        # Fallback to in-memory checkpointer
-        try:
+            # Ensure we exit the context manager if it was entered
+            if postgres_cm and saver and isinstance(saver, PostgresSaver):
+                try:
+                    await postgres_cm.__aexit__(None, None, None)
+                except:
+                    pass
+                postgres_cm = None
+                saver = None
+
+            # Fallback to in-memory checkpointer
             from langgraph.checkpoint.memory import MemorySaver
             saver = MemorySaver()
             graph = graph_builder.compile(checkpointer=saver)
@@ -299,14 +350,20 @@ async def lifespan(app: FastAPI):
             await service_manager.initialize(graph)
             
             yield
-        except Exception as fallback_error:
-            logger.error(f"❌ Fallback initialization failed: {fallback_error}")
-            raise
+            
+    except Exception as e:
+        logger.error(f"❌ Critical startup error: {e}")
+        raise
     finally:
         # --- Shutdown logic ---
         logger.info("🔄 Shutting down application...")
         
         try:
+            # Close PostgresSaver context if active
+            if postgres_cm and saver and isinstance(saver, PostgresSaver):
+                await postgres_cm.__aexit__(None, None, None)
+                logger.info("✅ PostgreSQL checkpointer closed")
+
             # Disconnect Redis
             await redis_client.disconnect()
             logger.info("✅ Redis disconnected")

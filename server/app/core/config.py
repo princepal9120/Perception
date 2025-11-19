@@ -58,6 +58,11 @@ class Settings(BaseSettings):
     # Document Management
     UPLOAD_DIR: str = "uploads"
     FAISS_INDEX_DIR: str = "faiss_index"
+    
+    # Pinecone Configuration
+    PINECONE_API_KEY: str = ""
+    PINECONE_INDEX_NAME: str = "quickstart"
+    
     MAX_FILE_SIZE: int = 50 * 1024 * 1024  # 50MB
     MAX_FILES_PER_UPLOAD: int = 10
     SUPPORTED_FILE_EXTENSIONS: List[str] = [".pdf", ".docx", ".txt", ".md"]

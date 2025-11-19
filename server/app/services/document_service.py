@@ -45,7 +45,8 @@ class DocumentService:
             chat = await self._get_chat(chat_id)
             
             # Generate session ID for this upload batch
-            session_id = generate_session_id()
+            # We use a consistent session ID for the chat to maintain a single vector index
+            session_id = f"chat_{chat_id}"
             
             # Filter supported files
             supported_files = []
@@ -276,7 +277,6 @@ class DocumentService:
             # Initialize ingestor
             ingestor = ChatIngestor(
                 temp_base=str(temp_dir),
-                faiss_base=str(settings.FAISS_INDEX_DIR),
                 use_session_dirs=True,
                 session_id=session_id
             )

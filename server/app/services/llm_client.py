@@ -43,7 +43,8 @@ class LLMClient:
         self,
         message: str,
         checkpoint_id: Optional[str] = None,
-        document_context: Optional[dict] = None
+        document_context: Optional[dict] = None,
+        chat_id: Optional[int] = None
     ) -> AsyncGenerator[str, None]:
         """
         Stream chat responses from LangGraph.
@@ -52,6 +53,7 @@ class LLMClient:
             message: User message
             checkpoint_id: Optional checkpoint ID for continuing conversation
             document_context: Optional document context information
+            chat_id: Optional chat ID for tool context
             
         Yields:
             Server-Sent Events formatted strings
@@ -69,7 +71,12 @@ class LLMClient:
             if is_new:
                 # Generate new checkpoint ID
                 new_checkpoint_id = str(uuid4())
-                config = {"configurable": {"thread_id": new_checkpoint_id}}
+                config = {
+                    "configurable": {
+                        "thread_id": new_checkpoint_id,
+                        "chat_id": chat_id
+                    }
+                }
                 
                 # Send checkpoint ID to client
                 yield f'data: {{"type":"checkpoint","checkpoint_id":"{new_checkpoint_id}"}}\n\n'
@@ -77,7 +84,12 @@ class LLMClient:
                 logger.info(f"Starting new chat with checkpoint: {new_checkpoint_id}")
             else:
                 # Use existing checkpoint
-                config = {"configurable": {"thread_id": checkpoint_id}}
+                config = {
+                    "configurable": {
+                        "thread_id": checkpoint_id,
+                        "chat_id": chat_id
+                    }
+                }
                 logger.info(f"Continuing chat with checkpoint: {checkpoint_id}")
             
             # Prepare enhanced message with document context

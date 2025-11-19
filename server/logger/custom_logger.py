@@ -40,7 +40,3 @@ class CustomLogger:
         )
 
         return structlog.get_logger(logger_name)
-
-# Create global logger instance
-_custom_logger = CustomLogger()
-GLOBAL_LOGGER = _custom_logger.get_logger()

@@ -422,33 +422,54 @@ class ChatAPI {
   async uploadDocuments(
     chatId: number,
     files: File[],
-    token: string
+    token: string,
+    onProgress?: (progress: number) => void
   ): Promise<DocumentUploadResponse> {
-    const formData = new FormData();
-    
-    // Add files to form data
-    files.forEach((file) => {
-      formData.append("files", file);
-    });
+    return new Promise((resolve, reject) => {
+      const formData = new FormData();
+      
+      // Add files to form data
+      files.forEach((file) => {
+        formData.append("files", file);
+      });
 
-    const response = await fetch(
-      `${API_BASE_URL}/documents/upload/${chatId}`,
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
-          // Don't set Content-Type for FormData - browser sets it automatically with boundary
-        },
-        body: formData,
+      const xhr = new XMLHttpRequest();
+      xhr.open("POST", `${API_BASE_URL}/documents/upload/${chatId}`);
+      xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+
+      if (onProgress) {
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percentComplete = (event.loaded / event.total) * 100;
+            onProgress(percentComplete);
+          }
+        };
       }
-    );
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Failed to upload documents");
-    }
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            resolve(response);
+          } catch (e) {
+            reject(new Error("Failed to parse response"));
+          }
+        } else {
+          try {
+            const error = JSON.parse(xhr.responseText);
+            reject(new Error(error.detail || "Failed to upload documents"));
+          } catch (e) {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        }
+      };
 
-    return response.json();
+      xhr.onerror = () => {
+        reject(new Error("Network error occurred during upload"));
+      };
+
+      xhr.send(formData);
+    });
   }
 
   async getChatDocuments(

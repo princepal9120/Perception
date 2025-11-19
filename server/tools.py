@@ -57,6 +57,19 @@ def get_stock_price(symbol: str) -> dict:
     return r.json()
 
 # -----------------
+# Document Search Tool
+# -----------------
+@tool
+def search_documents(query: str) -> dict:
+    """
+    Search through the uploaded documents for the current chat session to find relevant information.
+    Use this tool when the user asks questions about uploaded files or context.
+    """
+    # This is a placeholder. The actual execution happens in the tool_node in main.py
+    # where we have access to the chat_id/session_id.
+    return {"status": "searching"}
+
+# -----------------
 # Export Tools
 # -----------------
-tools = [tavily_tool, duck_tool, calculator, get_stock_price]
+tools = [tavily_tool, duck_tool, calculator, get_stock_price, search_documents]

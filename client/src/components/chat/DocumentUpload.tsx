@@ -3,13 +3,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Upload, 
-  File, 
-  X, 
-  CheckCircle, 
-  AlertCircle, 
-  Loader2 
+import {
+  Upload,
+  File,
+  X,
+  CheckCircle,
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { chatAPI, Document } from "@/lib/chat-api";
@@ -22,11 +22,11 @@ interface DocumentUploadProps {
   onUploadError?: (error: string) => void;
 }
 
-export const DocumentUpload = ({ 
-  chatId, 
-  token, 
-  onUploadComplete, 
-  onUploadError 
+export const DocumentUpload = ({
+  chatId,
+  token,
+  onUploadComplete,
+  onUploadError
 }: DocumentUploadProps) => {
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -36,13 +36,13 @@ export const DocumentUpload = ({
     type: "success" | "error" | null;
     message: string;
   }>({ type: null, message: "" });
-  
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
   const supportedTypes = [
     ".pdf",
-    ".docx", 
+    ".docx",
     ".txt",
     ".md"
   ];
@@ -108,20 +108,15 @@ export const DocumentUpload = ({
     setUploadStatus({ type: null, message: "" });
 
     try {
-      // Simulate progress
-      const progressInterval = setInterval(() => {
-        setUploadProgress((prev) => {
-          if (prev >= 90) {
-            clearInterval(progressInterval);
-            return 90;
-          }
-          return prev + 10;
-        });
-      }, 200);
+      const response = await chatAPI.uploadDocuments(
+        chatId,
+        files,
+        token,
+        (progress) => {
+          setUploadProgress(Math.round(progress));
+        }
+      );
 
-      const response = await chatAPI.uploadDocuments(chatId, files, token);
-      
-      clearInterval(progressInterval);
       setUploadProgress(100);
 
       setUploadStatus({
@@ -145,10 +140,9 @@ export const DocumentUpload = ({
       }, 2000);
 
     } catch (error) {
-      clearInterval(progressInterval);
       setIsUploading(false);
       setUploadProgress(0);
-      
+
       const errorMessage = error instanceof Error ? error.message : "Upload failed";
       setUploadStatus({
         type: "error",
@@ -178,7 +172,7 @@ export const DocumentUpload = ({
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    
+
     const files = Array.from(e.dataTransfer.files);
     handleFiles(files);
   };
@@ -216,11 +210,10 @@ export const DocumentUpload = ({
       <CardContent className="space-y-4">
         {/* Upload Area */}
         <div
-          className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-            isDragging
+          className={`relative border-2 border-dashed rounded-lg p-6 text-center transition-colors ${isDragging
               ? "border-primary bg-primary/5"
               : "border-muted-foreground/25 hover:border-muted-foreground/50"
-          } ${isUploading ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
+            } ${isUploading ? "pointer-events-none opacity-50" : "cursor-pointer"}`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
@@ -237,9 +230,8 @@ export const DocumentUpload = ({
           />
 
           <div className="space-y-2">
-            <Upload className={`w-12 h-12 mx-auto text-muted-foreground ${
-              isDragging ? "text-primary" : ""
-            }`} />
+            <Upload className={`w-12 h-12 mx-auto text-muted-foreground ${isDragging ? "text-primary" : ""
+              }`} />
             <div>
               <p className="text-lg font-medium">
                 {isUploading ? "Uploading..." : "Drop files here or click to browse"}
@@ -320,11 +312,10 @@ export const DocumentUpload = ({
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 10 }}
-              className={`p-3 rounded-md flex items-center gap-2 ${
-                uploadStatus.type === "success"
+              className={`p-3 rounded-md flex items-center gap-2 ${uploadStatus.type === "success"
                   ? "bg-green-50 text-green-800 border border-green-200"
                   : "bg-red-50 text-red-800 border border-red-200"
-              }`}
+                }`}
             >
               {uploadStatus.type === "success" ? (
                 <CheckCircle className="w-4 h-4" />

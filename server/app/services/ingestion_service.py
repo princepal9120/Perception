@@ -3,10 +3,12 @@ from pathlib import Path
 from typing import Iterable, List, Optional, Dict, Any
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_community.vectorstores import FAISS
+from langchain_pinecone import PineconeVectorStore
+from pinecone import Pinecone, ServerlessSpec
 from app.utils.model_loder import ModelLoader
-from app.logger.custom_logger import GLOBAL_LOGGER as log
+from app.logger import GLOBAL_LOGGER as log
 from app.logger.custom_exception import DocumentPortalException
+from app.core.config import settings
 import json
 import uuid
 from datetime import datetime
@@ -14,6 +16,7 @@ from app.utils.file_io import save_uploaded_files
 from app.utils.document_operation import load_documents
 import hashlib
 import sys
+import time
 
 
 def generate_session_id() -> str:
@@ -26,9 +29,9 @@ def generate_session_id() -> str:
 class ChatIngestor:
     def __init__( self,
         temp_base: str = "data",
-        faiss_base: str = "faiss_index",
         use_session_dirs: bool = True,
         session_id: Optional[str] = None,
+        faiss_base: str = "faiss_index" # Kept for backward compatibility but not used
     ):
         try:
             self.model_loader = ModelLoader()
@@ -37,15 +40,35 @@ class ChatIngestor:
             self.session_id = session_id or generate_session_id()
 
             self.temp_base = Path(temp_base); self.temp_base.mkdir(parents=True, exist_ok=True)
-            self.faiss_base = Path(faiss_base); self.faiss_base.mkdir(parents=True, exist_ok=True)
-
             self.temp_dir = self._resolve_dir(self.temp_base)
-            self.faiss_dir = self._resolve_dir(self.faiss_base)
+            
+            # Initialize Pinecone
+            self.pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+            self.index_name = settings.PINECONE_INDEX_NAME
+            
+            # Check if index exists, create if not
+            existing_indexes = [i.name for i in self.pc.list_indexes()]
+            if self.index_name not in existing_indexes:
+                log.info(f"Creating Pinecone index: {self.index_name}")
+                self.pc.create_index(
+                    name=self.index_name,
+                    dimension=384, # all-MiniLM-L6-v2 dimension
+                    metric="cosine",
+                    spec=ServerlessSpec(
+                        cloud="aws",
+                        region="us-east-1"
+                    )
+                )
+                # Wait for index to be ready
+                while not self.pc.describe_index(self.index_name).status['ready']:
+                    time.sleep(1)
+            
+            self.index = self.pc.Index(self.index_name)
 
-            log.info("ChatIngestor initialized",
+            log.info("ChatIngestor initialized with Pinecone",
                       session_id=self.session_id,
                       temp_dir=str(self.temp_dir),
-                      faiss_dir=str(self.faiss_dir),
+                      index_name=self.index_name,
                       sessionized=self.use_session)
         except Exception as e:
             log.error("Failed to initialize ChatIngestor", error=str(e))
@@ -54,10 +77,10 @@ class ChatIngestor:
 
     def _resolve_dir(self, base: Path):
         if self.use_session:
-            d = base / self.session_id # e.g. "faiss_index/abc123"
-            d.mkdir(parents=True, exist_ok=True) # creates dir if not exists
+            d = base / self.session_id 
+            d.mkdir(parents=True, exist_ok=True)
             return d
-        return base # fallback: "faiss_index/"
+        return base
 
     def _split(self, docs: List[Document], chunk_size=1000, chunk_overlap=200) -> List[Document]:
         splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
@@ -75,115 +98,58 @@ class ChatIngestor:
         fetch_k: int = 20,
         lambda_mult: float = 0.5):
         try:
-            paths = save_uploaded_files(uploaded_files, self.temp_dir)
+            # Check if uploaded_files are already Path objects
+            first_file = next(iter(uploaded_files), None) if uploaded_files else None
+            if isinstance(first_file, Path):
+                paths = list(uploaded_files)
+            else:
+                paths = save_uploaded_files(uploaded_files, self.temp_dir)
+            
             docs = load_documents(paths)
+            
+            # Load embeddings
+            embeddings = self.model_loader.load_embeddings()
+            
+            # If no docs, return retriever for existing index
             if not docs:
-                raise ValueError("No valid documents loaded")
+                log.info("No new documents to index, returning retriever for existing index")
+                vectorstore = PineconeVectorStore(
+                    index=self.index,
+                    embedding=embeddings,
+                    namespace=self.session_id
+                )
+                return vectorstore.as_retriever(
+                    search_type=search_type,
+                    search_kwargs={"k": k, "fetch_k": fetch_k, "lambda_mult": lambda_mult}
+                )
 
+            # Split documents
             chunks = self._split(docs, chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+            
+            # Add to Pinecone
+            log.info(f"Adding {len(chunks)} chunks to Pinecone index {self.index_name} in namespace {self.session_id}")
+            
+            vectorstore = PineconeVectorStore.from_documents(
+                documents=chunks,
+                embedding=embeddings,
+                index_name=self.index_name,
+                namespace=self.session_id
+            )
+            
+            log.info("Pinecone index updated")
 
-            ## FAISS manager very very important class for the docchat
-            fm = FaissManager(self.faiss_dir, self.model_loader)
-
-            texts = [c.page_content for c in chunks]
-            metas = [c.metadata for c in chunks]
-
-            try:
-                vs = fm.load_or_create(texts=texts, metadatas=metas)
-            except Exception:
-                vs = fm.load_or_create(texts=texts, metadatas=metas)
-
-            added = fm.add_documents(chunks)
-            log.info("FAISS index updated", added=added, index=str(self.faiss_dir))
-
-            # Configure search parameters based on search type
+            # Configure search parameters
             search_kwargs = {"k": k}
             
             if search_type == "mmr":
-                # MMR needs fetch_k (docs to fetch) and lambda_mult (diversity parameter)
                 search_kwargs["fetch_k"] = fetch_k
                 search_kwargs["lambda_mult"] = lambda_mult
                 log.info("Using MMR search", k=k, fetch_k=fetch_k, lambda_mult=lambda_mult)
             
-            return vs.as_retriever(search_type=search_type, search_kwargs=search_kwargs)
+            return vectorstore.as_retriever(search_type=search_type, search_kwargs=search_kwargs)
 
         except Exception as e:
             log.error("Failed to build retriever", error=str(e))
             raise DocumentPortalException("Failed to build retriever", e) from e
 
-
-
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt"}
-
-# FAISS Manager (load-or-create)
-class FaissManager:
-    def __init__(self, index_dir: Path, model_loader: Optional[ModelLoader] = None):
-        self.index_dir = Path(index_dir)
-        self.index_dir.mkdir(parents=True, exist_ok=True)
-
-        self.meta_path = self.index_dir / "ingested_meta.json"
-        self._meta: Dict[str, Any] = {"rows": {}} ## this is dict of rows
-
-        if self.meta_path.exists():
-            try:
-                self._meta = json.loads(self.meta_path.read_text(encoding="utf-8")) or {"rows": {}} # load it if alrady there
-            except Exception:
-                self._meta = {"rows": {}} # init the empty one if dones not exists
-
-
-        self.model_loader = model_loader or ModelLoader()
-        self.emb = self.model_loader.load_embeddings()
-        self.vs: Optional[FAISS] = None
-
-    def _exists(self)-> bool:
-        return (self.index_dir / "index.faiss").exists() and (self.index_dir / "index.pkl").exists()
-
-    @staticmethod
-    def _fingerprint(text: str, md: Dict[str, Any]) -> str:
-        src = md.get("source") or md.get("file_path")
-        rid = md.get("row_id")
-        if src is not None:
-            return f"{src}::{'' if rid is None else rid}"
-        return hashlib.sha256(text.encode("utf-8")).hexdigest()
-
-    def _save_meta(self):
-        self.meta_path.write_text(json.dumps(self._meta, ensure_ascii=False, indent=2), encoding="utf-8")
-
-
-    def add_documents(self,docs: List[Document]):
-
-        if self.vs is None:
-            raise RuntimeError("Call load_or_create() before add_documents_idempotent().")
-
-        new_docs: List[Document] = []
-
-        for d in docs:
-
-            key = self._fingerprint(d.page_content, d.metadata or {})
-            if key in self._meta["rows"]:
-                continue
-            self._meta["rows"][key] = True
-            new_docs.append(d)
-
-        if new_docs:
-            self.vs.add_documents(new_docs)
-            self.vs.save_local(str(self.index_dir))
-            self._save_meta()
-        return len(new_docs)
-
-    def load_or_create(self,texts:Optional[List[str]]=None, metadatas: Optional[List[dict]] = None):
-        ## if we running first time then it will not go in this block
-        if self._exists():
-            self.vs = FAISS.load_local(
-                str(self.index_dir),
-                embeddings=self.emb,
-                allow_dangerous_deserialization=True,
-            )
-            return self.vs
-
-
-        if not texts:
-            raise DocumentPortalException("No existing FAISS index and no data to create one", sys)
-        self.vs = FAISS.from_texts(texts=texts, embedding=self.emb, metadatas=metadatas or [])
-        self.vs.save_local(str(self.index_dir))
-        return self.vs

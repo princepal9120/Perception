@@ -1,17 +1,15 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Mic, Paperclip, Square, Zap, X } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Send, Mic, Paperclip, Square, Zap } from "lucide-react";
+import { motion } from "framer-motion";
 import { useChat } from "@/hooks/use-chat";
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { DocumentUpload } from "./DocumentUpload";
 import { DocumentAttachments } from "./DocumentAttachments";
-import { DocumentMessage, CompactDocumentList } from "./DocumentMessage";
 import { Document } from "@/lib/chat-api";
 import { useAuth } from "@/hooks/use-auth";
 import { chatAPI } from "@/lib/chat-api";
@@ -23,8 +21,9 @@ export const ChatInput = () => {
   const [attachedDocuments, setAttachedDocuments] = useState<Document[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
-  const [showDocumentManager, setShowDocumentManager] = useState(false);
-  
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const { sendMessage, isStreaming, stopStreaming, currentChat } = useChat();
   const { token } = useAuth();
 
@@ -32,12 +31,12 @@ export const ChatInput = () => {
     if (message.trim() && !isStreaming) {
       const userMessage = message.trim();
       setMessage("");
-      
+
       // Add context about deep research mode to guide the AI
-      const enhancedMessage = deepResearchMode 
+      const enhancedMessage = deepResearchMode
         ? `Please research this topic thoroughly using web search and provide a comprehensive answer with sources: ${userMessage}`
         : userMessage;
-      
+
       await sendMessage(enhancedMessage);
     }
   };
@@ -55,25 +54,78 @@ export const ChatInput = () => {
 
   // Document upload handlers
   const handleDocumentUpload = async (files: FileList) => {
-    if (!currentChat || !token) return;
+    if (!token) return;
+
+    // Create a chat if one doesn't exist
+    let chatId = currentChat?.id;
+    if (!chatId) {
+      try {
+        const newChat = await chatAPI.createChat("New Chat", token);
+        chatId = newChat.id;
+        // Reload chats to update the UI
+        window.location.reload();
+      } catch (error) {
+        console.error('Failed to create chat:', error);
+        return;
+      }
+    }
 
     setIsUploading(true);
     const fileArray = Array.from(files);
-    
+
     try {
       // Convert files to File objects for API
-      const response = await chatAPI.uploadDocuments(currentChat.id, fileArray, token);
-      
+      const response = await chatAPI.uploadDocuments(
+        chatId,
+        fileArray,
+        token,
+        (progress) => {
+          // This is a simplified progress for all files. 
+          // Ideally we'd track per file, but for now we'll just show it on the last one or generic
+        }
+      );
+
       // Add uploaded documents to attached documents
       setAttachedDocuments(prev => [...prev, ...response.documents]);
-      
+
       // Clear upload progress
       setUploadProgress({});
-      
+
     } catch (error) {
       console.error('Upload failed:', error);
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      handleDocumentUpload(files);
+    }
+    // Reset input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleDocumentUpload(files);
     }
   };
 
@@ -102,15 +154,24 @@ export const ChatInput = () => {
   return (
     <div className="border-t border-border bg-card/80 backdrop-blur-sm p-3 sm:p-4 sticky bottom-0">
       <div className="w-full max-w-5xl mx-auto space-y-2">
+        {/* Hidden File Input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept=".pdf,.docx,.doc,.txt,.md"
+          onChange={handleFileSelect}
+          className="hidden"
+          disabled={isStreaming}
+        />
+
         {/* Document Attachments - ChatGPT Style */}
         <DocumentAttachments
           documents={attachedDocuments}
-          onUpload={handleDocumentUpload}
           onRemove={handleDocumentRemove}
           isUploading={isUploading}
           uploadProgress={uploadProgress}
           disabled={isStreaming}
-          maxFiles={10}
         />
 
         {/* Deep Research Mode Toggle */}
@@ -128,8 +189,8 @@ export const ChatInput = () => {
                   size="sm"
                   onClick={() => setDeepResearchMode(!deepResearchMode)}
                   className={`gap-2 h-8 text-xs transition-all ${deepResearchMode
-                      ? "gradient-primary shadow-glow text-white"
-                      : "hover:bg-muted"
+                    ? "gradient-primary shadow-glow text-white"
+                    : "hover:bg-muted"
                     }`}
                 >
                   <Zap className={`w-3.5 h-3.5 ${deepResearchMode ? "fill-white" : ""}`} />
@@ -156,9 +217,15 @@ export const ChatInput = () => {
           </motion.div>
         )}
 
-        <div className="flex gap-1.5 sm:gap-2 items-end">
-          {/* Upload Button - Only show when not streaming and has current chat */}
-          {!isStreaming && currentChat && token && (
+        <div
+          className={`flex gap-1.5 sm:gap-2 items-end transition-all ${isDragOver ? "ring-2 ring-primary ring-offset-2 rounded-xl" : ""
+            }`}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
+          {/* Upload Button - Only show when not streaming and authenticated */}
+          {!isStreaming && token && (
             <motion.div
               whileTap={{ scale: 0.95 }}
               className="hidden sm:flex flex-shrink-0"
@@ -166,7 +233,7 @@ export const ChatInput = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => window.dispatchEvent(new CustomEvent('openDocumentManager'))}
+                onClick={() => fileInputRef.current?.click()}
                 className="hover:bg-accent/10 h-9 w-9"
               >
                 <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -180,7 +247,13 @@ export const ChatInput = () => {
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder={deepResearchMode ? "Ask a question to research..." : "Ask anything..."}
+              placeholder={
+                isDragOver
+                  ? "Drop files here..."
+                  : deepResearchMode
+                    ? "Ask a question to research..."
+                    : "Ask anything..."
+              }
               disabled={isStreaming}
               className={`min-h-[44px] sm:min-h-[52px] max-h-[120px] sm:max-h-[200px] resize-none rounded-xl sm:rounded-2xl text-sm sm:text-base py-2.5 sm:py-3 px-3 sm:px-4 pr-10 sm:pr-12 bg-background transition-all ${deepResearchMode ? "border-primary/50 focus-visible:ring-primary/50" : ""
                 }`}
