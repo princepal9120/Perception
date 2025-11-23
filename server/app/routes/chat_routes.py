@@ -7,6 +7,7 @@ from typing import Optional
 from fastapi import APIRouter, Depends, Query, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 from app.models.tables import User, Chat
 from app.models.schemas import (
     ChatCreate,
@@ -333,18 +334,29 @@ async def send_message(
         'document_ids': [doc.id for doc in documents] if documents else []
     }
     
-    logger.info(f"User {current_user.id} sent message in chat {chat_id} with {len(documents)} documents")
+    # Store checkpoint info before streaming
+    current_checkpoint = chat.checkpoint_id
+    user_id = current_user.id
+    
+    logger.info(f"User {user_id} sent message in chat {chat_id} with {len(documents)} documents")
+    
+    # IMPORTANT: Close the current DB session before streaming
+    # The streaming response will create new sessions as needed
+    await db.close()
     
     # Stream AI response
     async def generate_response():
         """Generator for streaming AI responses."""
+        from app.db.session import AsyncSessionLocal
+        
         assistant_content = []
+        new_checkpoint = None
         
         try:
             # Stream from LLM with document context
             async for event in llm_client.stream_chat_response(
                 message_data.content,
-                chat.checkpoint_id,
+                current_checkpoint,
                 document_context,
                 chat_id=chat_id
             ):
@@ -359,28 +371,58 @@ async def send_message(
                     except:
                         pass
                 
-                # Update checkpoint_id if new conversation
-                if '"type":"checkpoint"' in event and not chat.checkpoint_id:
+                # Collect checkpoint_id if new conversation
+                if '"type":"checkpoint"' in event and not current_checkpoint:
                     try:
                         event_data = json.loads(event.replace("data: ", ""))
                         if event_data.get("type") == "checkpoint":
                             new_checkpoint = event_data.get("checkpoint_id")
-                            if new_checkpoint:
-                                chat.checkpoint_id = new_checkpoint
-                                await db.commit()
-                                logger.info(f"Updated chat {chat_id} with checkpoint {new_checkpoint}")
                     except:
                         pass
             
-            # Save assistant response to database
-            if assistant_content:
-                full_content = "".join(assistant_content)
-                await service.create_message(
-                    chat_id=chat_id,
-                    role="assistant",
-                    content=full_content
-                )
-                logger.info(f"Assistant response saved for chat {chat_id}")
+            # After streaming completes, save to database with a NEW session
+            # This prevents holding connections during streaming
+            if assistant_content or new_checkpoint:
+                async with AsyncSessionLocal() as session:
+                    try:
+                        # Update checkpoint if new
+                        if new_checkpoint and not current_checkpoint:
+                            from app.models.tables import Chat
+                            result = await session.execute(
+                                select(Chat).where(Chat.id == chat_id)
+                            )
+                            chat_obj = result.scalar_one_or_none()
+                            if chat_obj:
+                                chat_obj.checkpoint_id = new_checkpoint
+                                logger.info(f"Updated chat {chat_id} with checkpoint {new_checkpoint}")
+                        
+                        # Save assistant response
+                        if assistant_content:
+                            from app.models.tables import Message, User
+                            full_content = "".join(assistant_content)
+                            
+                            # Get user object
+                            result = await session.execute(
+                                select(User).where(User.id == user_id)
+                            )
+                            user_obj = result.scalar_one()
+                            
+                            message = Message(
+                                chat_id=chat_id,
+                                user_id=user_id,
+                                role="assistant",
+                                content=full_content
+                            )
+                            session.add(message)
+                            logger.info(f"Assistant response saved for chat {chat_id}")
+                        
+                        await session.commit()
+                        
+                    except Exception as e:
+                        await session.rollback()
+                        logger.error(f"Error saving after stream: {e}")
+                    finally:
+                        await session.close()
                 
         except Exception as e:
             logger.error(f"Error in generate_response: {e}")

@@ -34,7 +34,17 @@ class ChatIngestor:
         faiss_base: str = "faiss_index" # Kept for backward compatibility but not used
     ):
         try:
-            self.model_loader = ModelLoader()
+            log.info("Initializing ChatIngestor", session_id=session_id)
+            
+            # Initialize ModelLoader (loads config and API keys)
+            try:
+                self.model_loader = ModelLoader()
+            except Exception as e:
+                log.error(f"Failed to initialize ModelLoader: {e}")
+                raise DocumentPortalException(
+                    "Failed to load models and configuration. Check if app/config/conf.yaml exists and API keys are set.",
+                    e
+                ) from e
 
             self.use_session = use_session_dirs
             self.session_id = session_id or generate_session_id()
@@ -42,36 +52,61 @@ class ChatIngestor:
             self.temp_base = Path(temp_base); self.temp_base.mkdir(parents=True, exist_ok=True)
             self.temp_dir = self._resolve_dir(self.temp_base)
             
+            # Get embedding dimension from ModelLoader
+            embedding_dimension = self.model_loader.get_embedding_dimension()
+            log.info(f"Using embedding dimension: {embedding_dimension}")
+            
             # Initialize Pinecone
-            self.pc = Pinecone(api_key=settings.PINECONE_API_KEY)
-            self.index_name = settings.PINECONE_INDEX_NAME
-            
-            # Check if index exists, create if not
-            existing_indexes = [i.name for i in self.pc.list_indexes()]
-            if self.index_name not in existing_indexes:
-                log.info(f"Creating Pinecone index: {self.index_name}")
-                self.pc.create_index(
-                    name=self.index_name,
-                    dimension=384, # all-MiniLM-L6-v2 dimension
-                    metric="cosine",
-                    spec=ServerlessSpec(
-                        cloud="aws",
-                        region="us-east-1"
+            try:
+                self.pc = Pinecone(api_key=settings.PINECONE_API_KEY)
+                self.index_name = settings.PINECONE_INDEX_NAME
+                
+                # Check if index exists, create if not
+                existing_indexes = [i.name for i in self.pc.list_indexes()]
+                if self.index_name not in existing_indexes:
+                    log.info(f"Creating Pinecone index: {self.index_name} with dimension {embedding_dimension}")
+                    self.pc.create_index(
+                        name=self.index_name,
+                        dimension=embedding_dimension,
+                        metric="cosine",
+                        spec=ServerlessSpec(
+                            cloud="aws",
+                            region="us-east-1"
+                        )
                     )
-                )
-                # Wait for index to be ready
-                while not self.pc.describe_index(self.index_name).status['ready']:
-                    time.sleep(1)
-            
-            self.index = self.pc.Index(self.index_name)
+                    # Wait for index to be ready
+                    log.info(f"Waiting for Pinecone index {self.index_name} to be ready...")
+                    while not self.pc.describe_index(self.index_name).status['ready']:
+                        time.sleep(1)
+                    log.info(f"Pinecone index {self.index_name} is ready")
+                else:
+                    # Verify dimension matches
+                    index_info = self.pc.describe_index(self.index_name)
+                    index_dimension = index_info.dimension
+                    if index_dimension != embedding_dimension:
+                        log.warning(
+                            f"Dimension mismatch! Index has dimension {index_dimension} "
+                            f"but embedding model produces {embedding_dimension}. "
+                            f"You may need to delete and recreate the index."
+                        )
+                
+                self.index = self.pc.Index(self.index_name)
+            except Exception as e:
+                log.error(f"Failed to initialize Pinecone: {e}")
+                raise DocumentPortalException(
+                    "Failed to connect to Pinecone. Check if PINECONE_API_KEY is set correctly.",
+                    e
+                ) from e
 
             log.info("ChatIngestor initialized with Pinecone",
                       session_id=self.session_id,
                       temp_dir=str(self.temp_dir),
                       index_name=self.index_name,
                       sessionized=self.use_session)
+        except DocumentPortalException:
+            raise
         except Exception as e:
-            log.error("Failed to initialize ChatIngestor", error=str(e))
+            log.error("Failed to initialize ChatIngestor", error=str(e), exc_info=True)
             raise DocumentPortalException("Initialization error in ChatIngestor", e) from e
 
 

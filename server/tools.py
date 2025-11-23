@@ -6,6 +6,7 @@ from langchain_core.tools import tool
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_community.tools import DuckDuckGoSearchRun
 import requests
+from app.prompts.prompt_library import get_prompt
 
 # -----------------
 # Tavily Search Tool
@@ -59,15 +60,18 @@ def get_stock_price(symbol: str) -> dict:
 # -----------------
 # Document Search Tool
 # -----------------
+# Get the detailed description from the prompt library
+SEARCH_DOCUMENTS_DESCRIPTION = get_prompt("search_documents_tool")
+
 @tool
 def search_documents(query: str) -> dict:
-    """
-    Search through the uploaded documents for the current chat session to find relevant information.
-    Use this tool when the user asks questions about uploaded files or context.
-    """
+    f"""{SEARCH_DOCUMENTS_DESCRIPTION}"""
     # This is a placeholder. The actual execution happens in the tool_node in main.py
     # where we have access to the chat_id/session_id.
     return {"status": "searching"}
+
+# Override the tool's description with our detailed one
+search_documents.description = SEARCH_DOCUMENTS_DESCRIPTION
 
 # -----------------
 # Export Tools

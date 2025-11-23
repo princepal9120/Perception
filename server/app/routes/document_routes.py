@@ -49,7 +49,9 @@ async def upload_documents(
     - **files**: List of files to upload (max 10 files, 50MB each)
     
     Supported formats: PDF, DOCX, TXT, MD
-    Duplicate files (based on content hash) are automatically skipped.
+    
+    **Duplicate Detection**: Files are checked for duplicates ONLY within the same chat.
+    The same file can be uploaded to different chats without issues.
     
     Requires authentication and ownership of the chat.
     """
@@ -78,13 +80,16 @@ async def upload_documents(
         
         return result
         
-    except HTTPException:
+    except HTTPException as e:
+        # Re-raise HTTP exceptions with proper status codes (400, 404, etc.)
+        logger.warning(f"Upload validation error for chat {chat_id}: {e.detail}")
         raise
     except Exception as e:
-        logger.error(f"Error uploading documents: {e}")
+        # Catch unexpected errors and return 500
+        logger.error(f"Unexpected error uploading documents to chat {chat_id}: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to upload documents"
+            detail="An unexpected error occurred while uploading documents"
         )
 
 

@@ -29,7 +29,6 @@ export function SignupForm() {
       email: '',
       password: '',
       confirm_password: '',
-      username: '',
       name: '',
     },
   });
@@ -43,7 +42,6 @@ export function SignupForm() {
       await signup({
         email: data.email,
         password: data.password,
-        username: data.username,
         name: data.name,
       });
       setSuccess(true);
@@ -52,7 +50,7 @@ export function SignupForm() {
       // Redirect to login after successful signup
       setTimeout(() => {
         navigate('/login');
-      },2000);
+      }, 2000);
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Signup failed');
     }
@@ -82,22 +80,6 @@ export function SignupForm() {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-          <div>
-            <Label htmlFor="username">Username</Label>
-            <Input
-              id="username"
-              type="text"
-              placeholder="johndoe"
-              {...register('username')}
-              disabled={isLoading}
-              className={errors.username ? 'border-red-500' : ''}
-            />
-            {errors.username && (
-              <p className="text-sm text-red-500 mt-1">
-                {errors.username.message}
-              </p>
-            )}
-          </div>
           <div>
             <Label htmlFor="name">Full Name</Label>
             <Input

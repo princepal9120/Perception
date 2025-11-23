@@ -9,19 +9,33 @@ def _project_root() -> Path:
 def load_config(config_path: str | None = None) -> dict:
     """
     Resolve config path reliably irrespective of CWD.
-    Priority: explicit arg > CONFIG_PATH env > <project_root>/config/config.yaml
+    Priority: explicit arg > CONFIG_PATH env > <project_root>/config/conf.yaml
     """
     env_path = os.getenv("CONFIG_PATH")
     if config_path is None:
-        # _project_root() already points to the package root (multi_doc_chat)
-        config_path = env_path or str(_project_root() / "config" / "config.yaml")
+        # Try conf.yaml first (current filename), fallback to config.yaml
+        config_dir = _project_root() / "config"
+        if env_path:
+            config_path = env_path
+        elif (config_dir / "conf.yaml").exists():
+            config_path = str(config_dir / "conf.yaml")
+        elif (config_dir / "config.yaml").exists():
+            config_path = str(config_dir / "config.yaml")
+        else:
+            config_path = str(config_dir / "conf.yaml")  # Default
 
     path = Path(config_path)
     if not path.is_absolute():
         path = _project_root() / path
 
     if not path.exists():
-        raise FileNotFoundError(f"Config file not found: {path}")
+        raise FileNotFoundError(
+            f"Config file not found: {path}\n"
+            f"Tried locations:\n"
+            f"  - {_project_root() / 'config' / 'conf.yaml'}\n"
+            f"  - {_project_root() / 'config' / 'config.yaml'}\n"
+            f"Please ensure the config file exists in the config directory."
+        )
 
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f) or {}

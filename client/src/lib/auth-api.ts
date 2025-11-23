@@ -4,10 +4,9 @@ const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
 
 export interface SignupData {
+  name: string;
   email: string;
   password: string;
-  username: string;
-  name: string;
 }
 
 export interface LoginData {
@@ -18,8 +17,8 @@ export interface LoginData {
 
 export interface User {
   id: number;
+  name: string;
   email: string;
-  username: string;
   created_at: string;
 }
 

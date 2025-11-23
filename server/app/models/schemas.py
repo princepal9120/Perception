@@ -14,7 +14,7 @@ import re
 class UserResponse(BaseModel):
     """Schema for user response."""
     id: int
-    username: str
+    name: str
     email: str
     created_at: datetime
     
@@ -24,18 +24,9 @@ class UserResponse(BaseModel):
 
 class UserSignup(BaseModel):
     """Schema for user signup request."""
-    username: str = Field(..., min_length=settings.MIN_USERNAME_LENGTH, max_length=settings.MAX_USERNAME_LENGTH)
     name: str = Field(..., min_length=2, max_length=100)
     email: EmailStr
     password: str = Field(..., min_length=settings.MIN_PASSWORD_LENGTH, max_length=settings.MAX_PASSWORD_LENGTH)
-    
-    @field_validator("username")
-    @classmethod
-    def validate_username(cls, v):
-        """Validate username format."""
-        if not re.match(r"^[a-zA-Z0-9_-]+$", v):
-            raise ValueError("Username can only contain letters, numbers, underscores, and hyphens")
-        return v
     
     @field_validator("password")
     @classmethod

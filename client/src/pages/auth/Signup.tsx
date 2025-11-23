@@ -36,9 +36,9 @@ const Signup = () => {
 
     try {
       await signup({
+        name,
         email,
-        password,
-        username: name.toLowerCase().replace(/\s+/g, '_') // Convert name to username
+        password
       });
       toast.success("Account created successfully!");
       navigate("/chat");

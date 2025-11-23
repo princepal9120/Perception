@@ -66,10 +66,30 @@ class ModelLoader:
             log.info("Running in PRODUCTION mode")
 
         self.api_key_mgr = ApiKeyManager()
-        self.config = load_config()
-        log.info("YAML config loaded", config_keys=list(self.config.keys()))
+        
+        try:
+            self.config = load_config()
+            log.info("YAML config loaded", config_keys=list(self.config.keys()))
+        except FileNotFoundError as e:
+            log.error(f"Configuration file error: {e}")
+            raise DocumentPortalException(
+                "Failed to load configuration file. Please ensure app/config/conf.yaml exists.",
+                sys
+            ) from e
+        except Exception as e:
+            log.error(f"Error loading configuration: {e}")
+            raise DocumentPortalException("Configuration loading failed", sys) from e
 
 
+    def get_embedding_dimension(self) -> int:
+        """
+        Get the embedding dimension from config.
+        
+        Returns:
+            int: Embedding dimension (default: 768 for Google text-embedding-004)
+        """
+        return self.config.get("embedding_model", {}).get("dimension", 768)
+    
     def load_embeddings(self):
         """
         Load and return embedding model from Google Generative AI.

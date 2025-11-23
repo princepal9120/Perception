@@ -47,7 +47,7 @@ async def signup(
     """
     Register a new user.
     
-    - **username**: Unique username (3-30 characters, alphanumeric, underscore, hyphen)
+    - **name**: User's full name (2-100 characters)
     - **email**: Valid email address
     - **password**: Strong password (min 8 chars, uppercase, lowercase, digit)
     
@@ -65,20 +65,9 @@ async def signup(
             detail="Email already registered"
         )
     
-    # Check if username already exists
-    result = await db.execute(
-        select(User).where(User.username == user_data.username)
-    )
-    if result.scalar_one_or_none():
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="Username already taken"
-        )
-    
     # Create new user
     hashed_password = hash_password(user_data.password)
     new_user = User(
-        username=user_data.username,
         name=user_data.name,
         email=user_data.email,
         password_hash=hashed_password
@@ -92,7 +81,7 @@ async def signup(
     access_token = create_access_token(data={"sub": str(new_user.id)})
     refresh_token = create_refresh_token(data={"sub": str(new_user.id)})
     
-    logger.info(f"User created successfully: {new_user.username} (ID: {new_user.id})")
+    logger.info(f"User created successfully: {new_user.name} (ID: {new_user.id})")
     
     return TokenResponse(
         access_token=access_token,
@@ -141,7 +130,7 @@ async def login(
     access_token = create_access_token(data={"sub": str(user.id)})
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
-    logger.info(f"User logged in successfully: {user.username} (ID: {user.id})")
+    logger.info(f"User logged in successfully: {user.name} (ID: {user.id})")
     
     return TokenResponse(
         access_token=access_token,
@@ -205,7 +194,7 @@ async def refresh_token(
     access_token = create_access_token(data={"sub": str(user.id)})
     refresh_token = create_refresh_token(data={"sub": str(user.id)})
     
-    logger.info(f"Token refreshed for user: {user.username} (ID: {user.id})")
+    logger.info(f"Token refreshed for user: {user.name} (ID: {user.id})")
     
     return TokenResponse(
         access_token=access_token,
@@ -228,7 +217,7 @@ async def get_current_user_profile(
     
     Requires valid JWT access token in Authorization header.
     """
-    logger.info(f"Profile accessed by user: {current_user.username} (ID: {current_user.id})")
+    logger.info(f"Profile accessed by user: {current_user.name} (ID: {current_user.id})")
     return current_user
 
 
@@ -246,7 +235,7 @@ async def logout(
     Note: With JWT, logout is handled client-side by removing tokens.
     This endpoint is provided for consistency and potential server-side token blacklisting.
     """
-    logger.info(f"User logged out: {current_user.username} (ID: {current_user.id})")
+    logger.info(f"User logged out: {current_user.name} (ID: {current_user.id})")
     
     return SuccessResponse(
         message="Logged out successfully",

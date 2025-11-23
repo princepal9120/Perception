@@ -15,6 +15,8 @@ import json
 import os
 import logging
 from contextlib import asynccontextmanager
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 # LangGraph / LangChain
 from langgraph.graph import StateGraph, END, add_messages
@@ -34,6 +36,7 @@ from app.core.config import settings
 from app.services.redis_utils import redis_client
 from app.services.llm_service import LLMService
 from app.services.ingestion_service import ChatIngestor
+from app.prompts.prompt_library import get_prompt
 
 # Configure logging
 logging.basicConfig(
@@ -51,52 +54,9 @@ class ChatState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
 
 # -------------------
-# 2. System Prompt
+# 2. System Prompt (imported from prompt_library)
 # -------------------
-SYSTEM_PROMPT = """You are Perception AI, an advanced conversational assistant designed to help users with a wide range of tasks including research, analysis, problem-solving, and decision-making. You have access to powerful tools including web search capabilities, calculator functions, and real-time stock price information.
-
-## Core Capabilities
-
-### 🔍 Research & Information Gathering
-- Use Tavily and DuckDuckGo search tools to find current, accurate information
-- Provide comprehensive answers with sources when possible
-- Synthesize information from multiple sources for well-rounded responses
-
-### 📊 Data Analysis & Calculation
-- Perform mathematical calculations using the calculator tool
-- Analyze numerical data and provide insights
-- Handle complex computations with precision
-
-### 📈 Financial Information
-- Access real-time stock prices and market data
-- Provide basic financial information and analysis
-- Help users understand market trends
-
-## Guidelines
-
-1. **Accuracy First**: Always verify information using search tools when discussing current events, facts, or specific data points.
-
-2. **Tool Usage**: 
-   - Use search tools for any information that may have changed since your training
-   - Use calculator for mathematical computations
-   - Use stock price tool for current market data
-
-3. **Transparency**: Always cite your sources when using web search results.
-
-4. **Helpfulness**: Prioritize user needs and provide actionable insights when possible.
-
-5. **Safety**: Avoid harmful, illegal, or unethical suggestions. Respect user privacy and confidentiality.
-
-## Response Structure
-
-1. **Direct Answer**: Start with a clear, concise response to the user's question
-2. **Supporting Details**: Provide relevant context and additional information
-3. **Sources**: Include sources when using search results
-4. **Follow-up**: Offer additional help or related information when appropriate
-
-Remember: You're here to assist, inform, and empower users with accurate, timely information and helpful insights.
-
-**IMPORTANT**: When you cannot answer a question from your training data, or when information may be outdated, ALWAYS use the available search tools to find current information. For any mathematical calculations, use the calculator tool. For stock price inquiries, use the stock price tool."""
+SYSTEM_PROMPT = get_prompt("perception_system")
 
 # -------------------
 # 3. LLM
@@ -282,6 +242,10 @@ service_manager = ServiceManager()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global saver, graph
+    
+    # Initialize variables at the top level so they're accessible in finally
+    postgres_cm = None
+    
     # --- Startup logic ---
     logger.info("🚀 Starting Perception API with Industry-Grade Architecture")
     
@@ -308,9 +272,6 @@ async def lifespan(app: FastAPI):
         
         # Initialize PostgresSaver with context manager for chat
         logger.info("🔄 Connecting to PostgreSQL for LangGraph checkpointing...")
-        # Initialize PostgresSaver with manual context manager handling
-        logger.info("🔄 Connecting to PostgreSQL for LangGraph checkpointing...")
-        postgres_cm = None
         try:
             postgres_cm = PostgresSaver.from_conn_string(DATABASE_URL)
             saver = await postgres_cm.__aenter__()
@@ -328,15 +289,16 @@ async def lifespan(app: FastAPI):
             yield
             
         except Exception as e:
-            logger.error(f"❌ Failed to setup PostgreSQL: {e}")
+            logger.error(f"❌ Failed to setup PostgreSQL checkpointer: {e}")
             logger.warning("⚠️  Using in-memory checkpointer as fallback")
             
             # Ensure we exit the context manager if it was entered
             if postgres_cm and saver and isinstance(saver, PostgresSaver):
                 try:
                     await postgres_cm.__aexit__(None, None, None)
-                except:
-                    pass
+                    logger.info("✅ PostgreSQL checkpointer context exited")
+                except Exception as ex:
+                    logger.error(f"Error closing PostgreSQL checkpointer: {ex}")
                 postgres_cm = None
                 saver = None
 
@@ -360,17 +322,20 @@ async def lifespan(app: FastAPI):
         
         try:
             # Close PostgresSaver context if active
-            if postgres_cm and saver and isinstance(saver, PostgresSaver):
-                await postgres_cm.__aexit__(None, None, None)
-                logger.info("✅ PostgreSQL checkpointer closed")
+            if postgres_cm is not None and saver and isinstance(saver, PostgresSaver):
+                try:
+                    await postgres_cm.__aexit__(None, None, None)
+                    logger.info("✅ PostgreSQL checkpointer closed")
+                except Exception as ex:
+                    logger.error(f"Error closing PostgreSQL checkpointer during shutdown: {ex}")
 
             # Disconnect Redis
             await redis_client.disconnect()
             logger.info("✅ Redis disconnected")
             
-            # Close database connections
+            # Close database connections and dispose engine
             await close_database_connection()
-            logger.info("✅ Database connections closed")
+            logger.info("✅ Database connections closed and engine disposed")
             
         except Exception as e:
             logger.error(f"❌ Error during shutdown: {e}")
@@ -411,6 +376,43 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(document_router, prefix="/api/v1")
+
+# Custom validation error handler
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc: RequestValidationError):
+    """
+    Custom handler for validation errors to provide user-friendly messages.
+    """
+    errors = []
+    for error in exc.errors():
+        field = " -> ".join(str(loc) for loc in error["loc"] if loc != "body")
+        message = error["msg"]
+        error_type = error["type"]
+        
+        # Create user-friendly error messages
+        if error_type == "string_too_short":
+            ctx = error.get("ctx", {})
+            min_length = ctx.get("min_length", "required")
+            errors.append(f"{field}: Must be at least {min_length} characters long")
+        elif error_type == "string_too_long":
+            ctx = error.get("ctx", {})
+            max_length = ctx.get("max_length", "allowed")
+            errors.append(f"{field}: Must be at most {max_length} characters long")
+        elif error_type == "value_error":
+            # Custom validation errors (like password strength)
+            errors.append(f"{field}: {message}")
+        elif error_type == "missing":
+            errors.append(f"{field}: This field is required")
+        else:
+            errors.append(f"{field}: {message}")
+    
+    return JSONResponse(
+        status_code=422,
+        content={
+            "detail": " | ".join(errors) if errors else "Validation error",
+            "errors": errors
+        }
+    )
 
 # Add root endpoint
 @app.get("/")
