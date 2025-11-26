@@ -54,6 +54,8 @@ class Settings(BaseSettings):
     # LLM Configuration
     GROQ_API_KEY: str = ""
     TAVILY_API_KEY: str = ""
+    OPENAI_API_KEY: str = ""
+    ELEVENLABS_API_KEY: str = ""
     
     # Document Management
     UPLOAD_DIR: str = "uploads"

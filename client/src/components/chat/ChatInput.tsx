@@ -13,6 +13,7 @@ import { DocumentAttachments } from "./DocumentAttachments";
 import { Document } from "@/lib/chat-api";
 import { useAuth } from "@/hooks/use-auth";
 import { chatAPI } from "@/lib/chat-api";
+import { VoiceChat } from "./VoiceChat";
 
 export const ChatInput = () => {
   const [message, setMessage] = useState("");
@@ -24,8 +25,17 @@ export const ChatInput = () => {
   const [isDragOver, setIsDragOver] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { sendMessage, isStreaming, stopStreaming, currentChat } = useChat();
+  const { sendMessage, isStreaming, stopStreaming, currentChat, messages } = useChat();
   const { token } = useAuth();
+  const [isVoiceChatOpen, setIsVoiceChatOpen] = useState(false);
+
+  // Get last message for voice synthesis
+  const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
+  const lastMessageContent = lastMessage?.role === 'assistant' ? lastMessage.content : undefined;
+
+  const handleVoiceTranscript = (text: string) => {
+    sendMessage(text);
+  };
 
   const handleSend = async () => {
     if (message.trim() && !isStreaming) {
@@ -281,8 +291,8 @@ export const ChatInput = () => {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setIsRecording(!isRecording)}
-                className={`hover:bg-accent/10 h-9 w-9 ${isRecording ? "text-destructive animate-pulse" : ""}`}
+                onClick={() => setIsVoiceChatOpen(true)}
+                className={`hover:bg-accent/10 h-9 w-9 ${isVoiceChatOpen ? "text-primary bg-primary/10" : ""}`}
               >
                 <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
@@ -319,6 +329,15 @@ export const ChatInput = () => {
           }
         </p>
       </div>
-    </div>
+
+
+      <VoiceChat
+        isOpen={isVoiceChatOpen}
+        onClose={() => setIsVoiceChatOpen(false)}
+        onTranscript={handleVoiceTranscript}
+        isStreaming={isStreaming}
+        lastMessage={lastMessageContent}
+      />
+    </div >
   );
 };

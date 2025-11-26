@@ -31,6 +31,7 @@ from tools import tools, tavily_tool, duck_tool, calculator, get_stock_price
 from app.routes.auth_routes import router as auth_router
 from app.routes.chat_routes import router as chat_router, set_llm_client
 from app.routes.document_routes import router as document_router
+from app.routes.voice_routes import router as voice_router
 from app.db.session import create_tables, check_database_connection, close_database_connection
 from app.core.config import settings
 from app.services.redis_utils import redis_client
@@ -376,6 +377,7 @@ app.add_middleware(
 app.include_router(auth_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(document_router, prefix="/api/v1")
+app.include_router(voice_router, prefix="/api/v1/voice", tags=["Voice"])
 
 # Custom validation error handler
 @app.exception_handler(RequestValidationError)
