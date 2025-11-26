@@ -81,7 +81,11 @@ export const ChatSidebar = ({ isOpen, onToggle }: ChatSidebarProps) => {
                         <div className="flex-1 min-w-0">
                           <p className="text-xs sm:text-sm font-medium truncate">{chat.title}</p>
                           <p className="text-[10px] sm:text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(chat.updated_at), { addSuffix: true })}
+                            {/* Show created_at for empty chats (no messages), updated_at for active chats */}
+                            {chat.message_count === 0
+                              ? formatDistanceToNow(new Date(chat.created_at), { addSuffix: true })
+                              : formatDistanceToNow(new Date(chat.updated_at), { addSuffix: true })
+                            }
                           </p>
                         </div>
                       </div>

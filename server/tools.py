@@ -65,12 +65,17 @@ SEARCH_DOCUMENTS_DESCRIPTION = get_prompt("search_documents_tool")
 
 @tool
 def search_documents(query: str) -> dict:
-    f"""{SEARCH_DOCUMENTS_DESCRIPTION}"""
+    """
+    Search and retrieve information from uploaded documents (PDFs, DOCX, TXT, MD) in the current chat session.
+    
+    Use this tool when the user asks about uploaded files or when system instructions indicate documents are available.
+    This tool searches through document embeddings to find relevant content and returns formatted results with sources.
+    """
     # This is a placeholder. The actual execution happens in the tool_node in main.py
     # where we have access to the chat_id/session_id.
     return {"status": "searching"}
 
-# Override the tool's description with our detailed one
+# Override the tool's description with our detailed one from the prompt library
 search_documents.description = SEARCH_DOCUMENTS_DESCRIPTION
 
 # -----------------

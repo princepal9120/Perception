@@ -109,13 +109,21 @@ export const useChat = () => {
         return;
       }
 
-      if (!currentChatId) {
-        // Create a new chat if none exists
-        await handleCreateChat();
-        return;
-      }
-
       try {
+        // Create a new chat if none exists
+        if (!currentChatId) {
+          await handleCreateChat();
+          // The chat store will have updated currentChatId, but we need to wait for it
+          // Get the updated chat ID from the store after creation
+          const updatedState = useChatStore.getState();
+          if (!updatedState.currentChatId) {
+            toast.error("Failed to create chat", {
+              description: "Could not create a new conversation. Please try again."
+            });
+            return;
+          }
+        }
+
         await sendMessage(message);
       } catch (error) {
         console.error("Failed to send message:", error);

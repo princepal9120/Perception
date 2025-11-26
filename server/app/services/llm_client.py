@@ -8,6 +8,7 @@ from typing import AsyncGenerator, Optional
 from uuid import uuid4
 from langchain_core.messages import HumanMessage, AIMessageChunk, ToolMessage
 from fastapi import HTTPException
+from app.prompts.prompt_library import get_prompt
 
 
 logger = logging.getLogger(__name__)
@@ -94,11 +95,71 @@ class LLMClient:
             
             # Prepare enhanced message with document context
             enhanced_content = message
-            if document_context and document_context.get('has_documents'):
+            retrieved_context = ""
+            
+            # Automatically retrieve document context if documents are available
+            if document_context and document_context.get('has_documents') and chat_id:
                 doc_names = document_context.get('document_names', [])
-                if doc_names:
-                    doc_list = ', '.join(doc_names)
-                    enhanced_content = f"{message}\n\nContext: The user has uploaded the following documents: {doc_list}. Please consider these documents in your response."
+                doc_list = ', '.join(doc_names) if doc_names else 'unknown documents'
+                doc_count = document_context.get('document_count', 0)
+                
+                logger.info(f"📄 Chat has {doc_count} documents: {doc_list}")
+                
+                try:
+                    from app.services.ingestion_service import ChatIngestor
+                    
+                    session_id = f"chat_{chat_id}"
+                    logger.info(f"🔍 Attempting to retrieve context from documents for session: {session_id}")
+                    
+                    # Initialize ingestor with existing session
+                    ingestor = ChatIngestor(
+                        session_id=session_id,
+                        use_session_dirs=True
+                    )
+                    
+                    # Get retriever (passing empty list to load existing index)
+                    logger.info("Building retriever...")
+                    retriever = ingestor.built_retriver([])
+                    logger.info("Retriever built successfully")
+                    
+                    # Search for relevant context
+                    logger.info(f"Searching for: '{message[:100]}...'")
+                    docs = await retriever.ainvoke(message)
+                    logger.info(f"✅ Retrieved {len(docs)} relevant chunks from documents")
+                    
+                    # Format retrieved context
+                    if docs and len(docs) > 0:
+                        context_parts = []
+                        for i, doc in enumerate(docs[:5], 1):  # Limit to top 5 results
+                            source = doc.metadata.get("source", "unknown")
+                            page = doc.metadata.get("page", "N/A")
+                            content = doc.page_content[:500]  # Limit content length
+                            context_parts.append(f"[Document {i} - {source}, Page {page}]:\n{content}")
+                            logger.info(f"  Doc {i}: {source} (Page {page}) - {len(doc.page_content)} chars")
+                        
+                        retrieved_context = "\n\n".join(context_parts)
+                        
+                        # Use prompt from library
+                        prompt_fn = get_prompt("document_context_prompt")
+                        enhanced_content = prompt_fn(message, doc_count, doc_list, retrieved_context)
+                        
+                        logger.info(f"✅ Injected {len(retrieved_context)} characters of context into prompt")
+                    else:
+                        # No results found, but still inform AI about documents
+                        logger.warning(f"⚠️  Retriever returned 0 chunks for query")
+                        
+                        # Use prompt from library
+                        prompt_fn = get_prompt("no_results_context_prompt")
+                        enhanced_content = prompt_fn(message, doc_count, doc_list)
+                        
+                except Exception as e:
+                    logger.error(f"❌ FAILED to retrieve document context: {type(e).__name__}: {str(e)}")
+                    logger.error(f"Error details:", exc_info=True)
+                    
+                    # ALWAYS inform AI about documents even if retrieval fails
+                    # Use prompt from library
+                    prompt_fn = get_prompt("retrieval_error_context_prompt")
+                    enhanced_content = prompt_fn(message, doc_count, doc_list)
             
             # Stream events from graph
             events = self.graph.astream_events(

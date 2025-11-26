@@ -143,6 +143,49 @@ export interface StreamCallbacks {
   onError: (error: Error) => void;
 }
 
+// ==================== Token Management ====================
+
+const TOKEN_KEY = 'perception_auth_token';
+const REFRESH_TOKEN_KEY = 'perception_refresh_token';
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+  
+  if (!refreshToken) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/token/refresh`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    if (!response.ok) {
+      // Refresh token is invalid or expired
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(REFRESH_TOKEN_KEY);
+      return null;
+    }
+
+    const data = await response.json();
+    const newAccessToken = data.access_token;
+    const newRefreshToken = data.refresh_token;
+
+    // Update tokens in localStorage
+    localStorage.setItem(TOKEN_KEY, newAccessToken);
+    localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
+
+    return newAccessToken;
+  } catch (error) {
+    console.error('Failed to refresh token:', error);
+    return null;
+  }
+}
+
 // ==================== Chat API Class ====================
 
 class ChatAPI {
@@ -158,14 +201,45 @@ class ChatAPI {
     return headers;
   }
 
+  /**
+   * Fetch with automatic token refresh on 401 errors
+   */
+  private async fetchWithTokenRefresh(
+    url: string,
+    options: RequestInit,
+    originalToken: string
+  ): Promise<Response> {
+    let response = await fetch(url, options);
+
+    // If we get a 401, try to refresh the token and retry once
+    if (response.status === 401) {
+      const newToken = await refreshAccessToken();
+      
+      if (newToken) {
+        // Update Authorization header with new token
+        const headers = options.headers as Record<string, string>;
+        headers["Authorization"] = `Bearer ${newToken}`;
+        
+        // Retry the request with the new token
+        response = await fetch(url, options);
+      }
+    }
+
+    return response;
+  }
+
   // ==================== Chat Management ====================
 
   async createChat(title: string, token: string): Promise<Chat> {
-    const response = await fetch(`${API_BASE_URL}/chats`, {
-      method: "POST",
-      headers: this.getHeaders(token),
-      body: JSON.stringify({ title }),
-    });
+    const response = await this.fetchWithTokenRefresh(
+      `${API_BASE_URL}/chats`,
+      {
+        method: "POST",
+        headers: this.getHeaders(token),
+        body: JSON.stringify({ title }),
+      },
+      token
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -180,12 +254,13 @@ class ChatAPI {
     skip: number = 0,
     limit: number = 50
   ): Promise<ChatListResponse> {
-    const response = await fetch(
+    const response = await this.fetchWithTokenRefresh(
       `${API_BASE_URL}/chats?skip=${skip}&limit=${limit}`,
       {
         method: "GET",
         headers: this.getHeaders(token),
-      }
+      },
+      token
     );
 
     if (!response.ok) {
@@ -197,10 +272,14 @@ class ChatAPI {
   }
 
   async getChat(chatId: number, token: string): Promise<Chat> {
-    const response = await fetch(`${API_BASE_URL}/chats/${chatId}`, {
-      method: "GET",
-      headers: this.getHeaders(token),
-    });
+    const response = await this.fetchWithTokenRefresh(
+      `${API_BASE_URL}/chats/${chatId}`,
+      {
+        method: "GET",
+        headers: this.getHeaders(token),
+      },
+      token
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -215,11 +294,15 @@ class ChatAPI {
     title: string,
     token: string
   ): Promise<Chat> {
-    const response = await fetch(`${API_BASE_URL}/chats/${chatId}`, {
-      method: "PATCH",
-      headers: this.getHeaders(token),
-      body: JSON.stringify({ title }),
-    });
+    const response = await this.fetchWithTokenRefresh(
+      `${API_BASE_URL}/chats/${chatId}`,
+      {
+        method: "PATCH",
+        headers: this.getHeaders(token),
+        body: JSON.stringify({ title }),
+      },
+      token
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -230,10 +313,14 @@ class ChatAPI {
   }
 
   async deleteChat(chatId: number, token: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/chats/${chatId}`, {
-      method: "DELETE",
-      headers: this.getHeaders(token),
-    });
+    const response = await this.fetchWithTokenRefresh(
+      `${API_BASE_URL}/chats/${chatId}`,
+      {
+        method: "DELETE",
+        headers: this.getHeaders(token),
+      },
+      token
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -249,12 +336,13 @@ class ChatAPI {
     skip: number = 0,
     limit: number = 100
   ): Promise<MessageListResponse> {
-    const response = await fetch(
+    const response = await this.fetchWithTokenRefresh(
       `${API_BASE_URL}/chats/${chatId}/messages?skip=${skip}&limit=${limit}`,
       {
         method: "GET",
         headers: this.getHeaders(token),
-      }
+      },
+      token
     );
 
     if (!response.ok) {
@@ -276,11 +364,15 @@ class ChatAPI {
     callbacks: StreamCallbacks
   ): Promise<() => void> {
     // Create a custom fetch request with streaming
-    const response = await fetch(`${API_BASE_URL}/chats/${chatId}/message`, {
-      method: "POST",
-      headers: this.getHeaders(token),
-      body: JSON.stringify({ content }),
-    });
+    const response = await this.fetchWithTokenRefresh(
+      `${API_BASE_URL}/chats/${chatId}/message`,
+      {
+        method: "POST",
+        headers: this.getHeaders(token),
+        body: JSON.stringify({ content }),
+      },
+      token
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -478,12 +570,13 @@ class ChatAPI {
     skip: number = 0,
     limit: number = 50
   ): Promise<DocumentListResponse> {
-    const response = await fetch(
+    const response = await this.fetchWithTokenRefresh(
       `${API_BASE_URL}/documents/chat/${chatId}?skip=${skip}&limit=${limit}`,
       {
         method: "GET",
         headers: this.getHeaders(token),
-      }
+      },
+      token
     );
 
     if (!response.ok) {
@@ -499,12 +592,13 @@ class ChatAPI {
     skip: number = 0,
     limit: number = 50
   ): Promise<DocumentListResponse> {
-    const response = await fetch(
+    const response = await this.fetchWithTokenRefresh(
       `${API_BASE_URL}/documents?skip=${skip}&limit=${limit}`,
       {
         method: "GET",
         headers: this.getHeaders(token),
-      }
+      },
+      token
     );
 
     if (!response.ok) {
@@ -519,10 +613,14 @@ class ChatAPI {
     documentId: number,
     token: string
   ): Promise<Document> {
-    const response = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
-      method: "GET",
-      headers: this.getHeaders(token),
-    });
+    const response = await this.fetchWithTokenRefresh(
+      `${API_BASE_URL}/documents/${documentId}`,
+      {
+        method: "GET",
+        headers: this.getHeaders(token),
+      },
+      token
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -536,10 +634,14 @@ class ChatAPI {
     documentId: number,
     token: string
   ): Promise<DocumentDeleteResponse> {
-    const response = await fetch(`${API_BASE_URL}/documents/${documentId}`, {
-      method: "DELETE",
-      headers: this.getHeaders(token),
-    });
+    const response = await this.fetchWithTokenRefresh(
+      `${API_BASE_URL}/documents/${documentId}`,
+      {
+        method: "DELETE",
+        headers: this.getHeaders(token),
+      },
+      token
+    );
 
     if (!response.ok) {
       const error = await response.json();
@@ -553,11 +655,15 @@ class ChatAPI {
     documentIds: number[],
     token: string
   ): Promise<DocumentDeleteResponse[]> {
-    const response = await fetch(`${API_BASE_URL}/documents/batch-delete`, {
-      method: "POST",
-      headers: this.getHeaders(token),
-      body: JSON.stringify(documentIds),
-    });
+    const response = await this.fetchWithTokenRefresh(
+      `${API_BASE_URL}/documents/batch-delete`,
+      {
+        method: "POST",
+        headers: this.getHeaders(token),
+        body: JSON.stringify(documentIds),
+      },
+      token
+    );
 
     if (!response.ok) {
       const error = await response.json();
