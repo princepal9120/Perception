@@ -5,12 +5,20 @@ import { ChatHeader } from "@/components/chat/ChatHeader";
 import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { DocumentManager } from "@/components/chat/DocumentManager";
+import { TreeChatInterface } from "@/components/tree/TreeChatInterface";
 import { useAuth } from "@/hooks/use-auth";
 import { useChat } from "@/hooks/use-chat";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 const Chat = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default closed on mobile
   const [isDocumentManagerOpen, setIsDocumentManagerOpen] = useState(false);
+  const [isTreeViewOpen, setIsTreeViewOpen] = useState(false);
   const { token } = useAuth();
   const { currentChat } = useChat();
 
@@ -36,6 +44,7 @@ const Chat = () => {
         <ChatHeader
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           onToggleDocumentManager={() => setIsDocumentManagerOpen(true)}
+          onOpenTreeView={() => setIsTreeViewOpen(true)}
         />
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">
@@ -56,6 +65,20 @@ const Chat = () => {
           chatId={currentChat.id}
           token={token}
         />
+      )}
+
+      {/* Tree View Modal */}
+      {currentChat && (
+        <Dialog open={isTreeViewOpen} onOpenChange={setIsTreeViewOpen}>
+          <DialogContent className="max-w-7xl h-[90vh]">
+            <DialogHeader>
+              <DialogTitle>Conversation Tree</DialogTitle>
+            </DialogHeader>
+            <div className="flex-1 overflow-hidden">
+              <TreeChatInterface chatId={currentChat.id} />
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );

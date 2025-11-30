@@ -12,7 +12,7 @@ const Index = () => {
       <Features />
       <Testimonials />
       <Pricing />
-    
+
       <Footer />
     </main>
   );

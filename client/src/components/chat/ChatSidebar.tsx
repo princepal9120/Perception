@@ -1,6 +1,6 @@
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Plus, MessageSquare, ChevronLeft, Trash2, Settings, LogOut } from "lucide-react";
+import { Plus, MessageSquare, ChevronLeft, Trash2, Settings, LogOut, GitBranch } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat } from "@/hooks/use-chat";
 import { formatDistanceToNow } from "date-fns";
@@ -33,31 +33,42 @@ export const ChatSidebar = ({ isOpen, onToggle }: ChatSidebarProps) => {
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -280, opacity: 0 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
-            className="fixed lg:relative inset-y-0 left-0 z-50 w-[260px] bg-[#0F172A] text-gray-100 flex flex-col border-r border-white/10"
+            className="fixed lg:relative inset-y-0 left-0 z-50 w-[260px] bg-background border-r border-border flex flex-col"
           >
             {/* New Chat Button */}
-            <div className="p-3">
+            <div className="p-3 space-y-2">
               <Button
                 onClick={() => createChat()}
-                className="w-full justify-start gap-2 bg-white/5 hover:bg-white/10 text-white border-0 h-10 rounded-lg transition-colors"
+                className="w-full justify-start gap-2 bg-muted hover:bg-muted/80 text-foreground border-0 h-10 rounded-lg transition-colors"
                 variant="ghost"
                 disabled={isLoading}
               >
                 <Plus className="w-4 h-4" />
                 <span className="text-sm font-medium">New chat</span>
               </Button>
+
+              {currentChatId && (
+                <Button
+                  onClick={() => window.location.href = `/workflow/${currentChatId}`}
+                  className="w-full justify-start gap-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-0 h-10 rounded-lg transition-colors"
+                  variant="ghost"
+                >
+                  <GitBranch className="w-4 h-4" />
+                  <span className="text-sm font-medium">View Workflow</span>
+                </Button>
+              )}
             </div>
 
             {/* Chat History */}
             <ScrollArea className="flex-1 px-3">
               <div className="space-y-1 py-2">
-                <div className="text-xs font-medium text-gray-500 px-2 py-2">Recent</div>
+                <div className="text-xs font-medium text-muted-foreground px-2 py-2">Recent</div>
                 {chats.map((chat) => (
                   <motion.div
                     key={chat.id}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className={`group relative rounded-lg transition-colors ${currentChatId === chat.id ? 'bg-white/10' : 'hover:bg-white/5'
+                    className={`group relative rounded-lg transition-colors ${currentChatId === chat.id ? 'bg-muted' : 'hover:bg-muted/50'
                       }`}
                   >
                     <button
@@ -68,7 +79,7 @@ export const ChatSidebar = ({ isOpen, onToggle }: ChatSidebarProps) => {
                       className="w-full text-left p-2 flex items-center gap-3 overflow-hidden"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-300 truncate group-hover:text-white transition-colors">
+                        <p className="text-sm text-foreground/80 truncate group-hover:text-foreground transition-colors">
                           {chat.title || "New Conversation"}
                         </p>
                       </div>
@@ -81,7 +92,7 @@ export const ChatSidebar = ({ isOpen, onToggle }: ChatSidebarProps) => {
                         e.stopPropagation();
                         deleteChat(chat.id);
                       }}
-                      className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 h-7 w-7 text-gray-400 hover:text-red-400 hover:bg-white/5 transition-all"
+                      className="absolute right-1 top-1 opacity-0 group-hover:opacity-100 h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-muted transition-all"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </Button>
@@ -91,19 +102,19 @@ export const ChatSidebar = ({ isOpen, onToggle }: ChatSidebarProps) => {
             </ScrollArea>
 
             {/* User Profile / Bottom Section */}
-            <div className="p-3 border-t border-white/10 mt-auto">
-              <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors group">
-                <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-xs font-medium">
+            <div className="p-3 border-t border-border mt-auto">
+              <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 cursor-pointer transition-colors group">
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-xs font-medium text-primary-foreground">
                   {user?.email?.[0].toUpperCase() || "U"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-white truncate">{user?.email}</p>
+                  <p className="text-sm font-medium text-foreground truncate">{user?.email}</p>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={logout}
-                  className="h-8 w-8 text-gray-400 hover:text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="h-8 w-8 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <LogOut className="w-4 h-4" />
                 </Button>

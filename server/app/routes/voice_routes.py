@@ -6,11 +6,23 @@ import requests
 import tempfile
 import os
 import io
+from langchain_groq import ChatGroq
+from langchain_core.messages import HumanMessage, SystemMessage
+from tools import tavily_tool
+from langgraph.prebuilt import create_react_agent
 
 router = APIRouter()
 
 # Initialize OpenAI client for STT/TTS
 openai_client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+
+# Initialize Agent with Tools
+llm = ChatGroq(
+    model="llama-3.3-70b-versatile",
+    api_key=settings.GROQ_API_KEY
+)
+tools = [tavily_tool]
+agent_executor = create_react_agent(llm, tools)
 
 @router.post("/transcribe")
 async def transcribe_audio(file: UploadFile = File(...)):
@@ -41,6 +53,28 @@ async def transcribe_audio(file: UploadFile = File(...)):
         return JSONResponse(content={"text": text})
 
     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/chat")
+async def chat_with_agent(text: str = Body(..., embed=True)):
+    """
+    Process text with an agentic LLM (with search tools).
+    Returns the text response.
+    """
+    try:
+        # Run the agent
+        inputs = {"messages": [("user", text)]}
+        result = await agent_executor.ainvoke(inputs)
+        
+        # Get the last message content
+        last_message = result["messages"][-1]
+        response_text = last_message.content
+        
+        return JSONResponse(content={"text": response_text})
+        
+    except Exception as e:
+        print(f"Agent error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 

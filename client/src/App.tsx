@@ -16,6 +16,7 @@ import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
 import DashboardPage from "@/pages/DashboardPage";
 import DeepResearchPage from "@/pages/DeepResearchPage";
+import WorkflowPage from "@/pages/WorkflowPage";
 
 const queryClient = new QueryClient();
 
@@ -60,6 +61,16 @@ const AnimatedRoutes = () => {
           element={
             <ProtectedRoute>
               <DeepResearchPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected workflow route */}
+        <Route
+          path="/workflow/:chatId"
+          element={
+            <ProtectedRoute>
+              <WorkflowPage />
             </ProtectedRoute>
           }
         />

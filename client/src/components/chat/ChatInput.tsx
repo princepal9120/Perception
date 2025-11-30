@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Mic, Paperclip, Square, Zap } from "lucide-react";
+import { Send, Mic, Paperclip, Square, Zap, Brain } from "lucide-react";
 import { motion } from "framer-motion";
 import { useChat } from "@/hooks/use-chat";
 import {
@@ -14,11 +14,14 @@ import { Document } from "@/lib/chat-api";
 import { useAuth } from "@/hooks/use-auth";
 import { chatAPI } from "@/lib/chat-api";
 import { VoiceChat } from "./VoiceChat";
+import { DeepResearchModal, ResearchConfig } from "./DeepResearchModal";
+import { useChatStore } from "@/store/chatStore";
 
 export const ChatInput = () => {
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [deepResearchMode, setDeepResearchMode] = useState(false);
+  const [isDeepResearchModalOpen, setIsDeepResearchModalOpen] = useState(false);
   const [attachedDocuments, setAttachedDocuments] = useState<Document[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
@@ -26,6 +29,7 @@ export const ChatInput = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { sendMessage, isStreaming, stopStreaming, currentChat, messages } = useChat();
+  const { sendDeepResearch } = useChatStore();
   const { token } = useAuth();
   const [isVoiceChatOpen, setIsVoiceChatOpen] = useState(false);
 
@@ -154,6 +158,14 @@ export const ChatInput = () => {
     }
   };
 
+  const handleStartDeepResearch = async (config: ResearchConfig) => {
+    try {
+      await sendDeepResearch(config.topic, config.depth, config.iterations);
+    } catch (error) {
+      console.error('Deep Research failed:', error);
+    }
+  };
+
   // Load documents when chat changes
   useEffect(() => {
     if (currentChat && token) {
@@ -211,20 +223,20 @@ export const ChatInput = () => {
 
           {/* Right Actions */}
           <div className="flex items-center gap-1">
-            {/* Deep Research Toggle */}
+            {/* Deep Research Button */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => setDeepResearchMode(!deepResearchMode)}
-                  className={`h-10 w-10 rounded-full transition-colors ${deepResearchMode ? "text-blue-500 bg-blue-500/10" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
-                    }`}
+                  onClick={() => setIsDeepResearchModalOpen(true)}
+                  disabled={isStreaming}
+                  className="h-10 w-10 rounded-full text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                 >
-                  <Zap className="w-5 h-5" />
+                  <Brain className="w-5 h-5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>Deep Research Mode</TooltipContent>
+              <TooltipContent>Deep Research</TooltipContent>
             </Tooltip>
 
             {/* Voice Button */}
@@ -267,6 +279,12 @@ export const ChatInput = () => {
         onTranscript={handleVoiceTranscript}
         isStreaming={isStreaming}
         lastMessage={lastMessageContent}
+      />
+
+      <DeepResearchModal
+        isOpen={isDeepResearchModalOpen}
+        onClose={() => setIsDeepResearchModalOpen(false)}
+        onStartResearch={handleStartDeepResearch}
       />
     </div>
   );

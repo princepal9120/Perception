@@ -1,20 +1,20 @@
 import { Button } from "@/components/ui/button";
-import { Menu, Settings, User, FileText } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Menu,GitBranch } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface ChatHeaderProps {
   onToggleSidebar?: () => void;
   onToggleDocumentManager?: () => void;
+  onOpenTreeView?: () => void;
 }
 
-export const ChatHeader = ({ onToggleSidebar, onToggleDocumentManager }: ChatHeaderProps) => {
+export const ChatHeader = ({ onToggleSidebar, onToggleDocumentManager, onOpenTreeView }: ChatHeaderProps) => {
   const navigate = useNavigate();
 
   return (
@@ -36,38 +36,28 @@ export const ChatHeader = ({ onToggleSidebar, onToggleDocumentManager }: ChatHea
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2">
-        {onToggleDocumentManager && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 sm:h-10 sm:w-10"
-            onClick={onToggleDocumentManager}
-          >
-            <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
-          </Button>
+    
+
+        {onOpenTreeView && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 sm:h-10 sm:w-10"
+                onClick={onOpenTreeView}
+              >
+                <GitBranch className="w-4 h-4 sm:w-5 sm:h-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Conversation Tree</TooltipContent>
+          </Tooltip>
         )}
 
         <ThemeToggle />
 
-        <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
-          <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
-        </Button>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10">
-              <User className="w-4 h-4 sm:w-5 sm:h-5" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => navigate("/")}>
-              Home
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/auth/login")}>
-              Sign Out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+       
+  
       </div>
     </header>
   );

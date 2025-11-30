@@ -8,8 +8,8 @@ from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from app.db.session import get_db
-from app.core.security import get_current_user
-from app.models.user import User
+from app.core.dependencies import get_current_user
+from app.models.tables import User
 from app.agents.deep_research_graph import DeepResearchGraph
 from langchain_groq import ChatGroq
 import json
