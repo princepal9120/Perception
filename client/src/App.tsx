@@ -15,6 +15,7 @@ import NotFound from "./pages/NotFound";
 import LoginPage from "@/pages/LoginPage";
 import SignupPage from "@/pages/SignupPage";
 import DashboardPage from "@/pages/DashboardPage";
+import DeepResearchPage from "@/pages/DeepResearchPage";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,16 @@ const AnimatedRoutes = () => {
           element={
             <ProtectedRoute>
               <DashboardPage />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Protected deep research route */}
+        <Route
+          path="/deep-research"
+          element={
+            <ProtectedRoute>
+              <DeepResearchPage />
             </ProtectedRoute>
           }
         />

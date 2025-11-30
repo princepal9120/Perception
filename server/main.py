@@ -32,6 +32,8 @@ from app.routes.auth_routes import router as auth_router
 from app.routes.chat_routes import router as chat_router, set_llm_client
 from app.routes.document_routes import router as document_router
 from app.routes.voice_routes import router as voice_router
+from app.routes.tree_routes import router as tree_router
+from app.routes.deep_research_routes import router as deep_research_router
 from app.db.session import create_tables, check_database_connection, close_database_connection
 from app.core.config import settings
 from app.services.redis_utils import redis_client
@@ -378,6 +380,8 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(document_router, prefix="/api/v1")
 app.include_router(voice_router, prefix="/api/v1/voice", tags=["Voice"])
+app.include_router(tree_router)
+app.include_router(deep_research_router)
 
 # Custom validation error handler
 @app.exception_handler(RequestValidationError)

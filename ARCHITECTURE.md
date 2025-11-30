@@ -145,7 +145,93 @@ sequenceDiagram
 
 ---
 
-## 🗄️ Database Schema
+## 🌳 Conversation Tree Architecture
+
+The **Branch-Your-LLM** system enables non-linear conversations using a tree data structure.
+
+### Data Model
+- **ConversationNode**: Represents a single message exchange (User + AI).
+  - `parent_id`: Links to previous node.
+  - `branch_name`: Identifies the branch (e.g., "Main", "Main.2").
+  - `depth`: Distance from root.
+- **ConversationTree**: Metadata for the entire chat.
+  - `active_node_id`: Tracks the user's current position in the tree.
+- **NodeRelationship**: Denormalized table for efficient traversal.
+
+### Logic Flow
+1.  **Message Sending**:
+    -   User sends message from `active_node`.
+    -   System creates new `ConversationNode` as child.
+    -   **Lineage Construction**: System walks up the tree from the new node to root to build the conversation history context.
+    -   **LangGraph**: Receives the linear history and generates response.
+2.  **Branching**:
+    -   **Fork**: User creates a sibling node at any point.
+    -   **Regenerate**: System creates a sibling AI node.
+3.  **Visualization**:
+    -   Frontend fetches the full tree structure.
+    -   **ReactFlow** renders the graph.
+    -   User clicks nodes to change `active_node_id`.
+
+### Database Schema (Tree)
+```sql
+CREATE TABLE conversation_nodes (
+    id VARCHAR(36) PRIMARY KEY,
+    parent_id VARCHAR(36) REFERENCES conversation_nodes,
+    user_message TEXT,
+    ai_message TEXT,
+    branch_name VARCHAR(100),
+    depth INTEGER
+);
+```
+
+## � Deep Research Architecture
+
+Deep Research Mode performs iterative, evidence-backed research using a specialized LangGraph agent.
+
+### Core Components
+
+1.  **DeepResearchGraph**: A LangGraph-based agent that orchestrates the research process.
+    -   **Nodes**: `retriever`, `extract_claims`, `verify_claims`, `gap_analysis`, `synthesis`.
+    -   **Flow**: Iterative loop (Retrieve → Extract → Verify → Gap Analysis) → Final Synthesis.
+
+2.  **Research Chains**: Specialized LangChain chains for specific tasks.
+    -   `extraction_chain`: Extracts factual claims from documents.
+    -   `verification_chain`: Verifies claims against sources.
+    -   `gap_chain`: Identifies knowledge gaps.
+    -   `synthesis_chain`: Generates the final structured report.
+
+### Data Flow
+
+```mermaid
+graph TD
+    User[User Request] --> API[FastAPI Endpoint]
+    API -->|SSE Stream| Client[Frontend]
+    API --> Agent[DeepResearchGraph]
+    
+    subgraph Research Loop
+        Agent --> Retrieve[Tavily Search]
+        Retrieve --> Extract[Extract Claims]
+        Extract --> Verify[Verify Claims]
+        Verify --> Gap[Gap Analysis]
+        Gap -->|Next Iteration| Retrieve
+    end
+    
+    Gap -->|Complete| Synthesis[Final Report]
+    Synthesis -->|Stream| Client
+```
+
+### Output Structure
+The final report is a structured JSON object containing:
+-   Executive Summary
+-   Background
+-   Key Findings
+-   Technical Details
+-   Opportunities & Risks
+-   Applications
+-   References
+-   Research Log
+
+## �🗄️ Database Schema
 
 ### Users
 - `id`: PK

@@ -72,6 +72,30 @@ NEXT_PUBLIC_AUTH_URL=http://localhost:8000/api/v1/auth
 
 ---
 
+## 🌳 Branch-Your-LLM Setup
+
+To enable the conversation tree features:
+
+### 1. Backend Migration
+Run the migration script to create the necessary tables:
+```bash
+cd server
+python migrate_tree_tables.py
+```
+
+### 2. Frontend Dependencies
+Install ReactFlow for the tree visualization:
+```bash
+cd client
+npm install reactflow
+```
+
+### 3. Usage
+The feature is automatically enabled.
+-   **Initialize**: Opening a chat initializes the tree.
+-   **Visualize**: Use the "Tree View" tab in the chat interface.
+-   **Branch**: Click the "Fork" button on any message node.
+
 ## 🎙️ Voice Mode Setup
 
 To enable the voice interaction feature:
@@ -92,6 +116,38 @@ To enable the voice interaction feature:
     -   Speak to the agent!
 
 ---
+
+---
+
+## 🔬 Deep Research Setup
+
+Deep Research Mode is pre-configured but requires specific API keys.
+
+### 1. Prerequisites
+Ensure these keys are in your `server/.env`:
+```env
+GROQ_API_KEY=...    # Required for LLM reasoning
+TAVILY_API_KEY=...  # Required for web search
+```
+
+### 2. Usage
+-   **Frontend**: Navigate to `/deep-research` (e.g., `http://localhost:5173/deep-research`).
+-   **Configuration**:
+    -   **Topic**: Enter your research question.
+    -   **Depth** (1-5): Controls analysis detail (1=Overview, 5=Deep Dive).
+    -   **Iterations** (1-10): Controls thoroughness (more iterations = more evidence).
+
+### 3. API Usage
+```bash
+curl -X POST http://localhost:8000/api/v1/deep-research/stream \
+  -H "Authorization: Bearer TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "topic": "Quantum Computing",
+    "depth": 3,
+    "iterations": 3
+  }'
+```
 
 ## 🧪 Testing & Verification
 
