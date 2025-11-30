@@ -361,7 +361,7 @@ app.add_middleware(
     secret_key=settings.SESSION_SECRET_KEY,
     max_age=3600,  # 1 hour session timeout
     same_site="lax",
-    https_only=False  # Set to True in production with HTTPS
+    https_only=not settings.DEBUG  # Secure cookies in production
 )
 
 # Add CORS Middleware

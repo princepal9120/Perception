@@ -33,7 +33,7 @@ export const ChatMessages = () => {
     (!lastMessage || lastMessage.role !== "assistant");
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6">
+    <div className="w-full max-w-3xl mx-auto px-4 py-6 space-y-6">
       {/* Welcome screen when no messages */}
       {messages.length === 0 && !isStreaming ? (
         <WelcomeScreen onSuggestedPrompt={handleSuggestedPrompt} />
@@ -43,74 +43,74 @@ export const ChatMessages = () => {
           {messages.map((message, index) => (
             <motion.div
               key={message.id}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: index * 0.05 }}
-              className={`flex gap-2 sm:gap-3 md:gap-4 ${message.role === "user" ? "flex-row-reverse" : ""
+              transition={{ duration: 0.3 }}
+              className={`group w-full text-foreground border-b border-black/5 dark:border-white/5 pb-6 last:border-0 ${message.role === "assistant" ? "bg-transparent" : "bg-transparent"
                 }`}
             >
-              {/* Avatar */}
-              <div
-                className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${message.role === "assistant" ? "gradient-primary" : "bg-muted"
-                  }`}
-              >
-                {message.role === "assistant" ? (
-                  <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-                ) : (
-                  <User className="w-4 h-4 sm:w-5 sm:h-5 text-foreground" />
-                )}
-              </div>
+              <div className="flex gap-4 md:gap-6 m-auto">
+                {/* Avatar */}
+                <div className="flex-shrink-0 flex flex-col relative items-end">
+                  <div className={`w-8 h-8 rounded-sm flex items-center justify-center ${message.role === "assistant"
+                      ? "bg-green-500"
+                      : "bg-gray-500"
+                    }`}>
+                    {message.role === "assistant" ? (
+                      <Bot className="w-5 h-5 text-white" />
+                    ) : (
+                      <User className="w-5 h-5 text-white" />
+                    )}
+                  </div>
+                </div>
 
-              {/* Message Content */}
-              <div
-                className={`flex-1 max-w-full sm:max-w-[85%] md:max-w-2xl ${message.role === "user" ? "flex justify-end" : ""
-                  }`}
-              >
-                <div
-                  className={`inline-block p-3 sm:p-4 rounded-xl sm:rounded-2xl ${message.role === "assistant"
-                    ? "bg-card border border-border shadow-sm dark:shadow-none text-left w-full"
-                    : "bg-primary text-primary-foreground"
-                    }`}
-                >
-                  {message.role === "assistant" ? (
-                    <MarkdownMessage content={message.content} />
-                  ) : (
-                    <p className="text-sm sm:text-base leading-relaxed whitespace-pre-wrap break-words">
-                      {message.content}
-                    </p>
-                  )}
+                {/* Message Content */}
+                <div className="relative flex-1 overflow-hidden">
+                  <div className="font-semibold text-sm mb-1 opacity-90">
+                    {message.role === "assistant" ? "Perception" : "You"}
+                  </div>
+                  <div className="prose prose-slate dark:prose-invert max-w-none leading-7">
+                    {message.role === "assistant" ? (
+                      <MarkdownMessage content={message.content} />
+                    ) : (
+                      <p className="whitespace-pre-wrap">{message.content}</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>
           ))}
 
-          {/* Streaming message (only shown when not yet finalized) */}
-
+          {/* Streaming message */}
           {shouldRenderStreaming && (
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4 }}
-              className="flex gap-2 sm:gap-3 md:gap-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="w-full text-foreground pb-6"
             >
-              <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full gradient-primary flex items-center justify-center flex-shrink-0">
-                <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
-              </div>
+              <div className="flex gap-4 md:gap-6 m-auto">
+                <div className="flex-shrink-0 flex flex-col relative items-end">
+                  <div className="w-8 h-8 rounded-sm bg-green-500 flex items-center justify-center">
+                    <Bot className="w-5 h-5 text-white" />
+                  </div>
+                </div>
 
-              <div className="flex-1 max-w-full sm:max-w-[85%] md:max-w-2xl">
-                <div className="inline-block p-3 sm:p-4 rounded-xl sm:rounded-2xl bg-card border border-border shadow-sm dark:shadow-none w-full">
-                  <MarkdownMessage content={streamingContent} isStreaming={true} />
+                <div className="relative flex-1 overflow-hidden">
+                  <div className="font-semibold text-sm mb-1 opacity-90">Perception</div>
+                  <div className="prose prose-slate dark:prose-invert max-w-none leading-7">
+                    <MarkdownMessage content={streamingContent} isStreaming={true} />
+                  </div>
                 </div>
               </div>
             </motion.div>
           )}
 
-          {/* Typing indicator (only when stream starting, no message yet) */}
+          {/* Typing indicator */}
           {isStreaming && !streamingContent && <TypingIndicator />}
         </>
       )}
 
-      <div ref={messagesEndRef} />
+      <div ref={messagesEndRef} className="h-4" />
     </div>
   );
 };

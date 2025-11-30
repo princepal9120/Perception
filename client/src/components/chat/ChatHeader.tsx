@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Menu, Settings, User } from "lucide-react";
+import { Menu, Settings, User, FileText } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,9 +11,10 @@ import { ThemeToggle } from "@/components/theme-toggle";
 
 interface ChatHeaderProps {
   onToggleSidebar?: () => void;
+  onToggleDocumentManager?: () => void;
 }
 
-export const ChatHeader = ({ onToggleSidebar }: ChatHeaderProps) => {
+export const ChatHeader = ({ onToggleSidebar, onToggleDocumentManager }: ChatHeaderProps) => {
   const navigate = useNavigate();
 
   return (
@@ -27,14 +28,25 @@ export const ChatHeader = ({ onToggleSidebar }: ChatHeaderProps) => {
         >
           <Menu className="w-4 h-4 sm:w-5 sm:h-5" />
         </Button>
-        <div onClick={()=>window.location.href = "/"}>
-           <h1 className="text-base sm:text-xl font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Perception
-        </h1>
+        <div onClick={() => window.location.href = "/"}>
+          <h1 className="text-base sm:text-xl font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            Perception
+          </h1>
         </div>
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2">
+        {onToggleDocumentManager && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 sm:h-10 sm:w-10"
+            onClick={onToggleDocumentManager}
+          >
+            <FileText className="w-4 h-4 sm:w-5 sm:h-5" />
+          </Button>
+        )}
+
         <ThemeToggle />
 
         <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10">

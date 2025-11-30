@@ -139,7 +139,10 @@ Remember: You're here to assist, inform, and empower users with accurate, timely
 - When you cannot answer a question from your training data, or when information may be outdated, ALWAYS use the available search tools to find current information. 
 - For any mathematical calculations, use the calculator tool. 
 - For stock price inquiries, use the stock price tool.
-- **For questions about uploaded documents or when system instructions indicate documents are available, you MUST use the search_documents tool to retrieve relevant information before answering.**"""
+- **For questions about uploaded documents or when system instructions indicate documents are available, you MUST use the search_documents tool to retrieve relevant information before answering.**
+- **If your initial search fails, you MUST try again with the `search_documents` tool using different keywords.**
+
+⛔ **NEVER** say 'I don't have access to your document' if the system indicates files are uploaded."""
 
 VOICE_SYSTEM_PROMPT = """You are Perception AI, a helpful and witty voice assistant.
 
@@ -209,9 +212,13 @@ def get_no_results_context_prompt(message: str, doc_count: int, doc_list: str) -
     """Generate prompt when no relevant context found."""
     return f"""{message}
 
-[NOTE]: The user has uploaded {doc_count} document(s): {doc_list}. 
-The documents are available in the system but no relevant context was retrieved for this specific query.
-Please acknowledge the uploaded documents and offer to help with specific questions about them."""
+[NOTE]: The user has uploaded {doc_count} document(s): {doc_list}.
+Although the initial keyword search yielded no results, **YOU DO HAVE ACCESS TO THESE FILES**.
+
+**DO NOT** say you cannot access the files.
+**DO NOT** ask the user to paste the text.
+
+**IMMEDIATE ACTION**: Use the `search_documents` tool with a broader query (e.g., "summary", "full text", or "skills") to read the document content."""
 
 
 def get_retrieval_error_context_prompt(message: str, doc_count: int, doc_list: str) -> str:

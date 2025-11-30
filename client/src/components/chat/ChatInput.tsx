@@ -162,174 +162,104 @@ export const ChatInput = () => {
   }, [currentChat, token]);
 
   return (
-    <div className="border-t border-border bg-card/80 backdrop-blur-sm p-3 sm:p-4 sticky bottom-0">
-      <div className="w-full max-w-5xl mx-auto space-y-2">
-        {/* Hidden File Input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept=".pdf,.docx,.doc,.txt,.md"
-          onChange={handleFileSelect}
-          className="hidden"
-          disabled={isStreaming}
-        />
+    <div className="w-full bg-gradient-to-t from-background via-background to-transparent pb-6 pt-10 px-4 fixed bottom-0 md:relative md:bottom-auto z-20">
+      <div className="max-w-3xl mx-auto">
+        {/* Document Attachments */}
+        <div className="mb-2">
+          <DocumentAttachments
+            documents={attachedDocuments}
+            onRemove={handleDocumentRemove}
+            isUploading={isUploading}
+            uploadProgress={uploadProgress}
+            disabled={isStreaming}
+          />
+        </div>
 
-        {/* Document Attachments - ChatGPT Style */}
-        <DocumentAttachments
-          documents={attachedDocuments}
-          onRemove={handleDocumentRemove}
-          isUploading={isUploading}
-          uploadProgress={uploadProgress}
-          disabled={isStreaming}
-        />
+        <div className="relative flex items-end w-full p-3 bg-[#f4f4f4] dark:bg-[#212121] rounded-3xl border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 shadow-sm transition-all">
+          {/* Hidden File Input */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept=".pdf,.docx,.doc,.txt,.md"
+            onChange={handleFileSelect}
+            className="hidden"
+            disabled={isStreaming}
+          />
 
-        {/* Deep Research Mode Toggle */}
-        {!isStreaming && (
-          <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: "auto" }}
-            exit={{ opacity: 0, height: 0 }}
-            className="flex items-center justify-between"
+          {/* Attachment Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => fileInputRef.current?.click()}
+            className="h-10 w-10 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full"
+            disabled={isStreaming}
           >
+            <Paperclip className="w-5 h-5" />
+          </Button>
+
+          {/* Text Input */}
+          <Textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Message Perception..."
+            disabled={isStreaming}
+            className="flex-1 min-h-[44px] max-h-[200px] bg-transparent border-0 focus-visible:ring-0 resize-none py-3 px-2 text-base"
+            rows={1}
+          />
+
+          {/* Right Actions */}
+          <div className="flex items-center gap-1">
+            {/* Deep Research Toggle */}
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
-                  variant={deepResearchMode ? "default" : "outline"}
-                  size="sm"
+                  variant="ghost"
+                  size="icon"
                   onClick={() => setDeepResearchMode(!deepResearchMode)}
-                  className={`gap-2 h-8 text-xs transition-all ${deepResearchMode
-                    ? "gradient-primary shadow-glow text-white"
-                    : "hover:bg-muted"
+                  className={`h-10 w-10 rounded-full transition-colors ${deepResearchMode ? "text-blue-500 bg-blue-500/10" : "text-gray-500 hover:text-gray-700 dark:text-gray-400"
                     }`}
                 >
-                  <Zap className={`w-3.5 h-3.5 ${deepResearchMode ? "fill-white" : ""}`} />
-                  <span>Deep Research</span>
-                  {deepResearchMode && (
-                    <span className="px-1.5 py-0.5 bg-white/20 rounded text-[10px] font-medium">ON</span>
-                  )}
+                  <Zap className="w-5 h-5" />
                 </Button>
               </TooltipTrigger>
-              <TooltipContent>
-                <p className="text-xs">Enable web search and multi-source analysis</p>
-              </TooltipContent>
+              <TooltipContent>Deep Research Mode</TooltipContent>
             </Tooltip>
 
-            {deepResearchMode && (
-              <motion.p
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="text-xs text-muted-foreground hidden sm:block"
-              >
-                AI will search the web and analyze multiple sources
-              </motion.p>
-            )}
-          </motion.div>
-        )}
-
-        <div
-          className={`flex gap-1.5 sm:gap-2 items-end transition-all ${isDragOver ? "ring-2 ring-primary ring-offset-2 rounded-xl" : ""
-            }`}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          {/* Upload Button - Only show when not streaming and authenticated */}
-          {!isStreaming && token && (
-            <motion.div
-              whileTap={{ scale: 0.95 }}
-              className="hidden sm:flex flex-shrink-0"
+            {/* Voice Button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsVoiceChatOpen(true)}
+              className="h-10 w-10 text-gray-500 hover:text-gray-700 dark:text-gray-400 rounded-full"
             >
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => fileInputRef.current?.click()}
-                className="hover:bg-accent/10 h-9 w-9"
-              >
-                <Paperclip className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
-            </motion.div>
-          )}
+              <Mic className="w-5 h-5" />
+            </Button>
 
-          {/* Message Input */}
-          <div className="flex-1 relative">
-            <Textarea
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={
-                isDragOver
-                  ? "Drop files here..."
-                  : deepResearchMode
-                    ? "Ask a question to research..."
-                    : "Ask anything..."
-              }
-              disabled={isStreaming}
-              className={`min-h-[44px] sm:min-h-[52px] max-h-[120px] sm:max-h-[200px] resize-none rounded-xl sm:rounded-2xl text-sm sm:text-base py-2.5 sm:py-3 px-3 sm:px-4 pr-10 sm:pr-12 bg-background transition-all ${deepResearchMode ? "border-primary/50 focus-visible:ring-primary/50" : ""
+            {/* Send Button */}
+            <Button
+              onClick={isStreaming ? handleStopGenerating : handleSend}
+              disabled={!message.trim() && !isStreaming}
+              className={`h-10 w-10 rounded-full transition-all ${message.trim() || isStreaming
+                ? "bg-black dark:bg-white text-white dark:text-black"
+                : "bg-gray-200 dark:bg-gray-700 text-gray-400"
                 }`}
-            />
-            {deepResearchMode && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="absolute top-2 right-2 sm:right-3"
-              >
-                <div className="flex items-center gap-1 px-2 py-0.5 bg-primary/10 border border-primary/20 rounded-full">
-                  <Zap className="w-2.5 h-2.5 text-primary fill-primary" />
-                  <span className="text-[10px] font-medium text-primary">Research Mode</span>
-                </div>
-              </motion.div>
-            )}
+              size="icon"
+            >
+              {isStreaming ? (
+                <Square className="w-4 h-4 fill-current" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </Button>
           </div>
-
-          {/* Voice Button - Hidden on mobile when streaming */}
-          {!isStreaming && (
-            <motion.div
-              whileTap={{ scale: 0.95 }}
-              className="hidden sm:flex flex-shrink-0"
-            >
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsVoiceChatOpen(true)}
-                className={`hover:bg-accent/10 h-9 w-9 ${isVoiceChatOpen ? "text-primary bg-primary/10" : ""}`}
-              >
-                <Mic className="w-4 h-4 sm:w-5 sm:h-5" />
-              </Button>
-            </motion.div>
-          )}
-
-          {/* Send/Stop Button */}
-          {isStreaming ? (
-            <Button
-              onClick={handleStopGenerating}
-              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground flex-shrink-0 h-9 w-9 sm:h-10 sm:w-10"
-              size="icon"
-            >
-              <Square className="w-4 h-4 sm:w-5 sm:h-5 fill-current" />
-            </Button>
-          ) : (
-            <Button
-              onClick={handleSend}
-              disabled={!message.trim()}
-              className="gradient-primary shadow-glow flex-shrink-0 h-9 w-9 sm:h-10 sm:w-10 disabled:opacity-50"
-              size="icon"
-            >
-              <Send className="w-4 h-4 sm:w-5 sm:h-5" />
-            </Button>
-          )}
         </div>
 
-        <p className="text-[10px] sm:text-xs text-muted-foreground text-center px-2">
-          {isStreaming
-            ? "⚡ Generating response..."
-            : deepResearchMode
-              ? "🌐 Deep research mode active • Web search enabled • Shift + Enter for new line"
-              : "💬 Quick answer mode • Shift + Enter for new line"
-          }
+        <p className="text-xs text-center text-gray-400 mt-2">
+          Perception can make mistakes. Consider checking important information.
         </p>
       </div>
-
 
       <VoiceChat
         isOpen={isVoiceChatOpen}
@@ -338,6 +268,6 @@ export const ChatInput = () => {
         isStreaming={isStreaming}
         lastMessage={lastMessageContent}
       />
-    </div >
+    </div>
   );
 };

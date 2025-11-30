@@ -32,14 +32,17 @@ const Chat = () => {
       />
 
       {/* Main Chat Area */}
-      <div className="flex-1 flex flex-col min-w-0">
-        <ChatHeader 
+      <div className="flex-1 flex flex-col min-w-0 relative bg-white dark:bg-[#212121]">
+        <ChatHeader
           onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
           onToggleDocumentManager={() => setIsDocumentManagerOpen(true)}
         />
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden">
-          <ChatMessages />
+        <div className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">
+          <div className="min-h-full flex flex-col">
+            <ChatMessages />
+            <div className="h-32 md:h-48 flex-shrink-0" /> {/* Spacer for floating input */}
+          </div>
         </div>
 
         <ChatInput />

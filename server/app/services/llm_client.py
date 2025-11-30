@@ -127,6 +127,14 @@ class LLMClient:
                     docs = await retriever.ainvoke(message)
                     logger.info(f"✅ Retrieved {len(docs)} relevant chunks from documents")
                     
+                    # FALLBACK LOGIC: If no results found, try a broader query
+                    if not docs or len(docs) == 0:
+                        logger.warning("⚠️ Initial search returned 0 results. Attempting fallback with broad query...")
+                        fallback_query = "summary introduction abstract main points"
+                        docs = await retriever.ainvoke(fallback_query)
+                        if docs:
+                            logger.info(f"✅ Fallback retrieval found {len(docs)} chunks")
+                    
                     # Format retrieved context
                     if docs and len(docs) > 0:
                         context_parts = []

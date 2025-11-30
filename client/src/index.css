@@ -2,105 +2,116 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
+/* Definition of the design system. All colors, gradients, fonts, etc should be defined here.
 All colors MUST be HSL.
 */
 
 @layer base {
   :root {
-    /* Perception Design System - Calm Professional Palette */
-    --background: 210 20% 98%;
+    /* Perception Design System - Trust & Reliability (Light Mode) */
+    --background: 210 40% 98%;
+    /* #F8FAFC Soft Gray */
     --foreground: 222 47% 11%;
+    /* #0F172A Dark Text */
 
     --card: 0 0% 100%;
+    /* #FFFFFF White Cards */
     --card-foreground: 222 47% 11%;
 
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
 
-    --primary: 217 91% 60%;
+    /* Deep Blue for Buttons/CTAs (#1D4ED8) */
+    --primary: 221 83% 48%;
     --primary-foreground: 0 0% 100%;
 
-    --primary-glow: 199 89% 48%;
+    --primary-glow: 221 83% 53%;
+    /* Primary Blue #2563EB for glow */
 
-    --secondary: 215 16% 47%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222 47% 11%;
 
-    --muted: 214 32% 91%;
-    --muted-foreground: 215 16% 47%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
 
-    --accent: 199 89% 48%;
+    /* Primary Blue #2563EB as Accent */
+    --accent: 221 83% 53%;
     --accent-foreground: 0 0% 100%;
 
-    --destructive: 0 84% 60%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
 
-    --border: 214 32% 91%;
-    --input: 214 32% 91%;
-    --ring: 217 91% 60%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 221 83% 48%;
 
     --radius: 0.75rem;
 
-    /* Custom gradient stops */
-    --gradient-primary-start: 217 91% 60%;
-    --gradient-primary-end: 199 89% 48%;
+    /* Custom gradient stops - Blue to Deep Blue */
+    --gradient-primary-start: 221 83% 53%;
+    --gradient-primary-end: 221 83% 48%;
 
-    /* Shadows with accent glow */
-    --shadow-glow: 0 10px 40px -10px hsl(217 91% 60% / 0.3);
-    --shadow-elegant: 0 4px 16px -4px hsl(222 47% 11% / 0.08);
+    /* Shadows with blue glow */
+    --shadow-glow: 0 0 40px -10px hsl(221 83% 53% / 0.2);
+    --shadow-elegant: 0 10px 30px -10px hsl(222 47% 11% / 0.05);
 
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 222 47% 11%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-primary: 221 83% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 210 20% 98%;
+    --sidebar-accent: 210 40% 96.1%;
     --sidebar-accent-foreground: 222 47% 11%;
-    --sidebar-border: 214 32% 91%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 221 83% 48%;
   }
 
   .dark {
+    /* Perception Design System - Deep Space (Dark Mode) */
     --background: 222 47% 11%;
-    --foreground: 210 20% 98%;
+    /* Deepest Navy */
+    --foreground: 210 40% 98%;
 
-    --card: 222 47% 14%;
-    --card-foreground: 210 20% 98%;
+    --card: 222 47% 13%;
+    /* Slightly lighter navy */
+    --card-foreground: 210 40% 98%;
 
-    --popover: 222 47% 14%;
-    --popover-foreground: 210 20% 98%;
+    --popover: 222 47% 13%;
+    --popover-foreground: 210 40% 98%;
 
     --primary: 217 91% 60%;
-    --primary-foreground: 0 0% 100%;
+    /* Bright Blue */
+    --primary-foreground: 222 47% 11%;
 
-    --primary-glow: 199 89% 48%;
+    --primary-glow: 217 91% 60%;
 
-    --secondary: 215 16% 47%;
-    --secondary-foreground: 0 0% 100%;
+    --secondary: 217 33% 17%;
+    --secondary-foreground: 210 40% 98%;
 
     --muted: 217 33% 17%;
     --muted-foreground: 215 20% 65%;
 
-    --accent: 199 89% 48%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 262 83% 65%;
+    /* Bright Violet */
+    --accent-foreground: 210 40% 98%;
 
-    --destructive: 0 62% 50%;
-    --destructive-foreground: 210 20% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
 
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 217 91% 60%;
+    --ring: 221 83% 53%;
 
-    --shadow-glow: 0 10px 40px -10px hsl(217 91% 60% / 0.4);
-    --shadow-elegant: 0 4px 16px -4px hsl(0 0% 0% / 0.3);
+    --shadow-glow: 0 0 50px -10px hsl(217 91% 60% / 0.3);
+    --shadow-elegant: 0 10px 30px -10px hsl(0 0% 0% / 0.5);
 
     --sidebar-background: 222 47% 11%;
-    --sidebar-foreground: 210 20% 98%;
-    --sidebar-primary: 217 91% 60%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-primary: 221 83% 53%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 217 33% 17%;
-    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-accent-foreground: 210 40% 98%;
     --sidebar-border: 217 33% 17%;
-    --sidebar-ring: 217 91% 60%;
+    --sidebar-ring: 221 83% 53%;
   }
 }
 
@@ -156,19 +167,15 @@ All colors MUST be HSL.
 
 @layer utilities {
   .gradient-primary {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--gradient-primary-start)),
-      hsl(var(--gradient-primary-end))
-    );
+    background: linear-gradient(135deg,
+        hsl(var(--gradient-primary-start)),
+        hsl(var(--gradient-primary-end)));
   }
 
   .gradient-shine {
-    background: linear-gradient(
-      135deg,
-      hsl(var(--gradient-primary-start)),
-      hsl(var(--gradient-primary-end))
-    );
+    background: linear-gradient(135deg,
+        hsl(var(--gradient-primary-start)),
+        hsl(var(--gradient-primary-end)));
     background-size: 200% 200%;
     animation: gradient-shift 8s ease infinite;
   }
@@ -182,10 +189,12 @@ All colors MUST be HSL.
   }
 
   @keyframes gradient-shift {
+
     0%,
     100% {
       background-position: 0% 50%;
     }
+
     50% {
       background-position: 100% 50%;
     }
@@ -195,6 +204,7 @@ All colors MUST be HSL.
     0% {
       transform: translateX(-100%);
     }
+
     100% {
       transform: translateX(100%);
     }
@@ -206,15 +216,49 @@ All colors MUST be HSL.
 
   /* Smooth cursor blink for streaming */
   @keyframes cursor-blink {
-    0%, 50% {
+
+    0%,
+    50% {
       opacity: 1;
     }
-    51%, 100% {
+
+    51%,
+    100% {
       opacity: 0;
     }
   }
 
   .animate-cursor {
     animation: cursor-blink 1s infinite;
+  }
+
+  .glass-panel {
+    @apply bg-card/30 backdrop-blur-xl border border-white/10 shadow-elegant;
+  }
+
+  /* Magnetic button effect */
+  .magnetic-button {
+    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* 3D Card Tilt */
+  .card-3d {
+    transform-style: preserve-3d;
+    transition: transform 0.3s ease;
+  }
+
+  .card-3d:hover {
+    transform: perspective(1000px) rotateX(2deg) rotateY(2deg);
+  }
+
+  /* Smooth scroll */
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Selection color */
+  ::selection {
+    background-color: hsl(var(--primary) / 0.2);
+    color: hsl(var(--foreground));
   }
 }
