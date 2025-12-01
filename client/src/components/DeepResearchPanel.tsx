@@ -12,11 +12,16 @@ import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Loader2, Search, CheckCircle2, AlertCircle, FileText, Brain } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { ResearchProgressTracker } from '@/components/ResearchProgressTracker';
 
 interface IterationUpdate {
-    type: 'iteration';
+    type: 'iteration' | 'progress';
     iteration: number;
-    notes: string;
+    notes?: string;
+    step?: 'searching' | 'extracting' | 'verifying' | 'analyzing' | 'synthesizing';
+    message?: string;
+    status?: 'in_progress' | 'completed' | 'error';
+    data?: Record<string, any>;
 }
 
 interface ResearchReport {
@@ -41,10 +46,13 @@ interface ResearchReport {
 }
 
 interface SSEEvent {
-    type: 'start' | 'iteration' | 'final' | 'complete' | 'error';
+    type: 'start' | 'iteration' | 'progress' | 'final' | 'complete' | 'error';
     message?: string;
     iteration?: number;
     notes?: string;
+    step?: 'searching' | 'extracting' | 'verifying' | 'analyzing' | 'synthesizing';
+    status?: 'in_progress' | 'completed' | 'error';
+    data?: Record<string, any>;
     report?: ResearchReport;
 }
 
@@ -161,6 +169,21 @@ export const DeepResearchPanel: React.FC = () => {
                                         title: 'Research Started',
                                         description: event.message,
                                     });
+                                    break;
+
+                                case 'progress':
+                                    // Add progress update to the list
+                                    setIterationUpdates(prev => [
+                                        ...prev,
+                                        {
+                                            type: 'progress',
+                                            iteration: event.iteration || 0,
+                                            step: event.step,
+                                            message: event.message || '',
+                                            status: event.status,
+                                            data: event.data
+                                        },
+                                    ]);
                                     break;
 
                                 case 'iteration':
@@ -339,46 +362,24 @@ export const DeepResearchPanel: React.FC = () => {
                 </CardContent>
             </Card>
 
-            {/* Progress Log */}
+            {/* Progress Tracker */}
             {(iterationUpdates.length > 0 || isResearching) && (
-                <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Loader2 className={`h-5 w-5 ${isResearching ? 'animate-spin' : ''}`} />
-                            Research Progress
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <ScrollArea className="h-64" ref={logScrollRef}>
-                            <div className="space-y-3">
-                                {iterationUpdates.map((update, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="flex items-start gap-3 p-3 rounded-lg bg-muted/50"
-                                    >
-                                        <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 flex-shrink-0" />
-                                        <div className="flex-1">
-                                            <div className="font-medium">
-                                                Iteration {update.iteration}
-                                            </div>
-                                            <div className="text-sm text-muted-foreground">
-                                                {update.notes}
-                                            </div>
-                                        </div>
-                                    </div>
-                                ))}
-                                {isResearching && iterationUpdates.length === 0 && (
-                                    <div className="flex items-center gap-3 p-3">
-                                        <Loader2 className="h-5 w-5 animate-spin" />
-                                        <span className="text-muted-foreground">
-                                            Initializing research...
-                                        </span>
-                                    </div>
-                                )}
-                            </div>
-                        </ScrollArea>
-                    </CardContent>
-                </Card>
+                <div>
+                    <div className="flex items-center gap-2 mb-4">
+                        <Brain className="h-5 w-5 text-primary" />
+                        <h2 className="text-xl font-semibold">Research Progress</h2>
+                        {isResearching && (
+                            <Badge variant="outline" className="ml-auto animate-pulse">
+                                <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                In Progress
+                            </Badge>
+                        )}
+                    </div>
+                    <ResearchProgressTracker
+                        updates={iterationUpdates}
+                        isResearching={isResearching}
+                    />
+                </div>
             )}
 
             {/* Error Display */}

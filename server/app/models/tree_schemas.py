@@ -86,6 +86,7 @@ class TreeNodeData(BaseModel):
     is_active: bool
     created_at: datetime
     children_count: int = 0
+    metadata: Optional[Dict[str, Any]] = None
 
 
 class ConversationTreeStructure(BaseModel):

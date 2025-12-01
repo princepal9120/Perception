@@ -15,9 +15,15 @@ import { useAuth } from "@/hooks/use-auth";
 import { chatAPI } from "@/lib/chat-api";
 import { VoiceChat } from "./VoiceChat";
 import { DeepResearchModal, ResearchConfig } from "./DeepResearchModal";
+import { useTreeStore } from "@/store/treeStore";
+import { treeApi } from "@/lib/tree-api";
 import { useChatStore } from "@/store/chatStore";
 
-export const ChatInput = () => {
+interface ChatInputProps {
+  isTreeViewOpen?: boolean;
+}
+
+export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) => {
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const [deepResearchMode, setDeepResearchMode] = useState(false);
@@ -33,6 +39,8 @@ export const ChatInput = () => {
   const { token } = useAuth();
   const [isVoiceChatOpen, setIsVoiceChatOpen] = useState(false);
 
+  const { activeNodeId, treeStructure, loadTree } = useTreeStore();
+
   // Get last message for voice synthesis
   const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
   const lastMessageContent = lastMessage?.role === 'assistant' ? lastMessage.content : undefined;
@@ -45,6 +53,50 @@ export const ChatInput = () => {
     if (message.trim() && !isStreaming) {
       const userMessage = message.trim();
       setMessage("");
+
+      // If in tree mode, use tree API
+      if (isTreeViewOpen && currentChat) {
+        try {
+          // Determine parent node
+          // If we have an active node, use it. Otherwise use root.
+          const parentId = activeNodeId || treeStructure?.tree_metadata.root_node_id;
+
+          if (!parentId) {
+            // Fallback to regular chat if no tree context
+            console.warn("No active node or root node found, falling back to regular chat");
+            await sendMessage(userMessage);
+            return;
+          }
+
+          // Send via tree store/API
+          // We need to implement sendMessage in treeStore or call API directly
+          // calling API directly for now to ensure it works
+
+          // We need to handle streaming here manually or update treeStore to handle it
+          // For now, let's just send it and reload tree
+
+          // TODO: Implement proper streaming integration with Chat UI
+          // For now, we'll just fire and forget, then reload tree
+
+          const { treeApi } = await import('@/lib/tree-api');
+          await treeApi.sendMessage(currentChat.id, {
+            message: userMessage,
+            node_id: parentId,
+            regenerate: false
+          }, (event) => {
+            console.log("Tree event:", event);
+            // TODO: Update UI with streaming content
+          });
+
+          // Reload tree to show new node
+          await loadTree(currentChat.id);
+
+        } catch (error) {
+          console.error("Failed to send tree message:", error);
+          // Fallback?
+        }
+        return;
+      }
 
       // Add context about deep research mode to guide the AI
       const enhancedMessage = deepResearchMode

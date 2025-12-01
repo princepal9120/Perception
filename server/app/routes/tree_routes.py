@@ -34,7 +34,7 @@ import json
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/tree", tags=["Conversation Tree"])
+router = APIRouter(prefix="/tree", tags=["Conversation Tree"])
 
 
 # ==================== Tree Management ====================
@@ -429,6 +429,35 @@ async def compare_nodes(
 
 # ==================== Migration ====================
 
+@router.delete("/chats/{chat_id}")
+async def delete_tree(
+    chat_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    """
+    Delete conversation tree for a chat.
+    Useful for forcing a fresh migration.
+    """
+    tree_service = TreeService(db, current_user)
+    
+    # Delete tree (this will cascade delete all nodes)
+    from app.models.conversation_tree import ConversationTree
+    from sqlalchemy import delete
+    
+    # Verify access
+    await tree_service._verify_chat_access(chat_id)
+    
+    # Delete tree
+    await db.execute(
+        delete(ConversationTree).where(ConversationTree.chat_id == chat_id)
+    )
+    await db.commit()
+    
+    logger.info(f"Deleted tree for chat {chat_id}")
+    return {"message": "Tree deleted successfully"}
+
+
 @router.post("/migrate", response_model=MigrateToTreeResponse)
 async def migrate_chat_to_tree(
     request: MigrateToTreeRequest,
@@ -438,8 +467,27 @@ async def migrate_chat_to_tree(
     """
     Migrate existing linear chat to tree structure.
     Converts all messages to nodes in a linear tree.
+    If tree already exists, deletes it first.
     """
     tree_service = TreeService(db, current_user)
+    
+    # Check if tree already exists
+    from app.models.conversation_tree import ConversationTree
+    from sqlalchemy import delete, select
+    
+    result = await db.execute(
+        select(ConversationTree).where(ConversationTree.chat_id == request.chat_id)
+    )
+    existing_tree = result.scalar_one_or_none()
+    
+    if existing_tree:
+        logger.info(f"Deleting existing tree for chat {request.chat_id} before migration")
+        await db.execute(
+            delete(ConversationTree).where(ConversationTree.chat_id == request.chat_id)
+        )
+        await db.commit()
+    
+    # Now migrate
     tree, nodes_created = await tree_service.migrate_linear_chat_to_tree(request.chat_id)
     
     tree_response = ConversationTreeResponse(

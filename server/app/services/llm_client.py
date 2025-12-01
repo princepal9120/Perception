@@ -189,15 +189,42 @@ class LLMClient:
                 # Handle tool output
                 elif event_type == "on_tool_end":
                     tool_output = event["data"]["output"]
-                    yield f'data: {{"type":"tool_output","output":{json.dumps(tool_output)}}}\n\n'
+                    tool_name = event.get("name", "unknown_tool")
+                    
+                    # Send tool completion event
+                    yield f'data: {{"type":"tool_output","output":{json.dumps(tool_output)},"tool_name":"{tool_name}"}}\n\n'
+                    
+                    # Extract URLs from search tool results
+                    if ("search" in tool_name.lower() or "tavily" in tool_name.lower()) and tool_output:
+                        urls = []
+                        try:
+                            # Tavily tool returns a list of dicts with 'url' keys
+                            if isinstance(tool_output, list):
+                                urls = [item.get("url", "") for item in tool_output if isinstance(item, dict) and "url" in item]
+                            elif isinstance(tool_output, dict):
+                                # Single result
+                                if "url" in tool_output:
+                                    urls = [tool_output["url"]]
+                                # Or results array
+                                elif "results" in tool_output:
+                                    results = tool_output["results"]
+                                    if isinstance(results, list):
+                                        urls = [item.get("url", "") for item in results if isinstance(item, dict) and "url" in item]
+                            
+                            # Filter out empty URLs and send
+                            urls = [url for url in urls if url]
+                            if urls:
+                                yield f'data: {{"type":"search_results","urls":{json.dumps(urls)}}}\n\n'
+                        except Exception as e:
+                            logger.error(f"Failed to extract URLs from tool output: {e}")
                 
-                # Handle tool start (for search notifications)
+                # Handle tool start (for search and other tool notifications)
                 elif event_type == "on_tool_start":
                     tool_name = event.get("name", "")
                     tool_input = event["data"].get("input", {})
                     
-                    # Notify client about search operations
-                    if "search" in tool_name.lower():
+                    # Notify client about tool execution
+                    if "search" in tool_name.lower() or "tavily" in tool_name.lower():
                         query = ""
                         if isinstance(tool_input, dict):
                             query = tool_input.get("query", "")
@@ -205,7 +232,13 @@ class LLMClient:
                             query = tool_input
                         
                         if query:
-                            yield f'data: {{"type":"search_start","query":"{query}"}}\n\n'
+                            # Escape query for JSON
+                            safe_query = query.replace('"', '\\"').replace("\\n", " ")
+                            yield f'data: {{"type":"search_start","query":"{safe_query}"}}\n\n'
+                    else:
+                        # Generic tool execution notification
+                        safe_tool_name = tool_name.replace('"', '\\"')
+                        yield f'data: {{"type":"tool_start","tool_name":"{safe_tool_name}"}}\n\n'
             
             # Send completion event
             yield f'data: {{"type":"end"}}\n\n'

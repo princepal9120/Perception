@@ -1,8 +1,4 @@
-/**
- * Tree visualization component using ReactFlow
- * Displays the conversation tree as an interactive graph
- */
-import React, { useCallback, useMemo, useEffect } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import ReactFlow, {
     Node,
     Edge,
@@ -12,124 +8,26 @@ import ReactFlow, {
     useNodesState,
     useEdgesState,
     MarkerType,
-    Position,
+    ConnectionLineType,
+    Panel,
 } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useTreeStore } from '../../store/treeStore';
-import type { TreeNodeData } from '../../types/tree';
+import useTreeLayout from '../../hooks/useTreeLayout';
+import UserNode from './nodes/UserNode';
+import AINode from './nodes/AINode';
+import ToolNode from './nodes/ToolNode';
+import { DeepResearchLoader } from './DeepResearchLoader';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
-import {
-    GitBranch,
-    MessageSquare,
-    Bot,
-    MoreVertical,
-    RefreshCw,
-    Copy,
-} from 'lucide-react';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '../ui/dropdown-menu';
+import { Layout, ZoomIn, ZoomOut, Maximize, Network } from 'lucide-react';
 
-// Custom node component
-const TreeNode = ({ data }: { data: any }) => {
-    const { node, isActive, hasChildren, onNodeClick, onFork, onRegenerate } = data;
-
-    return (
-        <div
-            className={`
-        relative px-4 py-3 rounded-lg border-2 min-w-[200px] max-w-[300px]
-        transition-all duration-200 cursor-pointer
-        ${isActive
-                    ? 'border-primary bg-primary/10 shadow-lg'
-                    : 'border-border bg-card hover:border-primary/50'
-                }
-      `}
-            onClick={() => onNodeClick(node.id)}
-        >
-            {/* Branch badge */}
-            {node.branch_name && (
-                <Badge
-                    variant="outline"
-                    className="absolute -top-2 -left-2 text-xs"
-                >
-                    <GitBranch className="w-3 h-3 mr-1" />
-                    {node.branch_name}
-                </Badge>
-            )}
-
-            {/* Node actions */}
-            <div className="absolute -top-2 -right-2">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button
-                            variant="outline"
-                            size="icon"
-                            className="h-6 w-6 rounded-full"
-                            onClick={(e) => e.stopPropagation()}
-                        >
-                            <MoreVertical className="h-3 w-3" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onFork(node.id)}>
-                            <Copy className="mr-2 h-4 w-4" />
-                            Fork Branch
-                        </DropdownMenuItem>
-                        {node.ai_message && (
-                            <DropdownMenuItem onClick={() => onRegenerate(node.id)}>
-                                <RefreshCw className="mr-2 h-4 w-4" />
-                                Regenerate
-                            </DropdownMenuItem>
-                        )}
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
-
-            {/* User message */}
-            {node.user_message && (
-                <div className="mb-2">
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                        <MessageSquare className="w-3 h-3" />
-                        <span>User</span>
-                    </div>
-                    <p className="text-sm line-clamp-2">{node.user_message}</p>
-                </div>
-            )}
-
-            {/* AI message */}
-            {node.ai_message && (
-                <div>
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground mb-1">
-                        <Bot className="w-3 h-3" />
-                        <span>AI</span>
-                    </div>
-                    <p className="text-sm line-clamp-2">{node.ai_message}</p>
-                </div>
-            )}
-
-            {/* Children indicator */}
-            {hasChildren && (
-                <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2">
-                    <Badge variant="secondary" className="text-xs px-2 py-0">
-                        {node.children_count}
-                    </Badge>
-                </div>
-            )}
-
-            {/* Depth indicator */}
-            <div className="absolute bottom-1 right-1 text-xs text-muted-foreground">
-                D{node.depth}
-            </div>
-        </div>
-    );
-};
+import { useChatStore } from '../../store/chatStore';
+import { treeApi } from '../../lib/tree-api';
 
 const nodeTypes = {
-    treeNode: TreeNode,
+    user: UserNode,
+    ai: AINode,
+    tool: ToolNode,
 };
 
 interface TreeVisualizationProps {
@@ -142,12 +40,13 @@ export const TreeVisualization: React.FC<TreeVisualizationProps> = ({ chatId }) 
         activeNodeId,
         loadTree,
         setActiveNode,
-        forkNode,
-        regenerateResponse,
+        isStreaming,
     } = useTreeStore();
+    const { setMessages } = useChatStore();
 
     const [nodes, setNodes, onNodesChange] = useNodesState([]);
     const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+    const { getLayoutedElements } = useTreeLayout();
 
     // Load tree on mount
     useEffect(() => {
@@ -155,143 +54,214 @@ export const TreeVisualization: React.FC<TreeVisualizationProps> = ({ chatId }) 
     }, [chatId, loadTree]);
 
     // Handle node click
-    const handleNodeClick = useCallback(
-        (nodeId: string) => {
-            setActiveNode(nodeId);
+    const onNodeClick = useCallback(
+        async (_: React.MouseEvent, node: Node) => {
+            // If it's a user or AI node, we can set it as active
+            // The ID format is likely `${dbNodeId}_user` or `${dbNodeId}_ai`
+            const dbNodeId = node.id.split('_')[0];
+
+            // 1. Set active node in tree store
+            await setActiveNode(dbNodeId);
+
+            // 2. Fetch lineage and update chat
+            try {
+                const lineage = await treeApi.getNodeLineage(dbNodeId);
+
+                // Convert lineage to chat messages
+                const messages = lineage.flatMap((node: any, index: number) => {
+                    const msgs = [];
+                    if (node.user_message) {
+                        msgs.push({
+                            id: index * 2, // Temporary ID
+                            role: 'user',
+                            content: node.user_message,
+                            created_at: node.created_at,
+                            metadata: { ...node.metadata, nodeId: node.id, parentId: node.parent_id, isUserNode: true }
+                        });
+                    }
+                    if (node.ai_message) {
+                        msgs.push({
+                            id: index * 2 + 1, // Temporary ID
+                            role: 'assistant',
+                            content: node.ai_message,
+                            created_at: node.created_at,
+                            metadata: { ...node.metadata, nodeId: node.id, parentId: node.parent_id, isUserNode: false }
+                        });
+                    }
+                    return msgs;
+                });
+
+                setMessages(messages as any);
+            } catch (error) {
+                console.error('Failed to load branch:', error);
+            }
         },
-        [setActiveNode]
+        [setActiveNode, setMessages]
     );
 
-    // Handle fork
-    const handleFork = useCallback(
-        async (nodeId: string) => {
-            await forkNode(nodeId);
-        },
-        [forkNode]
-    );
-
-    // Handle regenerate
-    const handleRegenerate = useCallback(
-        async (nodeId: string) => {
-            await regenerateResponse(nodeId);
-        },
-        [regenerateResponse]
-    );
-
-    // Convert tree structure to ReactFlow nodes and edges
+    // Transform tree structure to React Flow elements
     useEffect(() => {
         if (!treeStructure) return;
 
-        const { nodes: treeNodes, adjacency_list } = treeStructure;
-
-        // Calculate layout using a simple tree layout algorithm
-        const nodePositions = new Map<string, { x: number; y: number }>();
-        const levelNodes = new Map<number, TreeNodeData[]>();
-
-        // Group nodes by depth
-        treeNodes.forEach((node) => {
-            if (!levelNodes.has(node.depth)) {
-                levelNodes.set(node.depth, []);
-            }
-            levelNodes.get(node.depth)!.push(node);
-        });
-
-        // Position nodes
-        const horizontalSpacing = 350;
-        const verticalSpacing = 200;
-
-        levelNodes.forEach((nodesAtLevel, depth) => {
-            const totalWidth = (nodesAtLevel.length - 1) * horizontalSpacing;
-            const startX = -totalWidth / 2;
-
-            nodesAtLevel.forEach((node, index) => {
-                nodePositions.set(node.id, {
-                    x: startX + index * horizontalSpacing,
-                    y: depth * verticalSpacing,
-                });
-            });
-        });
-
-        // Create ReactFlow nodes
-        const flowNodes: Node[] = treeNodes.map((node) => {
-            const position = nodePositions.get(node.id) || { x: 0, y: 0 };
-            const hasChildren = (adjacency_list[node.id] || []).length > 0;
-
-            return {
-                id: node.id,
-                type: 'treeNode',
-                position,
-                data: {
-                    node,
-                    isActive: node.id === activeNodeId,
-                    hasChildren,
-                    onNodeClick: handleNodeClick,
-                    onFork: handleFork,
-                    onRegenerate: handleRegenerate,
-                },
-                sourcePosition: Position.Bottom,
-                targetPosition: Position.Top,
-            };
-        });
-
-        // Create ReactFlow edges
+        const flowNodes: Node[] = [];
         const flowEdges: Edge[] = [];
-        Object.entries(adjacency_list).forEach(([parentId, childIds]) => {
-            childIds.forEach((childId, index) => {
-                flowEdges.push({
-                    id: `${parentId}-${childId}`,
-                    source: parentId,
-                    target: childId,
-                    type: 'smoothstep',
-                    animated: childId === activeNodeId,
-                    style: {
-                        stroke: childId === activeNodeId ? 'hsl(var(--primary))' : 'hsl(var(--border))',
-                        strokeWidth: childId === activeNodeId ? 2 : 1,
-                    },
-                    markerEnd: {
-                        type: MarkerType.ArrowClosed,
-                        color: childId === activeNodeId ? 'hsl(var(--primary))' : 'hsl(var(--border))',
-                    },
-                });
-            });
+        const { nodes: treeNodes } = treeStructure;
+
+        console.log('[TreeViz] Processing tree:', {
+            totalNodes: treeNodes.length,
+            activeNodeId: treeStructure.tree_metadata.active_node_id,
+            adjacencyList: treeStructure.adjacency_list
         });
 
-        setNodes(flowNodes);
-        setEdges(flowEdges);
-    }, [treeStructure, activeNodeId, handleNodeClick, handleFork, handleRegenerate, setNodes, setEdges]);
+        treeNodes.forEach((node) => {
+            // Only render nodes that have a user message (questions)
+            // We skip empty root nodes or nodes that are just AI responses without user query (rare in this model)
+            if (!node.user_message) return;
 
-    if (!treeStructure) {
+            const isNodeActive = node.id === activeNodeId;
+
+            // Create User Node
+            // We use the raw node.id so edges work naturally with parent_id
+            flowNodes.push({
+                id: node.id,
+                type: 'user',
+                data: {
+                    label: node.user_message,
+                    timestamp: node.created_at,
+                    isActive: isNodeActive,
+                    // Pass metadata to show if it has AI response, tools, etc.
+                    hasAI: !!node.ai_message,
+                    aiMessage: node.ai_message,
+                    metadata: node.metadata
+                },
+                position: { x: 0, y: 0 },
+            });
+
+            // Create Edge from Parent
+            // We only create an edge if the parent also exists in our filtered list (has user_message)
+            // OR if the parent is the root (which might be empty).
+            // If parent is root and root is hidden, this node is a root in the viz.
+            if (node.parent_id) {
+                const parentNode = treeNodes.find(n => n.id === node.parent_id);
+                // If parent exists and has user message, connect to it
+                if (parentNode && parentNode.user_message) {
+                    flowEdges.push({
+                        id: `${node.parent_id}-${node.id}`,
+                        source: node.parent_id,
+                        target: node.id,
+                        type: 'smoothstep',
+                        animated: isNodeActive,
+                        style: { stroke: isNodeActive ? '#3b82f6' : '#e4e4e7', strokeWidth: 2 },
+                    });
+                }
+                // If parent is root (no user message), we don't connect it, so this becomes a root in viz
+            }
+        });
+
+        console.log('[TreeViz] Created nodes and edges:', {
+            flowNodesCount: flowNodes.length,
+            flowEdgesCount: flowEdges.length,
+            flowNodes: flowNodes
+        });
+
+        const layouted = getLayoutedElements(flowNodes, flowEdges);
+        // The following lines were causing a syntax error and are now correctly placed/removed.
+        // nodesCount: layouted.nodes.length,
+        // edgesCount: layouted.edges.length,
+        // firstNodePos: layouted.nodes[0]?.position
+        // }); // This closing brace was misplaced
+
+        setNodes(layouted.nodes);
+        setEdges(layouted.edges);
+
+    }, [treeStructure, activeNodeId, isStreaming, getLayoutedElements, setNodes, setEdges]);
+
+    // Show loader if streaming and no nodes yet (initial deep research)
+    const showLoader = isStreaming && (!treeStructure || treeStructure.nodes.length <= 1);
+
+    if (showLoader) {
         return (
-            <div className="flex items-center justify-center h-full">
-                <div className="text-center">
-                    <p className="text-muted-foreground">Loading tree...</p>
+            <div className="h-full w-full flex items-center justify-center bg-zinc-50/50 dark:bg-zinc-900/50 backdrop-blur-sm">
+                <DeepResearchLoader />
+            </div>
+        );
+    }
+
+    // Show empty state if no nodes to display
+    if (nodes.length === 0) {
+        return (
+            <div className="h-full w-full flex items-center justify-center bg-zinc-50 dark:bg-zinc-950">
+                <div className="text-center max-w-md p-8">
+                    <div className="mb-4">
+                        <Network className="w-16 h-16 mx-auto text-zinc-400 dark:text-zinc-600" />
+                    </div>
+                    <h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+                        No Conversation Tree Yet
+                    </h3>
+                    <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-4">
+                        Click the "Sync Chat to Tree" button above to convert your chat messages into a branching conversation tree.
+                    </p>
+                    {treeStructure && (
+                        <div className="text-xs text-zinc-400 dark:text-zinc-600 mt-4 p-3 bg-zinc-100 dark:bg-zinc-900 rounded">
+                            <p>Debug Info:</p>
+                            <p>Total nodes in tree: {treeStructure.nodes.length}</p>
+                            <p>Nodes with messages: {treeStructure.nodes.filter(n => n.user_message || n.ai_message).length}</p>
+                        </div>
+                    )}
                 </div>
             </div>
         );
     }
 
     return (
-        <div className="h-full w-full">
+        <div className="h-full w-full relative bg-zinc-50 dark:bg-zinc-950">
             <ReactFlow
                 nodes={nodes}
                 edges={edges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
+                onNodeClick={onNodeClick}
                 nodeTypes={nodeTypes}
+                connectionLineType={ConnectionLineType.SmoothStep}
                 fitView
                 minZoom={0.1}
-                maxZoom={1.5}
-                defaultViewport={{ x: 0, y: 0, zoom: 0.8 }}
-                className="bg-background"
+                maxZoom={2}
+                defaultEdgeOptions={{
+                    type: 'smoothstep',
+                    animated: false,
+                }}
             >
-                <Background />
+                <Background color="#e4e4e7" gap={16} />
                 <Controls />
                 <MiniMap
                     nodeColor={(node) => {
-                        return node.data.isActive ? 'hsl(var(--primary))' : 'hsl(var(--muted))';
+                        switch (node.type) {
+                            case 'user':
+                                return '#71717a';
+                            case 'ai':
+                                return '#3b82f6';
+                            case 'tool':
+                                return '#f97316';
+                            default:
+                                return '#e4e4e7';
+                        }
                     }}
-                    className="bg-card border border-border"
+                    maskColor="rgba(0, 0, 0, 0.1)"
                 />
+                <Panel position="top-right" className="bg-white dark:bg-zinc-900 rounded-lg shadow-lg p-2">
+                    <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                            const layouted = getLayoutedElements(nodes, edges);
+                            setNodes(layouted.nodes);
+                            setEdges(layouted.edges);
+                        }}
+                    >
+                        <Layout className="w-4 h-4 mr-2" />
+                        Auto Layout
+                    </Button>
+                </Panel>
             </ReactFlow>
         </div>
     );

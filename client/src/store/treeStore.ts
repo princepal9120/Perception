@@ -78,10 +78,11 @@ export const useTreeStore = create<TreeState>((set, get) => ({
                 isLoading: false,
             });
         } catch (error: any) {
-            // If tree doesn't exist, try to initialize it
+            // If tree doesn't exist, try to migrate existing chat or initialize
             if (error.response?.status === 404) {
                 try {
-                    await treeApi.initializeTree(chatId);
+                    // Use migrateToTree to preserve existing messages
+                    await treeApi.migrateToTree(chatId);
                     const structure = await treeApi.getTreeStructure(chatId);
                     set({
                         treeStructure: structure,

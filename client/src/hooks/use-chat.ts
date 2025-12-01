@@ -15,6 +15,7 @@ export const useChat = () => {
     isLoading,
     isStreaming,
     streamingContent,
+    agentProgress,
     loadChats,
     createChat,
     selectChat,
@@ -25,7 +26,7 @@ export const useChat = () => {
     stopStreaming,
     clearCurrentChat,
   } = useChatStore();
-  
+
   const { isAuthenticated, token } = useAuth();
 
   // Get current chat
@@ -57,11 +58,11 @@ export const useChat = () => {
         });
       } catch (error) {
         console.error("Failed to create chat:", error);
-        
+
         // Provide more specific error messages
         let errorMessage = "Failed to create chat. Please try again.";
         let errorDescription = "There was an issue creating your conversation.";
-        
+
         if (error instanceof Error) {
           if (error.message.includes("401") || error.message.includes("unauthorized")) {
             errorMessage = "Authentication required";
@@ -74,7 +75,7 @@ export const useChat = () => {
             errorDescription = "Please check your connection and try again.";
           }
         }
-        
+
         toast.error(errorMessage, {
           description: errorDescription
         });
@@ -127,11 +128,11 @@ export const useChat = () => {
         await sendMessage(message);
       } catch (error) {
         console.error("Failed to send message:", error);
-        
+
         // Provide more specific error messages
         let errorMessage = "Failed to send message. Please try again.";
         let errorDescription = "There was an issue sending your message.";
-        
+
         if (error instanceof Error) {
           if (error.message.includes("401") || error.message.includes("unauthorized")) {
             errorMessage = "Authentication required";
@@ -147,7 +148,7 @@ export const useChat = () => {
             errorDescription = "The AI service is temporarily unavailable. Please try again later.";
           }
         }
-        
+
         toast.error(errorMessage, {
           description: errorDescription
         });
@@ -235,6 +236,7 @@ export const useChat = () => {
     isLoading,
     isStreaming,
     streamingContent,
+    agentProgress,
     isAuthenticated,
 
     // Actions

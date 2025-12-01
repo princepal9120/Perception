@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Menu,GitBranch } from "lucide-react";
+import { Menu, GitBranch } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -7,14 +7,21 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
 
 interface ChatHeaderProps {
   onToggleSidebar?: () => void;
   onToggleDocumentManager?: () => void;
   onOpenTreeView?: () => void;
+  isTreeViewOpen?: boolean;
 }
 
-export const ChatHeader = ({ onToggleSidebar, onToggleDocumentManager, onOpenTreeView }: ChatHeaderProps) => {
+export const ChatHeader = ({
+  onToggleSidebar,
+  onToggleDocumentManager,
+  onOpenTreeView,
+  isTreeViewOpen = false
+}: ChatHeaderProps) => {
   const navigate = useNavigate();
 
   return (
@@ -36,28 +43,28 @@ export const ChatHeader = ({ onToggleSidebar, onToggleDocumentManager, onOpenTre
       </div>
 
       <div className="flex items-center gap-1 sm:gap-2">
-    
-
         {onOpenTreeView && (
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 sm:h-10 sm:w-10"
+                className={cn(
+                  "h-8 w-8 sm:h-10 sm:w-10 transition-colors",
+                  isTreeViewOpen && "bg-primary/10 text-primary hover:bg-primary/20"
+                )}
                 onClick={onOpenTreeView}
               >
                 <GitBranch className="w-4 h-4 sm:w-5 sm:h-5" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Conversation Tree</TooltipContent>
+            <TooltipContent>
+              {isTreeViewOpen ? "Close Tree View" : "Open Tree View"}
+            </TooltipContent>
           </Tooltip>
         )}
 
         <ThemeToggle />
-
-       
-  
       </div>
     </header>
   );

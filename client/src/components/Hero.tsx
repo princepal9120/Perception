@@ -37,11 +37,11 @@ export const Hero = () => {
             transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
             className="text-6xl md:text-8xl font-bold tracking-tight leading-tight"
           >
-            Research Smarter
+            Research Smarter.
             <br />
             <span className="relative inline-block">
               <span className="bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] bg-clip-text text-transparent animate-shimmer">
-                With Intelligence
+                Branch Deeper.
               </span>
             </span>
           </motion.h1>
@@ -53,8 +53,8 @@ export const Hero = () => {
             transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
             className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed"
           >
-            Merge ChatGPT's conversational depth with Perplexity's research power.
-            Stream AI responses, search the web, and collaborate with documents.
+            Explore every possibility with visual conversation trees.
+            Fork, branch, and navigate your AI chats like never before.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -71,7 +71,7 @@ export const Hero = () => {
             >
               <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
               <span className="relative flex items-center gap-2">
-                Start Chatting
+                Start Branching
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </span>
             </Button>
@@ -94,15 +94,15 @@ export const Hero = () => {
           >
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/30 backdrop-blur-sm border border-white/5">
               <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-              <span>Streaming Responses</span>
+              <span>Visual Tree Navigation</span>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/30 backdrop-blur-sm border border-white/5">
               <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-              <span>Voice Interaction</span>
+              <span>Branching Conversations</span>
             </div>
             <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-secondary/30 backdrop-blur-sm border border-white/5">
               <div className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
-              <span>Multi-Document RAG</span>
+              <span>Deep Research</span>
             </div>
           </motion.div>
         </div>

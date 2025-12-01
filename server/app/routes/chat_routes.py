@@ -398,7 +398,7 @@ async def send_message(
                         
                         # Save assistant response
                         if assistant_content:
-                            from app.models.tables import Message, User
+                            from app.models.tables import Message, User, Chat
                             full_content = "".join(assistant_content)
                             
                             # Get user object
@@ -415,6 +415,24 @@ async def send_message(
                             )
                             session.add(message)
                             logger.info(f"Assistant response saved for chat {chat_id}")
+                            
+                            # Auto-generate title for new chats (if title is still "New Chat")
+                            result = await session.execute(
+                                select(Chat).where(Chat.id == chat_id)
+                            )
+                            chat_obj = result.scalar_one_or_none()
+                            if chat_obj and chat_obj.title == "New Chat":
+                                # Generate title from first user message (truncate to 50 chars)
+                                user_msg = message_data.content.strip()
+                                # Remove newlines and extra spaces
+                                user_msg = " ".join(user_msg.split())
+                                # Truncate and add ellipsis if needed
+                                if len(user_msg) > 50:
+                                    new_title = user_msg[:47] + "..."
+                                else:
+                                    new_title = user_msg
+                                chat_obj.title = new_title
+                                logger.info(f"Auto-generated title for chat {chat_id}: {new_title}")
                         
                         await session.commit()
                         

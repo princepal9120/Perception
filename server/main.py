@@ -380,7 +380,7 @@ app.include_router(auth_router, prefix="/api/v1")
 app.include_router(chat_router, prefix="/api/v1")
 app.include_router(document_router, prefix="/api/v1")
 app.include_router(voice_router, prefix="/api/v1/voice", tags=["Voice"])
-app.include_router(tree_router)
+app.include_router(tree_router, prefix="/api/v1")
 app.include_router(deep_research_router)
 
 # Custom validation error handler

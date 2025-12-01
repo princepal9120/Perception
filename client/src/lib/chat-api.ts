@@ -150,7 +150,7 @@ const REFRESH_TOKEN_KEY = 'perception_refresh_token';
 
 async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-  
+
   if (!refreshToken) {
     return null;
   }
@@ -214,12 +214,12 @@ class ChatAPI {
     // If we get a 401, try to refresh the token and retry once
     if (response.status === 401) {
       const newToken = await refreshAccessToken();
-      
+
       if (newToken) {
         // Update Authorization header with new token
         const headers = options.headers as Record<string, string>;
         headers["Authorization"] = `Bearer ${newToken}`;
-        
+
         // Retry the request with the new token
         response = await fetch(url, options);
       }
@@ -472,42 +472,7 @@ class ChatAPI {
     };
   }
 
-  /**
-   * Legacy method for backward compatibility
-   * Uses fetch with streaming instead of EventSource
-   */
-  streamChat(
-    message: string,
-    checkpointId: string | null,
-    callbacks: StreamCallbacks,
-    chatId?: number,
-    token?: string
-  ): { cancel: () => void } {
-    if (!chatId || !token) {
-      throw new Error("Chat ID and token are required");
-    }
 
-    let cancel: (() => void) | null = null;
-
-    this.sendMessageStream(chatId, message, token, callbacks).then(
-      (cancelFn) => {
-        cancel = cancelFn;
-      }
-    );
-
-    return {
-      cancel: () => {
-        if (cancel) cancel();
-      },
-    };
-  }
-
-  /**
-   * Cancel an ongoing stream
-   */
-  cancelStream(cancelFn: () => void): void {
-    cancelFn();
-  }
 
   // ==================== Document Management ====================
 
@@ -519,7 +484,7 @@ class ChatAPI {
   ): Promise<DocumentUploadResponse> {
     return new Promise((resolve, reject) => {
       const formData = new FormData();
-      
+
       // Add files to form data
       files.forEach((file) => {
         formData.append("files", file);

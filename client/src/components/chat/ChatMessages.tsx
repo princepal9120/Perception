@@ -5,16 +5,30 @@ import { MarkdownMessage } from "./MarkdownMessage";
 import { TypingIndicator } from "./TypingIndicator";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { useChat } from "@/hooks/use-chat";
+import { AgentProgressTracker } from "./AgentProgressTracker";
 
-export const ChatMessages = () => {
+import { MessageActions } from "./MessageActions";
+
+import { useTreeStore } from "@/store/treeStore";
+import { treeApi } from "@/lib/tree-api";
+import { useChatStore } from "@/store/chatStore";
+
+interface ChatMessagesProps {
+  isTreeViewOpen?: boolean;
+}
+
+export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = false }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const {
     messages,
     isStreaming,
     streamingContent,
     isLoading,
+    agentProgress,
   } = useChat();
   const { sendMessage } = useChat();
+  const { setActiveNode } = useTreeStore();
+  const { setMessages } = useChatStore();
 
   // Auto-scroll to bottom on new messages or stream updates
   useEffect(() => {
@@ -23,6 +37,63 @@ export const ChatMessages = () => {
 
   const handleSuggestedPrompt = async (prompt: string, deepResearch?: boolean) => {
     await sendMessage(prompt);
+  };
+
+  const handleFork = async (message: any) => {
+    if (!message.metadata?.nodeId) return;
+
+    // If forking a user message, we want to start from its parent
+    // If forking an AI message, we probably want to regenerate it (which is handled by onRegenerate)
+    // or reply to the user message before it (which is just normal reply)
+
+    // Let's assume Fork on User Message means "Edit this message"
+    // So we set active node to parent, and populate input (optional, for now just set context)
+
+    const parentId = message.metadata.parentId;
+    if (parentId) {
+      await setActiveNode(parentId);
+
+      // Reload messages up to parent
+      try {
+        const lineage = await treeApi.getNodeLineage(parentId);
+        // Convert lineage to chat messages (duplicate logic, should refactor)
+        const newMessages = lineage.flatMap((node: any, index: number) => {
+          const msgs = [];
+          if (node.user_message) {
+            msgs.push({
+              id: index * 2,
+              role: 'user',
+              content: node.user_message,
+              created_at: node.created_at,
+              metadata: { ...node.metadata, nodeId: node.id, parentId: node.parent_id, isUserNode: true }
+            });
+          }
+          if (node.ai_message) {
+            msgs.push({
+              id: index * 2 + 1,
+              role: 'assistant',
+              content: node.ai_message,
+              created_at: node.created_at,
+              metadata: { ...node.metadata, nodeId: node.id, parentId: node.parent_id, isUserNode: false }
+            });
+          }
+          return msgs;
+        });
+        setMessages(newMessages as any);
+      } catch (e) {
+        console.error(e);
+      }
+    } else {
+      // Root node?
+      console.log("Cannot fork root node yet");
+    }
+  };
+
+  const handleRegenerate = async (message: any) => {
+    if (!message.metadata?.nodeId) return;
+    // Regenerate logic here
+    // For now just log
+    console.log('Regenerate', message.id);
   };
 
   // Prevent duplicate rendering when assistant message is already completed
@@ -53,8 +124,8 @@ export const ChatMessages = () => {
                 {/* Avatar */}
                 <div className="flex-shrink-0 flex flex-col relative items-end">
                   <div className={`w-8 h-8 rounded-sm flex items-center justify-center ${message.role === "assistant"
-                      ? "bg-green-500"
-                      : "bg-gray-500"
+                    ? "bg-green-500"
+                    : "bg-gray-500"
                     }`}>
                     {message.role === "assistant" ? (
                       <Bot className="w-5 h-5 text-white" />
@@ -66,8 +137,16 @@ export const ChatMessages = () => {
 
                 {/* Message Content */}
                 <div className="relative flex-1 overflow-hidden">
-                  <div className="font-semibold text-sm mb-1 opacity-90">
-                    {message.role === "assistant" ? "Perception" : "You"}
+                  <div className="font-semibold text-sm mb-1 opacity-90 flex justify-between items-center">
+                    <span>{message.role === "assistant" ? "Perception" : "You"}</span>
+                    <MessageActions
+                      messageId={message.id}
+                      role={message.role as any}
+                      content={message.content}
+                      isTreeMode={isTreeViewOpen}
+                      onFork={() => handleFork(message)}
+                      onRegenerate={() => handleRegenerate(message)}
+                    />
                   </div>
                   <div className="prose prose-slate dark:prose-invert max-w-none leading-7">
                     {message.role === "assistant" ? (
@@ -97,6 +176,13 @@ export const ChatMessages = () => {
 
                 <div className="relative flex-1 overflow-hidden">
                   <div className="font-semibold text-sm mb-1 opacity-90">Perception</div>
+
+                  {/* Agent Progress Tracker */}
+                  <AgentProgressTracker
+                    steps={agentProgress}
+                    isActive={isStreaming}
+                  />
+
                   <div className="prose prose-slate dark:prose-invert max-w-none leading-7">
                     <MarkdownMessage content={streamingContent} isStreaming={true} />
                   </div>

@@ -1,42 +1,54 @@
 import { motion } from "framer-motion";
-import { MessageSquare, Mic, FileText, Sparkles, Search, Zap } from "lucide-react";
+import { MessageSquare, Mic, FileText, Sparkles, Search, Zap, GitBranch, Network, Workflow, BrainCircuit } from "lucide-react";
 
 const features = [
   {
-    icon: MessageSquare,
-    title: "Conversational Intelligence",
+    icon: GitBranch,
+    title: "Branching Conversations",
     description:
-      "Chat naturally with AI that understands context, remembers your conversations, and provides thoughtful responses.",
+      "Fork any message to explore different paths. Create parallel conversation timelines without losing context.",
   },
   {
     icon: Search,
-    title: "Web Research",
+    title: "Deep Research",
     description:
-      "Access real-time web search results and citations, just like Perplexity, for accurate and up-to-date information.",
+      "Access real-time web search results and citations for accurate and up-to-date information.",
   },
   {
-    icon: FileText,
-    title: "Multi-Document RAG",
+    icon: Network,
+    title: "Visual Tree Navigation",
     description:
-      "Upload and chat with multiple documents simultaneously. Extract insights from PDFs, papers, and reports.",
+      "Visualize your entire conversation history as an interactive tree. Navigate complex discussions with ease.",
   },
   {
     icon: Mic,
     title: "Voice Interaction",
     description:
-      "Speak your questions and hear AI responses with natural text-to-speech and speech-to-text capabilities.",
+      "Speak your questions and hear AI responses with natural text-to-speech capabilities.",
   },
   {
     icon: Zap,
     title: "Streaming Responses",
     description:
-      "Watch AI think in real-time with token-by-token streaming for a fluid, engaging conversation experience.",
+      "Watch AI think in real-time with token-by-token streaming for a fluid experience.",
   },
   {
-    icon: Sparkles,
-    title: "Perception Tools",
+    icon: FileText,
+    title: "Multi-Document RAG",
     description:
-      "AI that can use tools, run web searches, summarize content, and orchestrate complex multi-step tasks.",
+      "Upload and chat with multiple documents simultaneously. Extract insights from PDFs and reports.",
+  },
+  {
+    icon: Workflow,
+    title: "Workflow Automation",
+    description:
+      "Automate complex research tasks with custom workflows and agentic chains that work for you.",
+  },
+  {
+    icon: BrainCircuit,
+    title: "Adaptive Intelligence",
+    description:
+      "The system automatically selects the best AI model for each specific task to optimize speed and quality.",
   },
 ];
 
@@ -86,19 +98,21 @@ export const Features = () => {
           initial="hidden"
           whileInView="show"
           viewport={{ once: true }}
-          className="grid grid-cols-1 md:grid-cols-6 gap-8 auto-rows-[260px]"
+          className="grid grid-cols-1 md:grid-cols-6 gap-6 auto-rows-[280px]"
         >
           {features.map((feature, index) => {
             const Icon = feature.icon;
 
-            // Bento grid span pattern
+            // Bento grid span pattern for 8 items (Total 4 rows of 6 cols)
             const spanMap = [
-              "md:col-span-4 ", // Big hero card
-              "md:col-span-2",               // Small card
-              "md:col-span-3",               // Medium wide
-              "md:col-span-3",               // Medium wide
-              "md:col-span-2 ", // Tall card
-              "md:col-span-4",               // Wide card
+              "md:col-span-4", // Row 1: 4
+              "md:col-span-2", // Row 1: 2
+              "md:col-span-3", // Row 2: 3
+              "md:col-span-3", // Row 2: 3
+              "md:col-span-2", // Row 3: 2
+              "md:col-span-4", // Row 3: 4
+              "md:col-span-3", // Row 4: 3
+              "md:col-span-3", // Row 4: 3
             ];
 
             const spanClass = spanMap[index % spanMap.length];
@@ -107,15 +121,17 @@ export const Features = () => {
               <motion.div
                 key={index}
                 variants={item}
-                className={`group relative p-8 rounded-3xl bg-card border border-border/50 shadow-elegant hover:shadow-glow transition-all duration-500 overflow-hidden ${spanClass}`}
+                whileHover={{ y: -5, scale: 1.01 }}
+                className={`group relative p-8 rounded-3xl bg-card border border-border/50 shadow-elegant hover:shadow-2xl transition-all duration-300 overflow-hidden ${spanClass}`}
               >
-                {/* Hover Gradient */}
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                {/* Hover Gradient & Glow */}
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                <div className="absolute -right-10 -top-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-500" />
 
                 {/* Card Content */}
                 <div className="relative z-10 flex flex-col h-full justify-between">
                   <div>
-                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-primary/20 transition-all duration-300">
+                    <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:rotate-3 group-hover:bg-primary/20 transition-all duration-300">
                       <Icon className="w-7 h-7 text-primary" />
                     </div>
 
@@ -123,9 +139,16 @@ export const Features = () => {
                       {feature.title}
                     </h3>
 
-                    <p className="text-muted-foreground leading-relaxed text-lg">
+                    <p className="text-muted-foreground leading-relaxed text-lg group-hover:text-foreground/80 transition-colors">
                       {feature.description}
                     </p>
+                  </div>
+
+                  {/* Micro-interaction Arrow */}
+                  <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-2 group-hover:translate-y-0">
+                    <div className="w-8 h-8 rounded-full border border-primary/20 flex items-center justify-center">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    </div>
                   </div>
                 </div>
               </motion.div>

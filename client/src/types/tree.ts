@@ -9,6 +9,8 @@ export interface NodeMetadata {
     search_queries?: string[];
     temperature?: number;
     custom_data?: Record<string, any>;
+    tool_calls?: any[];
+    token_count?: number;
 }
 
 export interface ConversationNode {
@@ -37,6 +39,7 @@ export interface TreeNodeData {
     is_active: boolean;
     created_at: string;
     children_count: number;
+    metadata?: NodeMetadata | null;
 }
 
 export interface ConversationTreeMetadata {

@@ -127,7 +127,17 @@ class DeepResearchGraph:
     
     async def retriever_node(self, state: DeepResearchState) -> DeepResearchState:
         """Retrieve documents using RAG."""
-        logger.info(f"📚 Retrieving documents (iteration {state['current_iteration'] + 1})")
+        iteration_num = state['current_iteration'] + 1
+        logger.info(f"📚 Retrieving documents (iteration {iteration_num})")
+        
+        # Add progress update: Starting search
+        state["iteration_updates"].append({
+            "type": "progress",
+            "step": "searching",
+            "iteration": iteration_num,
+            "message": f"Searching the web for relevant information...",
+            "status": "in_progress"
+        })
         
         try:
             # Use existing retriever infrastructure
@@ -136,8 +146,19 @@ class DeepResearchGraph:
             
             # Retrieve for each query
             all_docs = []
-            for query in state["current_queries"][:3]:  # Limit to 3 queries per iteration
+            sources = []
+            for idx, query in enumerate(state["current_queries"][:3], 1):  # Limit to 3 queries per iteration
                 logger.info(f"  Searching: {query}")
+                
+                # Update progress for each query
+                state["iteration_updates"].append({
+                    "type": "progress",
+                    "step": "searching",
+                    "iteration": iteration_num,
+                    "message": f"Query {idx}/3: {query[:60]}...",
+                    "status": "in_progress"
+                })
+                
                 try:
                     results = await tavily_tool.ainvoke({"query": query})
                     
@@ -148,6 +169,8 @@ class DeepResearchGraph:
                                 content = result.get("content", "")
                                 url = result.get("url", "unknown")
                                 all_docs.append(f"Source: {url}\n{content}\n")
+                                if url not in sources:
+                                    sources.append(url)
                     
                 except Exception as e:
                     logger.error(f"Search failed for query '{query}': {e}")
@@ -155,17 +178,44 @@ class DeepResearchGraph:
             # Combine documents
             state["current_documents"] = "\n\n---\n\n".join(all_docs) if all_docs else "No documents retrieved"
             
+            # Add completion update
+            state["iteration_updates"].append({
+                "type": "progress",
+                "step": "searching",
+                "iteration": iteration_num,
+                "message": f"Found {len(all_docs)} sources across {len(sources)} websites",
+                "status": "completed",
+                "data": {"source_count": len(all_docs), "website_count": len(sources)}
+            })
+            
             logger.info(f"✅ Retrieved {len(all_docs)} document chunks")
             
         except Exception as e:
             logger.error(f"Retrieval failed: {e}")
             state["current_documents"] = f"Retrieval error: {str(e)}"
+            state["iteration_updates"].append({
+                "type": "progress",
+                "step": "searching",
+                "iteration": iteration_num,
+                "message": f"Search failed: {str(e)}",
+                "status": "error"
+            })
         
         return state
     
     async def extract_claims_node(self, state: DeepResearchState) -> DeepResearchState:
         """Extract factual claims from documents."""
+        iteration_num = state['current_iteration'] + 1
         logger.info("🔍 Extracting claims from documents")
+        
+        # Add progress update: Starting extraction
+        state["iteration_updates"].append({
+            "type": "progress",
+            "step": "extracting",
+            "iteration": iteration_num,
+            "message": "Extracting key claims and facts from sources...",
+            "status": "in_progress"
+        })
         
         claims = await self.chains.extract_claims(
             topic=state["topic"],
@@ -175,12 +225,32 @@ class DeepResearchGraph:
         # Store claims in state for verification
         state["current_claims"] = claims
         
+        # Add completion update
+        state["iteration_updates"].append({
+            "type": "progress",
+            "step": "extracting",
+            "iteration": iteration_num,
+            "message": f"Extracted {len(claims)} factual claims",
+            "status": "completed",
+            "data": {"claim_count": len(claims)}
+        })
+        
         logger.info(f"✅ Extracted {len(claims)} claims")
         return state
     
     async def verify_claims_node(self, state: DeepResearchState) -> DeepResearchState:
         """Verify extracted claims."""
+        iteration_num = state['current_iteration'] + 1
         logger.info("✔️  Verifying claims")
+        
+        # Add progress update: Starting verification
+        state["iteration_updates"].append({
+            "type": "progress",
+            "step": "verifying",
+            "iteration": iteration_num,
+            "message": "Verifying claims against sources...",
+            "status": "in_progress"
+        })
         
         verified = await self.chains.verify_claims(
             claims=state.get("current_claims", []),
@@ -190,12 +260,32 @@ class DeepResearchGraph:
         # Add to all verified claims
         state["all_verified_claims"].extend(verified)
         
+        # Add completion update
+        state["iteration_updates"].append({
+            "type": "progress",
+            "step": "verifying",
+            "iteration": iteration_num,
+            "message": f"Verified {len(verified)} claims with evidence",
+            "status": "completed",
+            "data": {"verified_count": len(verified)}
+        })
+        
         logger.info(f"✅ Verified {len(verified)} claims")
         return state
     
     async def gap_analysis_node(self, state: DeepResearchState) -> DeepResearchState:
         """Identify knowledge gaps and generate new queries."""
+        iteration_num = state['current_iteration'] + 1
         logger.info("🔎 Analyzing knowledge gaps")
+        
+        # Add progress update: Starting gap analysis
+        state["iteration_updates"].append({
+            "type": "progress",
+            "step": "analyzing",
+            "iteration": iteration_num,
+            "message": "Analyzing gaps in current knowledge...",
+            "status": "in_progress"
+        })
         
         gaps = await self.chains.identify_gaps(
             topic=state["topic"],
@@ -217,6 +307,16 @@ class DeepResearchGraph:
         # Generate new queries from gaps
         new_queries = [gap.get("suggested_query", "") for gap in gaps if gap.get("suggested_query")]
         state["current_queries"] = new_queries
+        
+        # Add completion update
+        state["iteration_updates"].append({
+            "type": "progress",
+            "step": "analyzing",
+            "iteration": iteration_num,
+            "message": f"Identified {len(gaps)} knowledge gaps for deeper investigation",
+            "status": "completed",
+            "data": {"gap_count": len(gaps), "new_query_count": len(new_queries)}
+        })
         
         # Create iteration update for streaming
         iteration_update = {
@@ -252,6 +352,15 @@ class DeepResearchGraph:
         """Synthesize final research report."""
         logger.info("📝 Synthesizing final research report")
         
+        # Add progress update: Starting synthesis
+        state["iteration_updates"].append({
+            "type": "progress",
+            "step": "synthesizing",
+            "iteration": state["current_iteration"],
+            "message": "Synthesizing comprehensive research report...",
+            "status": "in_progress"
+        })
+        
         report = await self.chains.synthesize_report(
             topic=state["topic"],
             depth=state["depth"],
@@ -261,6 +370,15 @@ class DeepResearchGraph:
         )
         
         state["final_report"] = report
+        
+        # Add completion update
+        state["iteration_updates"].append({
+            "type": "progress",
+            "step": "synthesizing",
+            "iteration": state["current_iteration"],
+            "message": "Research report complete!",
+            "status": "completed"
+        })
         
         logger.info("✅ Final report synthesized")
         return state

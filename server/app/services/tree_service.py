@@ -372,6 +372,14 @@ class TreeService:
             # Count children
             children_count = await self._count_children(node.id)
             
+            # Parse metadata
+            metadata = None
+            if node.metadata_json:
+                try:
+                    metadata = json.loads(node.metadata_json)
+                except:
+                    pass
+
             # Create node data
             node_data = TreeNodeData(
                 id=node.id,
@@ -382,7 +390,8 @@ class TreeService:
                 branch_name=node.branch_name,
                 is_active=node.is_active,
                 created_at=node.created_at,
-                children_count=children_count
+                children_count=children_count,
+                metadata=metadata
             )
             node_data_list.append(node_data)
             
@@ -589,9 +598,20 @@ class TreeService:
         nodes_created = 0
         previous_node_id = tree.root_node_id
         
+        logger.info(f"Starting migration of {len(messages)} messages for chat {chat_id}")
+        
+        # Group messages by pairs (user + AI)
         for i in range(0, len(messages), 2):
-            user_msg = messages[i] if i < len(messages) else None
-            ai_msg = messages[i + 1] if i + 1 < len(messages) else None
+            user_msg = messages[i] if i < len(messages) and messages[i].role == 'user' else None
+            ai_msg = messages[i + 1] if i + 1 < len(messages) and messages[i + 1].role == 'assistant' else None
+            
+            # Log what we're processing
+            logger.info(f"Processing pair {i//2 + 1}: user={bool(user_msg)} ({user_msg.content[:30] if user_msg else 'None'}...), ai={bool(ai_msg)} ({ai_msg.content[:30] if ai_msg else 'None'}...)")
+            
+            # Skip if no valid pair
+            if not user_msg and not ai_msg:
+                logger.warning(f"Skipping invalid pair at index {i}")
+                continue
             
             # Parse metadata
             metadata = None
@@ -599,8 +619,8 @@ class TreeService:
                 try:
                     metadata_dict = json.loads(ai_msg.metadata_json)
                     metadata = NodeMetadata(**metadata_dict)
-                except:
-                    pass
+                except Exception as e:
+                    logger.warning(f"Failed to parse metadata: {e}")
             
             # Create node
             node = await self.create_node(
@@ -611,10 +631,12 @@ class TreeService:
                 metadata=metadata
             )
             
+            logger.info(f"Created node {node.id} with depth={node.depth}, user_msg_len={len(user_msg.content) if user_msg else 0}, ai_msg_len={len(ai_msg.content) if ai_msg else 0}")
+            
             previous_node_id = node.id
             nodes_created += 1
         
-        logger.info(f"Migrated {len(messages)} messages to {nodes_created} nodes for chat {chat_id}")
+        logger.info(f"Migration complete: {len(messages)} messages → {nodes_created} nodes for chat {chat_id}")
         return tree, nodes_created
     
     # ==================== Helper Methods ====================

@@ -11,11 +11,11 @@ import type {
     CompareNodesRequest,
 } from '../types/tree';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
 // Get auth token from localStorage
 const getAuthToken = () => {
-    const token = localStorage.getItem('access_token');
+    const token = localStorage.getItem('perception_auth_token');
     return token;
 };
 
@@ -41,7 +41,7 @@ export const treeApi = {
      * Initialize a conversation tree for a chat
      */
     async initializeTree(chatId: number) {
-        const response = await apiClient.post(`/api/tree/chats/${chatId}/init`);
+        const response = await apiClient.post(`/tree/chats/${chatId}/init`);
         return response.data;
     },
 
@@ -49,7 +49,7 @@ export const treeApi = {
      * Get complete tree structure
      */
     async getTreeStructure(chatId: number): Promise<ConversationTreeStructure> {
-        const response = await apiClient.get(`/api/tree/chats/${chatId}`);
+        const response = await apiClient.get(`/tree/chats/${chatId}`);
         return response.data;
     },
 
@@ -57,7 +57,7 @@ export const treeApi = {
      * Get tree statistics
      */
     async getTreeStatistics(chatId: number): Promise<TreeStatistics> {
-        const response = await apiClient.get(`/api/tree/chats/${chatId}/stats`);
+        const response = await apiClient.get(`/tree/chats/${chatId}/stats`);
         return response.data;
     },
 
@@ -65,7 +65,7 @@ export const treeApi = {
      * Get a specific node
      */
     async getNode(nodeId: string): Promise<ConversationNode> {
-        const response = await apiClient.get(`/api/tree/nodes/${nodeId}`);
+        const response = await apiClient.get(`/tree/nodes/${nodeId}`);
         return response.data;
     },
 
@@ -73,7 +73,7 @@ export const treeApi = {
      * Get node lineage (path from root)
      */
     async getNodeLineage(nodeId: string) {
-        const response = await apiClient.get(`/api/tree/nodes/${nodeId}/lineage`);
+        const response = await apiClient.get(`/tree/nodes/${nodeId}/lineage`);
         return response.data;
     },
 
@@ -81,7 +81,7 @@ export const treeApi = {
      * Get node children
      */
     async getNodeChildren(nodeId: string) {
-        const response = await apiClient.get(`/api/tree/nodes/${nodeId}/children`);
+        const response = await apiClient.get(`/tree/nodes/${nodeId}/children`);
         return response.data;
     },
 
@@ -89,7 +89,7 @@ export const treeApi = {
      * Fork a node (create sibling)
      */
     async forkNode(nodeId: string, branchName?: string) {
-        const response = await apiClient.post(`/api/tree/nodes/${nodeId}/fork`, {
+        const response = await apiClient.post(`/tree/nodes/${nodeId}/fork`, {
             node_id: nodeId,
             branch_name: branchName,
         } as BranchCreateRequest);
@@ -100,7 +100,7 @@ export const treeApi = {
      * Set active node
      */
     async setActiveNode(chatId: number, nodeId: string) {
-        const response = await apiClient.post(`/api/tree/chats/${chatId}/active-node`, {
+        const response = await apiClient.post(`/tree/chats/${chatId}/active-node`, {
             node_id: nodeId,
         });
         return response.data;
@@ -116,7 +116,7 @@ export const treeApi = {
     ) {
         const token = getAuthToken();
         const eventSource = new EventSource(
-            `${API_BASE_URL}/api/tree/chats/${chatId}/send?node_id=${request.node_id}&message=${encodeURIComponent(request.message)}&regenerate=${request.regenerate || false}`,
+            `${API_BASE_URL}/tree/chats/${chatId}/send?node_id=${request.node_id}&message=${encodeURIComponent(request.message)}&regenerate=${request.regenerate || false}`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -160,7 +160,7 @@ export const treeApi = {
     ) {
         const token = getAuthToken();
         const eventSource = new EventSource(
-            `${API_BASE_URL}/api/tree/nodes/${nodeId}/regenerate?chat_id=${chatId}`,
+            `${API_BASE_URL}/tree/nodes/${nodeId}/regenerate?chat_id=${chatId}`,
             {
                 headers: {
                     Authorization: `Bearer ${token}`,
@@ -198,7 +198,7 @@ export const treeApi = {
      * Compare nodes
      */
     async compareNodes(nodeIds: string[]) {
-        const response = await apiClient.post(`/api/tree/nodes/compare`, {
+        const response = await apiClient.post(`/tree/nodes/compare`, {
             node_ids: nodeIds,
         } as CompareNodesRequest);
         return response.data;
@@ -208,7 +208,7 @@ export const treeApi = {
      * Migrate linear chat to tree
      */
     async migrateToTree(chatId: number) {
-        const response = await apiClient.post(`/api/tree/migrate`, {
+        const response = await apiClient.post(`/tree/migrate`, {
             chat_id: chatId,
             preserve_messages: true,
         });
@@ -219,7 +219,7 @@ export const treeApi = {
      * Get node context (for debugging)
      */
     async getNodeContext(nodeId: string) {
-        const response = await apiClient.get(`/api/tree/nodes/${nodeId}/context`);
+        const response = await apiClient.get(`/tree/nodes/${nodeId}/context`);
         return response.data;
     },
 };

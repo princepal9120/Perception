@@ -2,6 +2,14 @@ import { create } from "zustand";
 import { chatAPI, Chat, Message } from "@/lib/chat-api";
 import { useAuth } from "@/hooks/use-auth";
 
+interface AgentProgressStep {
+  type: 'thinking' | 'searching' | 'analyzing' | 'reading' | 'completed';
+  message: string;
+  query?: string;
+  sources?: string[];
+  timestamp?: number;
+}
+
 interface ChatState {
   // State
   chats: Chat[];
@@ -11,6 +19,7 @@ interface ChatState {
   isStreaming: boolean;
   streamingContent: string;
   currentEventSource: (() => void) | null;
+  agentProgress: AgentProgressStep[];
 
   // Actions
   loadChats: () => Promise<void>;
@@ -23,6 +32,7 @@ interface ChatState {
   sendDeepResearch: (topic: string, depth: number, iterations: number) => Promise<void>;
   stopStreaming: () => void;
   clearCurrentChat: () => void;
+  setMessages: (messages: Message[]) => void;
 }
 
 // Helper function to format research report as markdown
@@ -99,6 +109,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isStreaming: false,
   streamingContent: "",
   currentEventSource: null,
+  agentProgress: [],
 
   // Load all chats for the user
   loadChats: async () => {
@@ -250,7 +261,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
 
     try {
-      set({ isStreaming: true, streamingContent: "" });
+      set({ isStreaming: true, streamingContent: "", agentProgress: [] });
 
       // Add user message immediately
       const userMessage: Message = {
@@ -266,6 +277,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
         messages: [...state.messages, userMessage],
       }));
 
+      // Add initial thinking step
+      set((state) => ({
+        agentProgress: [
+          {
+            type: 'thinking',
+            message: 'Processing your request...',
+            timestamp: Date.now(),
+          },
+        ],
+      }));
+
       // Stream the response
       const cancelFn = await chatAPI.sendMessageStream(
         currentChatId,
@@ -279,12 +301,45 @@ export const useChatStore = create<ChatState>((set, get) => ({
           },
           onSearchStart: (query: string) => {
             console.log("Search started:", query);
+            set((state) => ({
+              agentProgress: [
+                ...state.agentProgress,
+                {
+                  type: 'searching',
+                  message: 'Searching the web for relevant information',
+                  query,
+                  timestamp: Date.now(),
+                },
+              ],
+            }));
           },
           onSearchResults: (urls: string[]) => {
             console.log("Search results:", urls);
+            set((state) => ({
+              agentProgress: [
+                ...state.agentProgress,
+                {
+                  type: 'reading',
+                  message: 'Reading and analyzing sources',
+                  sources: urls,
+                  timestamp: Date.now(),
+                },
+              ],
+            }));
           },
           onToolOutput: (output: any) => {
             console.log("Tool output:", output);
+            // Add analyzing step for tool outputs
+            set((state) => ({
+              agentProgress: [
+                ...state.agentProgress,
+                {
+                  type: 'analyzing',
+                  message: 'Analyzing information',
+                  timestamp: Date.now(),
+                },
+              ],
+            }));
           },
           onCheckpoint: (checkpointId: string) => {
             console.log("Checkpoint:", checkpointId);
@@ -306,7 +361,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
               isStreaming: false,
               streamingContent: "",
               currentEventSource: null,
+              agentProgress: [
+                ...state.agentProgress,
+                {
+                  type: 'completed',
+                  message: 'Response complete',
+                  timestamp: Date.now(),
+                },
+              ],
             }));
+
+            // Clear progress after a delay
+            setTimeout(() => {
+              set({ agentProgress: [] });
+            }, 2000);
           },
           onError: (error: Error) => {
             console.error("Stream error:", error);
@@ -314,6 +382,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               isStreaming: false,
               streamingContent: "",
               currentEventSource: null,
+              agentProgress: [],
             });
           },
         }
@@ -326,6 +395,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         isStreaming: false,
         streamingContent: "",
         currentEventSource: null,
+        agentProgress: [],
       });
       throw error;
     }
@@ -508,6 +578,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       isStreaming: false,
       streamingContent: "",
       currentEventSource: null,
+      agentProgress: [],
     });
+  },
+
+  setMessages: (messages: Message[]) => {
+    set({ messages });
   },
 }));
