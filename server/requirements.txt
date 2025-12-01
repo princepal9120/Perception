@@ -34,14 +34,14 @@ jsonschema-specifications==2025.4.1
 kombu==5.5.3
 langchain==0.3.23
 langchain-community==0.3.21
-langchain-core==0.3.52
-langchain-groq==0.3.2
-langchain-openai==0.3.13
-langchain-text-splitters==0.3.8
-langgraph==0.3.31
-langgraph-checkpoint==2.0.24
-langgraph-prebuilt==0.1.8
-langgraph-sdk==0.1.61
+langchain-core>=1.1.0
+langgraph>=1.0.4
+langgraph-checkpoint>=3.0.1
+langgraph-checkpoint-postgres>=3.0.1
+langgraph-prebuilt>=1.0.5
+langgraph-sdk>=0.2.10
+mcp>=1.22.0
+langchain-mcp-adapters>=0.1.14
 langsmith==0.3.31
 MarkupSafe==3.0.2
 marshmallow==3.26.1
@@ -108,3 +108,6 @@ email-validator==2.1.1
 
 # Redis for caching and rate limiting
 redis[hiredis]==5.2.1
+
+
+

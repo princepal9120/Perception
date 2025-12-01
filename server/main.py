@@ -34,12 +34,17 @@ from app.routes.document_routes import router as document_router
 from app.routes.voice_routes import router as voice_router
 from app.routes.tree_routes import router as tree_router
 from app.routes.deep_research_routes import router as deep_research_router
+from app.routes.mcp_routes import router as mcp_router
+from app.services.mcp_client_manager import mcp_manager
+from app.models.mcp_schemas import MCPServerConfig, MCPServerType
 from app.db.session import create_tables, check_database_connection, close_database_connection
 from app.core.config import settings
 from app.services.redis_utils import redis_client
 from app.services.llm_service import LLMService
 from app.services.ingestion_service import ChatIngestor
 from app.prompts.prompt_library import get_prompt
+
+
 
 # Configure logging
 logging.basicConfig(
@@ -78,6 +83,19 @@ saver = None
 # -------------------
 # 5. Nodes
 # -------------------
+# -------------------
+# 5. Nodes
+# -------------------
+async def get_all_tools():
+    """Combine native tools and MCP tools"""
+    # Native tools
+    native_tools = tools # from tools.py
+    
+    # MCP tools
+    mcp_tools = await mcp_manager.get_langchain_tools()
+    
+    return native_tools + mcp_tools
+
 async def chat_node(state: ChatState):
     # Add system message if not present
     messages = state["messages"]
@@ -89,7 +107,14 @@ async def chat_node(state: ChatState):
         # Add system message at the beginning
         messages = [SystemMessage(content=SYSTEM_PROMPT)] + messages
     
-    result = await llm_with_tools.ainvoke(messages)
+    # Get all available tools (Native + MCP)
+    all_tools = await get_all_tools()
+    
+    # Bind tools to LLM
+    # Note: We bind dynamically per request to ensure we have the latest MCP tools
+    llm_with_dynamic_tools = llm.bind_tools(all_tools)
+    
+    result = await llm_with_dynamic_tools.ainvoke(messages)
     return {"messages": [result]}
 
 async def tools_router(state: ChatState):
@@ -105,78 +130,64 @@ async def tool_node(state: ChatState, config):
     # Get chat_id from config
     chat_id = config.get("configurable", {}).get("chat_id")
     
+    # Get all tools to find the matching one
+    all_tools = await get_all_tools()
+    tool_map = {t.name: t for t in all_tools}
+    
     for call in tool_calls:
         tool_name = call["name"]
         tool_args = call["args"]
         tool_id = call["id"]
 
-        # Use the correct tool
-        if tool_name == "tavily_search_results_json":
-            result = await tavily_tool.ainvoke(tool_args)
-            tool_messages.append(
-                ToolMessage(content=str(result), tool_call_id=tool_id, name=tool_name)
-            )
-        elif tool_name == "DuckDuckGoSearchRun":
-            result = await duck_tool.ainvoke(tool_args)
-            tool_messages.append(
-                ToolMessage(content=str(result), tool_call_id=tool_id, name=tool_name)
-            )
-        elif tool_name == "calculator":
-            result = calculator.invoke(tool_args)
-            tool_messages.append(
-                ToolMessage(content=str(result), tool_call_id=tool_id, name=tool_name)
-            )
-        elif tool_name == "get_stock_price":
-            result = get_stock_price.invoke(tool_args)
-            tool_messages.append(
-                ToolMessage(content=str(result), tool_call_id=tool_id, name=tool_name)
-            )
-        elif tool_name == "search_documents":
-            logger.info(f"🔍 Executing search_documents tool. Chat ID: {chat_id}")
-            if not chat_id:
-                logger.error("❌ Chat context missing for search_documents")
-                result = {"error": "Chat context required for document search"}
+        logger.info(f"🛠️ Executing tool: {tool_name}")
+
+        try:
+            if tool_name in tool_map:
+                # Execute tool (Native or MCP)
+                tool_instance = tool_map[tool_name]
+                
+                # Special handling for search_documents which needs context
+                if tool_name == "search_documents":
+                    # ... (keep existing search_documents logic or move it to the tool definition)
+                    # For now, we'll keep the custom logic here if it's not encapsulated in the tool itself
+                    # But ideally search_documents should be a proper tool that handles its own context
+                    # Let's assume for now we use the generic invoke, but if it fails we fallback to custom logic
+                    pass
+                
+                # Generic execution
+                if tool_name == "search_documents":
+                     # Inject chat_id if needed, or handle as before
+                     # Re-implementing the custom logic here for safety
+                     logger.info(f"🔍 Executing search_documents tool. Chat ID: {chat_id}")
+                     if not chat_id:
+                        result = {"error": "Chat context required for document search"}
+                     else:
+                        try:
+                            session_id = f"chat_{chat_id}"
+                            ingestor = ChatIngestor(session_id=session_id, use_session_dirs=True)
+                            retriever = ingestor.built_retriver([])
+                            query = tool_args.get("query", "")
+                            docs = await retriever.ainvoke(query)
+                            results = [{"content": d.page_content, "source": d.metadata.get("source"), "page": d.metadata.get("page")} for d in docs]
+                            result = {"results": results}
+                        except Exception as e:
+                            result = {"error": f"Search failed: {str(e)}"}
+                else:
+                    # Standard execution for all other tools (Native & MCP)
+                    result = await tool_instance.ainvoke(tool_args)
+                
+                tool_messages.append(
+                    ToolMessage(content=str(result), tool_call_id=tool_id, name=tool_name)
+                )
             else:
-                try:
-                    session_id = f"chat_{chat_id}"
-                    logger.info(f"🔍 Initializing ChatIngestor for session: {session_id}")
-                    
-                    # Initialize ingestor with existing session
-                    ingestor = ChatIngestor(
-                        session_id=session_id,
-                        use_session_dirs=True
-                    )
-                    
-                    # Get retriever (passing empty list to load existing index)
-                    logger.info("🔍 Building retriever...")
-                    retriever = ingestor.built_retriver([])
-                    
-                    # Search
-                    query = tool_args.get("query", "")
-                    logger.info(f"🔍 Searching for: '{query}'")
-                    docs = await retriever.ainvoke(query)
-                    logger.info(f"✅ Found {len(docs)} documents")
-                    
-                    # Format results
-                    results = []
-                    for doc in docs:
-                        results.append({
-                            "content": doc.page_content,
-                            "source": doc.metadata.get("source", "unknown"),
-                            "page": doc.metadata.get("page", 0)
-                        })
-                    result = {"results": results}
-                except Exception as e:
-                    logger.error(f"❌ Search failed: {str(e)}", exc_info=True)
-                    result = {"error": f"Search failed: {str(e)}"}
-            
+                logger.warning(f"⚠️ Unknown tool: {tool_name}")
+                tool_messages.append(
+                    ToolMessage(content=f"Error: Tool {tool_name} not found", tool_call_id=tool_id, name=tool_name)
+                )
+        except Exception as e:
+            logger.error(f"❌ Tool execution failed: {e}")
             tool_messages.append(
-                ToolMessage(content=str(result), tool_call_id=tool_id, name=tool_name)
-            )
-        else:
-            result = {"error": f"Unknown tool {tool_name}"}
-            tool_messages.append(
-                ToolMessage(content=str(result), tool_call_id=tool_id, name=tool_name)
+                ToolMessage(content=f"Error executing {tool_name}: {str(e)}", tool_call_id=tool_id, name=tool_name)
             )
 
     return {"messages": tool_messages}
@@ -277,7 +288,12 @@ async def lifespan(app: FastAPI):
         logger.info("🔄 Connecting to PostgreSQL for LangGraph checkpointing...")
         try:
             postgres_cm = PostgresSaver.from_conn_string(DATABASE_URL)
-            saver = await postgres_cm.__aenter__()
+            # Handle sync context manager from langgraph-checkpoint-postgres 2.x/3.x
+            if hasattr(postgres_cm, "__aenter__"):
+                saver = await postgres_cm.__aenter__()
+            else:
+                saver = postgres_cm.__enter__()
+                
             await saver.setup()
             logger.info("✅ LangGraph checkpoint tables set up successfully")
             
@@ -287,6 +303,30 @@ async def lifespan(app: FastAPI):
             
             # Initialize industry-grade services
             await service_manager.initialize(graph)
+            
+            # Initialize MCP Manager with default servers
+            logger.info("🔌 Initializing MCP Client Manager...")
+            default_servers = [
+                MCPServerConfig(
+                    name="perplexity",
+                    command=["npx", "-y", "@perplexity/mcp-server"],
+                    env={"PERPLEXITY_API_KEY": os.getenv("PERPLEXITY_API_KEY", "")},
+                    enabled=bool(os.getenv("PERPLEXITY_API_KEY"))
+                ),
+                MCPServerConfig(
+                    name="github",
+                    command=["npx", "-y", "@modelcontextprotocol/server-github"],
+                    env={"GITHUB_TOKEN": os.getenv("GITHUB_TOKEN", "")},
+                    enabled=bool(os.getenv("GITHUB_TOKEN"))
+                ),
+                MCPServerConfig(
+                    name="gmail",
+                    command=["npx", "-y", "@modelcontextprotocol/server-gmail"],
+                    env={"GMAIL_CREDENTIALS": os.getenv("GMAIL_CREDENTIALS", "")},
+                    enabled=bool(os.getenv("GMAIL_CREDENTIALS"))
+                )
+            ]
+            await mcp_manager.load_config(default_servers)
             
             logger.info("🎉 Industry-grade application startup completed successfully")
             yield
@@ -298,7 +338,10 @@ async def lifespan(app: FastAPI):
             # Ensure we exit the context manager if it was entered
             if postgres_cm and saver and isinstance(saver, PostgresSaver):
                 try:
-                    await postgres_cm.__aexit__(None, None, None)
+                    if hasattr(postgres_cm, "__aexit__"):
+                        await postgres_cm.__aexit__(None, None, None)
+                    else:
+                        postgres_cm.__exit__(None, None, None)
                     logger.info("✅ PostgreSQL checkpointer context exited")
                 except Exception as ex:
                     logger.error(f"Error closing PostgreSQL checkpointer: {ex}")
@@ -314,6 +357,30 @@ async def lifespan(app: FastAPI):
             # Initialize services with fallback
             await service_manager.initialize(graph)
             
+            # Initialize MCP Manager with default servers (Fallback path)
+            logger.info("🔌 Initializing MCP Client Manager (Fallback)...")
+            default_servers = [
+                MCPServerConfig(
+                    name="perplexity",
+                    command=["npx", "-y", "@perplexity/mcp-server"],
+                    env={"PERPLEXITY_API_KEY": os.getenv("PERPLEXITY_API_KEY", "")},
+                    enabled=bool(os.getenv("PERPLEXITY_API_KEY"))
+                ),
+                MCPServerConfig(
+                    name="github",
+                    command=["npx", "-y", "@modelcontextprotocol/server-github"],
+                    env={"GITHUB_TOKEN": os.getenv("GITHUB_TOKEN", "")},
+                    enabled=bool(os.getenv("GITHUB_TOKEN"))
+                ),
+                MCPServerConfig(
+                    name="gmail",
+                    command=["npx", "-y", "@modelcontextprotocol/server-gmail"],
+                    env={"GMAIL_CREDENTIALS": os.getenv("GMAIL_CREDENTIALS", "")},
+                    enabled=bool(os.getenv("GMAIL_CREDENTIALS"))
+                )
+            ]
+            await mcp_manager.load_config(default_servers)
+            
             yield
             
     except Exception as e:
@@ -324,10 +391,17 @@ async def lifespan(app: FastAPI):
         logger.info("🔄 Shutting down application...")
         
         try:
+            # Cleanup MCP connections
+            await mcp_manager.cleanup()
+            logger.info("🔌 MCP connections closed")
+
             # Close PostgresSaver context if active
             if postgres_cm is not None and saver and isinstance(saver, PostgresSaver):
                 try:
-                    await postgres_cm.__aexit__(None, None, None)
+                    if hasattr(postgres_cm, "__aexit__"):
+                        await postgres_cm.__aexit__(None, None, None)
+                    else:
+                        postgres_cm.__exit__(None, None, None)
                     logger.info("✅ PostgreSQL checkpointer closed")
                 except Exception as ex:
                     logger.error(f"Error closing PostgreSQL checkpointer during shutdown: {ex}")
@@ -381,6 +455,7 @@ app.include_router(chat_router, prefix="/api/v1")
 app.include_router(document_router, prefix="/api/v1")
 app.include_router(voice_router, prefix="/api/v1/voice", tags=["Voice"])
 app.include_router(tree_router, prefix="/api/v1")
+app.include_router(mcp_router, prefix="/api/v1")
 app.include_router(deep_research_router)
 
 # Custom validation error handler

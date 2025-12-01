@@ -14,13 +14,17 @@ interface ChatHeaderProps {
   onToggleDocumentManager?: () => void;
   onOpenTreeView?: () => void;
   isTreeViewOpen?: boolean;
+  onOpenMCP?: () => void;
+  isMCPOpen?: boolean;
 }
 
 export const ChatHeader = ({
   onToggleSidebar,
   onToggleDocumentManager,
   onOpenTreeView,
-  isTreeViewOpen = false
+  isTreeViewOpen = false,
+  onOpenMCP,
+  isMCPOpen = false
 }: ChatHeaderProps) => {
   const navigate = useNavigate();
 
@@ -60,6 +64,29 @@ export const ChatHeader = ({
             </TooltipTrigger>
             <TooltipContent>
               {isTreeViewOpen ? "Close Tree View" : "Open Tree View"}
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {onOpenMCP && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "h-8 w-8 sm:h-10 sm:w-10 transition-colors",
+                  isMCPOpen && "bg-primary/10 text-primary hover:bg-primary/20"
+                )}
+                onClick={onOpenMCP}
+              >
+                <div className="flex items-center justify-center font-mono text-xs font-bold border border-current rounded w-5 h-5">
+                  M
+                </div>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {isMCPOpen ? "Close MCP Explorer" : "Open MCP Explorer"}
             </TooltipContent>
           </Tooltip>
         )}

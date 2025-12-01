@@ -13,6 +13,7 @@ const Index = () => {
       <Testimonials />
       <Pricing />
 
+      <CTA />
       <Footer />
     </main>
   );

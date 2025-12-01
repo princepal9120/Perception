@@ -140,7 +140,16 @@ export default {
         "shimmer": {
           "0%": { backgroundPosition: "200% 0" },
           "100%": { backgroundPosition: "-200% 0" }
-        }
+        },
+        "grid": {
+          "0%": { transform: "translateY(-50%)" },
+          "100%": { transform: "translateY(0)" },
+        },
+        "border-beam": {
+          "100%": {
+            "offset-distance": "100%",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -152,7 +161,9 @@ export default {
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
         "slow-spin": "slow-spin 20s linear infinite",
         "float": "float 6s ease-in-out infinite",
-        "shimmer": "shimmer 8s linear infinite"
+        "shimmer": "shimmer 8s linear infinite",
+        "border-beam": "border-beam calc(var(--duration)*1s) infinite linear",
+        "grid": "grid 15s linear infinite",
       },
     },
   },

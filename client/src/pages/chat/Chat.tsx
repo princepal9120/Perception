@@ -6,6 +6,7 @@ import { ChatMessages } from "@/components/chat/ChatMessages";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { DocumentManager } from "@/components/chat/DocumentManager";
 import { TreePanel } from "@/components/tree/TreePanel";
+import { MCPToolExplorer } from "@/components/mcp/MCPToolExplorer";
 import { useAuth } from "@/hooks/use-auth";
 import { useChat } from "@/hooks/use-chat";
 import { useTreeStore } from "@/store/treeStore";
@@ -17,6 +18,7 @@ const Chat = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default closed on mobile
   const [isDocumentManagerOpen, setIsDocumentManagerOpen] = useState(false);
   const [isTreeViewOpen, setIsTreeViewOpen] = useState(false);
+  const [isMCPOpen, setIsMCPOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const { token } = useAuth();
   const { currentChat } = useChat();
@@ -75,6 +77,18 @@ const Chat = () => {
     }
   };
 
+  const toggleTreeView = () => {
+    if (isMCPOpen) setIsMCPOpen(false);
+    setIsTreeViewOpen(!isTreeViewOpen);
+  };
+
+  const toggleMCP = () => {
+    if (isTreeViewOpen) setIsTreeViewOpen(false);
+    setIsMCPOpen(!isMCPOpen);
+  };
+
+  const isPanelOpen = isTreeViewOpen || isMCPOpen;
+
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Sidebar */}
@@ -83,13 +97,13 @@ const Chat = () => {
         onToggle={() => setIsSidebarOpen(!isSidebarOpen)}
       />
 
-      {/* Main Content Area - Chat + Tree View */}
+      {/* Main Content Area - Chat + Tree View / MCP */}
       <div className="flex-1 flex overflow-hidden">
         {/* Chat Area */}
         <motion.div
           className="flex flex-col min-w-0 relative bg-white dark:bg-[#212121]"
           animate={{
-            width: isTreeViewOpen ? "50%" : "100%",
+            width: isPanelOpen ? "50%" : "100%",
           }}
           transition={{
             duration: 0.3,
@@ -99,8 +113,10 @@ const Chat = () => {
           <ChatHeader
             onToggleSidebar={() => setIsSidebarOpen(!isSidebarOpen)}
             onToggleDocumentManager={() => setIsDocumentManagerOpen(true)}
-            onOpenTreeView={() => setIsTreeViewOpen(!isTreeViewOpen)}
+            onOpenTreeView={toggleTreeView}
             isTreeViewOpen={isTreeViewOpen}
+            onOpenMCP={toggleMCP}
+            isMCPOpen={isMCPOpen}
           />
 
           <div className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">
@@ -166,6 +182,44 @@ const Chat = () => {
               {/* Tree View Content */}
               <div className="flex-1 overflow-hidden">
                 <TreePanel chatId={currentChat.id} />
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* MCP Tool Explorer Side Panel */}
+        <AnimatePresence>
+          {isMCPOpen && (
+            <motion.div
+              initial={{ width: 0, opacity: 0 }}
+              animate={{ width: "50%", opacity: 1 }}
+              exit={{ width: 0, opacity: 0 }}
+              transition={{
+                duration: 0.3,
+                ease: [0.4, 0, 0.2, 1],
+              }}
+              className="relative border-l border-zinc-200 dark:border-zinc-800 bg-white dark:bg-[#212121] flex flex-col overflow-hidden"
+            >
+              <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800">
+                <div>
+                  <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+                    MCP Tool Explorer
+                  </h2>
+                  <p className="text-sm text-zinc-500 dark:text-zinc-400">
+                    Manage servers and discover available tools
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsMCPOpen(false)}
+                  className="h-8 w-8"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <MCPToolExplorer />
               </div>
             </motion.div>
           )}

@@ -1,13 +1,8 @@
 import { motion } from "framer-motion";
-import { MessageSquare, Mic, FileText, Sparkles, Search, Zap, GitBranch, Network, Workflow, BrainCircuit } from "lucide-react";
+import { MessageSquare, Mic, FileText, Search, GitBranch, Network, Database, Shield } from "lucide-react";
+import { BorderBeam } from "@/components/ui/border-beam";
 
 const features = [
-  {
-    icon: GitBranch,
-    title: "Branching Conversations",
-    description:
-      "Fork any message to explore different paths. Create parallel conversation timelines without losing context.",
-  },
   {
     icon: Search,
     title: "Deep Research",
@@ -15,22 +10,34 @@ const features = [
       "Access real-time web search results and citations for accurate and up-to-date information.",
   },
   {
-    icon: Network,
-    title: "Visual Tree Navigation",
+    icon: Database,
+    title: "Universal Connectivity",
     description:
-      "Visualize your entire conversation history as an interactive tree. Navigate complex discussions with ease.",
+      "Connect any data source—Postgres, Slack, GitHub—directly to your LLM context via MCP.",
+  },
+  {
+    icon: GitBranch,
+    title: "Branching Conversations",
+    description:
+      "Fork any message to explore different paths. Create parallel conversation timelines without losing context.",
+  },
+  {
+    icon: Shield,
+    title: "Secure Execution",
+    description:
+      "Granular permissions and local execution ensure your data stays safe while using powerful tools.",
   },
   {
     icon: Mic,
-    title: "Voice Interaction",
+    title: "Voice Intelligence",
     description:
       "Speak your questions and hear AI responses with natural text-to-speech capabilities.",
   },
   {
-    icon: Zap,
-    title: "Streaming Responses",
+    icon: Network,
+    title: "MCP Connectors",
     description:
-      "Watch AI think in real-time with token-by-token streaming for a fluid experience.",
+      "Connect any data source—Postgres, Slack, GitHub—directly to your LLM context via MCP.",
   },
   {
     icon: FileText,
@@ -39,16 +46,10 @@ const features = [
       "Upload and chat with multiple documents simultaneously. Extract insights from PDFs and reports.",
   },
   {
-    icon: Workflow,
-    title: "Workflow Automation",
+    icon: MessageSquare,
+    title: "Visual Tree Navigation",
     description:
-      "Automate complex research tasks with custom workflows and agentic chains that work for you.",
-  },
-  {
-    icon: BrainCircuit,
-    title: "Adaptive Intelligence",
-    description:
-      "The system automatically selects the best AI model for each specific task to optimize speed and quality.",
+      "Visualize your entire conversation history as an interactive tree. Navigate complex discussions with ease.",
   },
 ];
 
@@ -122,8 +123,10 @@ export const Features = () => {
                 key={index}
                 variants={item}
                 whileHover={{ y: -5, scale: 1.01 }}
-                className={`group relative p-8 rounded-3xl bg-card border border-border/50 shadow-elegant hover:shadow-2xl transition-all duration-300 overflow-hidden ${spanClass}`}
+                className={`group relative p-8 rounded-3xl bg-card border border-border/50 shadow-elegant hover:shadow-2xl transition-all duration-300 overflow-hidden ${spanClass} flex flex-col justify-between`}
               >
+                <BorderBeam size={250} duration={12} delay={9} />
+
                 {/* Hover Gradient & Glow */}
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-accent/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                 <div className="absolute -right-10 -top-10 w-32 h-32 bg-primary/10 rounded-full blur-3xl group-hover:bg-primary/20 transition-all duration-500" />

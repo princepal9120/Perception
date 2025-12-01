@@ -1,6 +1,7 @@
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Sparkles, Zap } from "lucide-react";
+import { RetroGrid } from "@/components/ui/retro-grid";
 import { useNavigate } from "react-router-dom";
 
 export const Hero = () => {
@@ -10,6 +11,7 @@ export const Hero = () => {
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden bg-background selection:bg-primary/20">
       {/* Dynamic Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <RetroGrid />
         <div className="absolute -top-[20%] -left-[10%] w-[70%] h-[70%] rounded-full bg-primary/10 blur-[120px] animate-slow-spin" />
         <div className="absolute top-[20%] -right-[10%] w-[60%] h-[60%] rounded-full bg-accent/10 blur-[120px] animate-float" />
         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-gradient-to-t from-background to-transparent z-10" />
@@ -37,11 +39,11 @@ export const Hero = () => {
             transition={{ duration: 0.8, delay: 0.1, ease: "easeOut" }}
             className="text-6xl md:text-8xl font-bold tracking-tight leading-tight"
           >
-            Research Smarter.
+          Ready to Transform Your
             <br />
             <span className="relative inline-block">
               <span className="bg-gradient-to-r from-primary via-accent to-primary bg-[length:200%_auto] bg-clip-text text-transparent animate-shimmer">
-                Branch Deeper.
+                Research Workflow?
               </span>
             </span>
           </motion.h1>
@@ -53,8 +55,8 @@ export const Hero = () => {
             transition={{ duration: 0.8, delay: 0.2, ease: "easeOut" }}
             className="text-xl md:text-2xl text-muted-foreground max-w-3xl mx-auto leading-relaxed"
           >
-            Explore every possibility with visual conversation trees.
-            Fork, branch, and navigate your AI chats like never before.
+            Join thousands of researchers who are already using Perception to accelerate their work.
+                        Start for free, no credit card required.
           </motion.p>
 
           {/* CTA Buttons */}
@@ -71,7 +73,7 @@ export const Hero = () => {
             >
               <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
               <span className="relative flex items-center gap-2">
-                Start Branching
+                Start free
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </span>
             </Button>
