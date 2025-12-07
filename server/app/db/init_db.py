@@ -24,7 +24,7 @@ async def init_db(session: AsyncSession) -> None:
         user = result.scalar_one_or_none()
         
         if user is None:
-            logger.info("🌱 Seeding initial database data...")
+            logger.info("Seeding initial database data...")
             
             # Create a test user (optional - remove in production)
             # test_user = User(
@@ -37,7 +37,7 @@ async def init_db(session: AsyncSession) -> None:
             
             logger.info("✅ Database seeded successfully")
         else:
-            logger.info("ℹ️  Database already contains data, skipping seed")
+            logger.info("✅ Database already contains data, skipping seed")
             
     except Exception as e:
         logger.error(f"❌ Failed to seed database: {e}")
@@ -52,7 +52,7 @@ async def reset_db() -> None:
     from db.session import engine
     from sqlmodel import SQLModel
     
-    logger.warning("⚠️  Resetting database - all data will be lost!")
+    logger.warning("❌ Resetting database - all data will be lost!")
     
     try:
         async with engine.begin() as conn:

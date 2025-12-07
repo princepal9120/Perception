@@ -139,7 +139,7 @@ async def tool_node(state: ChatState, config):
         tool_args = call["args"]
         tool_id = call["id"]
 
-        logger.info(f"🛠️ Executing tool: {tool_name}")
+        logger.info(f"Executing tool: {tool_name}")
 
         try:
             if tool_name in tool_map:
@@ -158,7 +158,7 @@ async def tool_node(state: ChatState, config):
                 if tool_name == "search_documents":
                      # Inject chat_id if needed, or handle as before
                      # Re-implementing the custom logic here for safety
-                     logger.info(f"🔍 Executing search_documents tool. Chat ID: {chat_id}")
+                     logger.info(f"Executing search_documents tool. Chat ID: {chat_id}")
                      if not chat_id:
                         result = {"error": "Chat context required for document search"}
                      else:
@@ -180,7 +180,7 @@ async def tool_node(state: ChatState, config):
                     ToolMessage(content=str(result), tool_call_id=tool_id, name=tool_name)
                 )
             else:
-                logger.warning(f"⚠️ Unknown tool: {tool_name}")
+                logger.warning(f"❌ Unknown tool: {tool_name}")
                 tool_messages.append(
                     ToolMessage(content=f"Error: Tool {tool_name} not found", tool_call_id=tool_id, name=tool_name)
                 )
@@ -229,7 +229,7 @@ class ServiceManager:
             set_llm_client(self.llm_service)
             
             logger.info("✅ Industry-grade services initialized successfully")
-            logger.info(f"🏭 Available industries: {self.llm_service.service_factory.get_available_industries()}")
+            logger.info(f"✅ Available industries: {self.llm_service.service_factory.get_available_industries()}")
             
         except Exception as e:
             logger.error(f"❌ Failed to initialize services: {e}")
@@ -261,31 +261,31 @@ async def lifespan(app: FastAPI):
     postgres_cm = None
     
     # --- Startup logic ---
-    logger.info("🚀 Starting Perception API with Industry-Grade Architecture")
+    logger.info("✅ Starting Perception API with Industry-Grade Architecture")
     
     try:
         # Check database connection
-        logger.info("🔄 Checking database connection...")
+        logger.info("Checking database connection...")
         db_connected = await check_database_connection()
         if not db_connected:
             logger.error("❌ Database connection failed")
             raise Exception("Database connection failed")
         
         # Create database tables
-        logger.info("🔄 Creating database tables...")
+        logger.info("Creating database tables...")
         await create_tables()
         logger.info("✅ Database tables created successfully")
         
         # Connect to Redis
-        logger.info("🔄 Connecting to Redis...")
+        logger.info("Connecting to Redis...")
         await redis_client.connect()
         if redis_client.connected:
             logger.info("✅ Redis connected successfully")
         else:
-            logger.warning("⚠️  Running without Redis cache")
+            logger.warning("❌ Running without Redis cache")
         
         # Initialize PostgresSaver with context manager for chat
-        logger.info("🔄 Connecting to PostgreSQL for LangGraph checkpointing...")
+        logger.info("Connecting to PostgreSQL for LangGraph checkpointing...")
         try:
             postgres_cm = PostgresSaver.from_conn_string(DATABASE_URL)
             # Handle sync context manager from langgraph-checkpoint-postgres 2.x/3.x
@@ -305,7 +305,7 @@ async def lifespan(app: FastAPI):
             await service_manager.initialize(graph)
             
             # Initialize MCP Manager with default servers
-            logger.info("🔌 Initializing MCP Client Manager...")
+            logger.info("Initializing MCP Client Manager...")
             default_servers = [
                 MCPServerConfig(
                     name="perplexity",
@@ -328,12 +328,12 @@ async def lifespan(app: FastAPI):
             ]
             await mcp_manager.load_config(default_servers)
             
-            logger.info("🎉 Industry-grade application startup completed successfully")
+            logger.info("✅ Industry-grade application startup completed successfully")
             yield
             
         except Exception as e:
             logger.error(f"❌ Failed to setup PostgreSQL checkpointer: {e}")
-            logger.warning("⚠️  Using in-memory checkpointer as fallback")
+            logger.warning("❌ Using in-memory checkpointer as fallback")
             
             # Ensure we exit the context manager if it was entered
             if postgres_cm and saver and isinstance(saver, PostgresSaver):
@@ -358,7 +358,7 @@ async def lifespan(app: FastAPI):
             await service_manager.initialize(graph)
             
             # Initialize MCP Manager with default servers (Fallback path)
-            logger.info("🔌 Initializing MCP Client Manager (Fallback)...")
+            logger.info("Initializing MCP Client Manager (Fallback)...")
             default_servers = [
                 MCPServerConfig(
                     name="perplexity",
@@ -388,12 +388,12 @@ async def lifespan(app: FastAPI):
         raise
     finally:
         # --- Shutdown logic ---
-        logger.info("🔄 Shutting down application...")
+        logger.info("Shutting down application...")
         
         try:
             # Cleanup MCP connections
             await mcp_manager.cleanup()
-            logger.info("🔌 MCP connections closed")
+            logger.info("✅ MCP connections closed")
 
             # Close PostgresSaver context if active
             if postgres_cm is not None and saver and isinstance(saver, PostgresSaver):
@@ -417,7 +417,7 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.error(f"❌ Error during shutdown: {e}")
         
-        logger.info("👋 Application shutdown completed")
+        logger.info("✅ Application shutdown completed")
 
 # -------------------
 # 9. FastAPI App Configuration

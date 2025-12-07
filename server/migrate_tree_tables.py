@@ -30,16 +30,16 @@ async def run_migration():
     )
     
     try:
-        logger.info("🔄 Starting database migration for conversation trees...")
+        logger.info("Starting database migration for conversation trees...")
         
         # Create all tables (will only create new ones)
         async with engine.begin() as conn:
             # Import all models to ensure they're registered
-            logger.info("📋 Creating conversation tree tables...")
+            logger.info("Creating conversation tree tables...")
             await conn.run_sync(SQLModel.metadata.create_all)
         
         logger.info("✅ Migration completed successfully!")
-        logger.info("📊 New tables created:")
+        logger.info("✅ New tables created:")
         logger.info("   - conversation_nodes")
         logger.info("   - conversation_trees")
         logger.info("   - node_relationships")
@@ -67,7 +67,7 @@ async def verify_tables():
             
             tables = await conn.run_sync(_inspect)
             
-            logger.info("\n📋 Current database tables:")
+            logger.info("\nCurrent database tables:")
             for table in sorted(tables):
                 logger.info(f"   ✓ {table}")
             
@@ -76,7 +76,7 @@ async def verify_tables():
             missing = [t for t in tree_tables if t not in tables]
             
             if missing:
-                logger.warning(f"\n⚠️  Missing tables: {missing}")
+                logger.warning(f"\n❌ Missing tables: {missing}")
             else:
                 logger.info("\n✅ All tree tables present!")
                 

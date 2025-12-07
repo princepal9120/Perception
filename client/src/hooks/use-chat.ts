@@ -86,6 +86,7 @@ export const useChat = () => {
 
   /**
    * Send a message
+   * Note: If no chat exists, the chatStore will auto-create one for instant first message
    */
   const handleSendMessage = useCallback(
     async (message: string) => {
@@ -111,20 +112,7 @@ export const useChat = () => {
       }
 
       try {
-        // Create a new chat if none exists
-        if (!currentChatId) {
-          await handleCreateChat();
-          // The chat store will have updated currentChatId, but we need to wait for it
-          // Get the updated chat ID from the store after creation
-          const updatedState = useChatStore.getState();
-          if (!updatedState.currentChatId) {
-            toast.error("Failed to create chat", {
-              description: "Could not create a new conversation. Please try again."
-            });
-            return;
-          }
-        }
-
+        // chatStore.sendMessage now auto-creates chat if none exists
         await sendMessage(message);
       } catch (error) {
         console.error("Failed to send message:", error);
@@ -154,7 +142,7 @@ export const useChat = () => {
         });
       }
     },
-    [sendMessage, isStreaming, currentChatId, isAuthenticated, handleCreateChat]
+    [sendMessage, isStreaming, isAuthenticated]
   );
 
   /**

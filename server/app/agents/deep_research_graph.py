@@ -111,7 +111,7 @@ class DeepResearchGraph:
     
     async def input_node(self, state: DeepResearchState) -> DeepResearchState:
         """Initialize research state."""
-        logger.info(f"🔬 Starting deep research: {state['topic']}")
+        logger.info(f"Starting deep research: {state['topic']}")
         
         # Initialize iteration tracking
         state["current_iteration"] = 0
@@ -128,7 +128,7 @@ class DeepResearchGraph:
     async def retriever_node(self, state: DeepResearchState) -> DeepResearchState:
         """Retrieve documents using RAG."""
         iteration_num = state['current_iteration'] + 1
-        logger.info(f"📚 Retrieving documents (iteration {iteration_num})")
+        logger.info(f"Retrieving documents (iteration {iteration_num})")
         
         # Add progress update: Starting search
         state["iteration_updates"].append({
@@ -206,7 +206,7 @@ class DeepResearchGraph:
     async def extract_claims_node(self, state: DeepResearchState) -> DeepResearchState:
         """Extract factual claims from documents."""
         iteration_num = state['current_iteration'] + 1
-        logger.info("🔍 Extracting claims from documents")
+        logger.info("Extracting claims from documents")
         
         # Add progress update: Starting extraction
         state["iteration_updates"].append({
@@ -241,7 +241,7 @@ class DeepResearchGraph:
     async def verify_claims_node(self, state: DeepResearchState) -> DeepResearchState:
         """Verify extracted claims."""
         iteration_num = state['current_iteration'] + 1
-        logger.info("✔️  Verifying claims")
+        logger.info("Verifying claims")
         
         # Add progress update: Starting verification
         state["iteration_updates"].append({
@@ -276,7 +276,7 @@ class DeepResearchGraph:
     async def gap_analysis_node(self, state: DeepResearchState) -> DeepResearchState:
         """Identify knowledge gaps and generate new queries."""
         iteration_num = state['current_iteration'] + 1
-        logger.info("🔎 Analyzing knowledge gaps")
+        logger.info("Analyzing knowledge gaps")
         
         # Add progress update: Starting gap analysis
         state["iteration_updates"].append({
@@ -332,25 +332,25 @@ class DeepResearchGraph:
     async def iteration_controller_node(self, state: DeepResearchState) -> DeepResearchState:
         """Control iteration flow."""
         state["current_iteration"] += 1
-        logger.info(f"📊 Iteration {state['current_iteration']}/{state['iterations']} complete")
+        logger.info(f"Iteration {state['current_iteration']}/{state['iterations']} complete")
         return state
     
     def should_continue_research(self, state: DeepResearchState) -> str:
         """Decide whether to continue research or finish."""
         if state["current_iteration"] >= state["iterations"]:
-            logger.info("🏁 Reached max iterations, finishing research")
+            logger.info("✅ Reached max iterations, finishing research")
             return "finish"
         
         if not state["current_queries"]:
-            logger.info("🏁 No more queries, finishing research")
+            logger.info("✅ No more queries, finishing research")
             return "finish"
         
-        logger.info("🔄 Continuing to next iteration")
+        logger.info("Continuing to next iteration")
         return "continue"
     
     async def final_synthesis_node(self, state: DeepResearchState) -> DeepResearchState:
         """Synthesize final research report."""
-        logger.info("📝 Synthesizing final research report")
+        logger.info("Synthesizing final research report")
         
         # Add progress update: Starting synthesis
         state["iteration_updates"].append({
@@ -385,7 +385,7 @@ class DeepResearchGraph:
     
     async def output_node(self, state: DeepResearchState) -> DeepResearchState:
         """Prepare final output."""
-        logger.info("✨ Deep research complete")
+        logger.info("✅ Deep research complete")
         return state
     
     # ============================================

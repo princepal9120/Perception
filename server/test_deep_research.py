@@ -74,7 +74,7 @@ async def test_graph():
     llm = ChatGroq(model="meta-llama/llama-4-scout-17b-16e-instruct", temperature=0.3)
     graph = DeepResearchGraph(llm)
     
-    print("\n🔬 Running mini research on 'Quantum Computing'...")
+    print("\nRunning mini research on 'Quantum Computing'...")
     print("   Depth: 2, Iterations: 2\n")
     
     result = await graph.run_research(
@@ -83,7 +83,7 @@ async def test_graph():
         iterations=2
     )
     
-    print("\n📊 Research Results:")
+    print("\n✅ Research Results:")
     print(f"   Iteration Updates: {len(result.get('iteration_updates', []))}")
     
     report = result.get('report')

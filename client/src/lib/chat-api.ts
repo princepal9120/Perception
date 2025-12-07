@@ -293,6 +293,32 @@ class ChatAPI {
     }
   }
 
+  /**
+   * Branch a new chat from a specific message
+   * Creates a new chat with messages up to and including the specified message
+   */
+  async branchChat(
+    chatId: number,
+    messageId: number,
+    token: string
+  ): Promise<Chat> {
+    const response = await this.fetchWithTokenRefresh(
+      `${API_BASE_URL}/chats/${chatId}/branch/${messageId}`,
+      {
+        method: "POST",
+        headers: this.getHeaders(token),
+      },
+      token
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to branch chat");
+    }
+
+    return response.json();
+  }
+
   // ==================== Message Management ====================
 
   async getMessages(

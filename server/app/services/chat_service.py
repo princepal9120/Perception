@@ -386,3 +386,77 @@ class ChatService:
         
         # Create message with enhanced metadata
         return await self.create_message(chat_id, role, content, metadata)
+    
+    async def branch_from_message(self, chat_id: int, message_id: int) -> Chat:
+        """
+        Create a new chat branched from a specific message.
+        
+        Copies all messages from the original chat up to and including
+        the specified message_id into a new chat.
+        
+        Args:
+            chat_id: Original chat ID
+            message_id: Message ID to branch from
+            
+        Returns:
+            Newly created chat with copied messages
+        """
+        # Verify ownership of original chat
+        original_chat = await self.get_chat(chat_id)
+        
+        # Get the message to branch from
+        result = await self.db.execute(
+            select(Message).where(
+                Message.id == message_id,
+                Message.chat_id == chat_id
+            )
+        )
+        branch_point = result.scalar_one_or_none()
+        
+        if not branch_point:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Message not found in this chat"
+            )
+        
+        # Create new branch chat
+        branch_title = f"Branch: {original_chat.title}"
+        if len(branch_title) > 255:
+            branch_title = branch_title[:252] + "..."
+            
+        new_chat = Chat(
+            user_id=self.user.id,
+            title=branch_title
+        )
+        self.db.add(new_chat)
+        await self.db.flush()  # Get the new chat ID
+        
+        # Get all messages up to and including the branch point
+        query = (
+            select(Message)
+            .where(Message.chat_id == chat_id)
+            .where(Message.created_at <= branch_point.created_at)
+            .order_by(Message.created_at.asc())
+        )
+        result = await self.db.execute(query)
+        messages_to_copy = result.scalars().all()
+        
+        # Copy messages to new chat
+        for msg in messages_to_copy:
+            new_message = Message(
+                chat_id=new_chat.id,
+                user_id=self.user.id,
+                role=msg.role,
+                content=msg.content,
+                metadata_json=msg.metadata_json
+            )
+            self.db.add(new_message)
+        
+        await self.db.commit()
+        await self.db.refresh(new_chat)
+        
+        # Add to user's session cache
+        await redis_client.add_user_session(self.user.id, new_chat.id)
+        
+        logger.info(f"Created branch chat {new_chat.id} from chat {chat_id} message {message_id} with {len(messages_to_copy)} messages")
+        return new_chat

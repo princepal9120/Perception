@@ -65,6 +65,7 @@ interface ChatState {
   selectChat: (chatId: number) => Promise<void>;
   updateChat: (chatId: number, title: string) => Promise<void>;
   deleteChat: (chatId: number) => Promise<void>;
+  branchFromMessage: (chatId: number, messageId: number) => Promise<Chat | null>;
   loadMessages: (chatId: number) => Promise<void>;
   sendMessage: (content: string) => Promise<void>;
   sendDeepResearch: (topic: string, depth: number, iterations: number) => Promise<void>;
@@ -276,6 +277,35 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
+  // Branch from a message - creates new chat with messages up to that point
+  branchFromMessage: async (chatId: number, messageId: number) => {
+    const token = getAuthToken();
+    if (!token) {
+      console.error("No authentication token found");
+      return null;
+    }
+
+    try {
+      set({ isLoading: true });
+      const newChat = await chatAPI.branchChat(chatId, messageId, token);
+
+      // Add new chat to the list
+      set((state) => ({
+        chats: [newChat, ...state.chats],
+      }));
+
+      // Select the new chat and load its messages
+      await get().selectChat(newChat.id);
+
+      return newChat;
+    } catch (error) {
+      console.error("Failed to branch chat:", error);
+      throw error;
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
   // Load messages for a chat
   loadMessages: async (chatId: number) => {
     const token = getAuthToken();
@@ -295,7 +325,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   // Send a message and stream the response
   sendMessage: async (content: string) => {
-    const { currentChatId, currentEventSource } = get();
+    let { currentChatId, currentEventSource } = get();
     const token = getAuthToken();
 
     if (!token) {
@@ -303,9 +333,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
       return;
     }
 
+    // Auto-create chat if none exists - this makes first message instant
     if (!currentChatId) {
-      console.error("No chat selected");
-      return;
+      try {
+        const newChat = await chatAPI.createChat("New Chat", token);
+        set((state) => ({
+          chats: [newChat, ...state.chats],
+          currentChatId: newChat.id,
+          messages: [],
+        }));
+        currentChatId = newChat.id;
+      } catch (error) {
+        console.error("Failed to auto-create chat:", error);
+        throw error;
+      }
     }
 
     // Stop any existing stream

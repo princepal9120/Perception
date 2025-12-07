@@ -2,6 +2,7 @@
 Authentication routes for signup, login, token refresh, and user profile.
 """
 import logging
+from datetime import timedelta
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -127,8 +128,18 @@ async def login(
         )
     
     # Generate tokens
+    # Generate tokens
     access_token = create_access_token(data={"sub": str(user.id)})
-    refresh_token = create_refresh_token(data={"sub": str(user.id)})
+    
+    # Check remember_me flag
+    expires_delta = None
+    if credentials.remember_me:
+        expires_delta = timedelta(days=15)
+        
+    refresh_token = create_refresh_token(
+        data={"sub": str(user.id)}, 
+        expires_delta=expires_delta
+    )
     
     logger.info(f"User logged in successfully: {user.name} (ID: {user.id})")
     

@@ -73,6 +73,7 @@ class AuthAPI {
       body: JSON.stringify({
         email: data.email,
         password: data.password,
+        remember_me: data.remember_me,
       }),
     });
 

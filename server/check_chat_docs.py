@@ -27,7 +27,7 @@ async def check_documents():
         )
         docs = result.fetchall()
         
-        print(f"\n📄 Documents for chat 40:")
+        print(f"\nDocuments for chat 40:")
         print(f"Total: {len(docs)}")
         print("-" * 80)
         if docs:
@@ -35,10 +35,10 @@ async def check_documents():
                 print(f"ID: {doc[0]}, File: {doc[2]}, Indexed: {doc[3]}, Created: {doc[4]}")
         else:
             print("❌ No documents found for chat 40!")
-            print("\n💡 This means you need to UPLOAD a document first!")
+            print("\nTip: This means you need to UPLOAD a document first!")
             
         # Check all recent documents
-        print("\n\n📋 Recent documents (all chats):")
+        print("\n\nRecent documents (all chats):")
         all_docs = await session.execute(
             text("SELECT id, chat_id, filename, indexed, created_at FROM documents ORDER BY created_at DESC LIMIT 5")
         )

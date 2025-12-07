@@ -2,6 +2,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Mail, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -13,17 +14,18 @@ const Login = () => {
   const { login, isLoading } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       toast.error("Please fill in all fields");
       return;
     }
 
     try {
-      await login({ email, password });
+      await login({ email, password, remember_me: rememberMe });
       toast.success("Login successful!");
       navigate("/chat");
     } catch (error) {
@@ -37,7 +39,7 @@ const Login = () => {
     <div className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden">
       {/* Background gradient */}
       <div className="absolute inset-0 gradient-shine opacity-5" />
-      
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -92,6 +94,20 @@ const Login = () => {
                   required
                 />
               </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="remember"
+                checked={rememberMe}
+                onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+              />
+              <label
+                htmlFor="remember"
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 text-muted-foreground"
+              >
+                Remember me for 15 days
+              </label>
             </div>
 
             <Button

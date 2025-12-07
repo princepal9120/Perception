@@ -36,7 +36,7 @@ class RedisClient:
             logger.info("✅ Redis connection established")
         except Exception as e:
             logger.error(f"❌ Failed to connect to Redis: {e}")
-            logger.warning("⚠️  Running without Redis cache")
+            logger.warning("❌ Running without Redis cache")
             self.connected = False
     
     async def disconnect(self):

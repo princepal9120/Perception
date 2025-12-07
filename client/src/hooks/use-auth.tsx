@@ -66,12 +66,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
         setIsLoading(false);
     }, []);
 
-    // Verify token and refresh user data when token exists but user doesn't
-    useEffect(() => {
-        if (token && !user) {
-            updateProfile();
-        }
-    }, [token, user]);
+    // Note: We no longer need to fetch profile after login because:
+    // 1. Login/signup already return user data in TokenResponse
+    // 2. User is set immediately in login/signup functions
+    // This eliminates an unnecessary API call that was causing login delays
 
     const login = async (data: LoginData) => {
         try {

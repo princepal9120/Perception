@@ -55,7 +55,7 @@ async def stream_deep_research(
         StreamingResponse with SSE events
     """
     logger.info(
-        f"🔬 Deep research started by user {current_user.id}: "
+        f"Deep research started by user {current_user.id}: "
         f"topic='{request.topic}', depth={request.depth}, iterations={request.iterations}"
     )
     

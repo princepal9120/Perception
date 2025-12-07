@@ -13,7 +13,7 @@ import { MessageActions } from "./MessageActions";
 import { useTreeStore } from "@/store/treeStore";
 import { treeApi } from "@/lib/tree-api";
 import { useChatStore } from "@/store/chatStore";
-import { WorkflowSyncVisualizer } from "../tree/WorkflowSyncVisualizer";
+
 
 interface ChatMessagesProps {
   isTreeViewOpen?: boolean;
@@ -45,26 +45,25 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
   };
 
   const handleFork = async (message: any) => {
-    if (!message.metadata?.nodeId) {
-      console.error("Cannot fork: no nodeId in message metadata");
+    const { currentChatId, branchFromMessage } = useChatStore.getState();
+
+    if (!currentChatId) {
+      console.error("Cannot branch: no current chat ID");
       return;
     }
 
-    const nodeId = message.metadata.nodeId;
-    const { forkNode, currentChatId } = useTreeStore.getState();
-
-    if (!currentChatId) {
-      console.error("Cannot fork: no current chat ID");
+    if (!message.id) {
+      console.error("Cannot branch: no message ID");
       return;
     }
 
     try {
-      // Create a new branch from this node
-      await forkNode(nodeId, `Branch from ${new Date().toLocaleTimeString()}`);
+      // Create a new chat branched from this message
+      const newChat = await branchFromMessage(currentChatId, message.id);
 
-      // The forkNode action in treeStore already reloads the tree
-      // After forking, the user can type a new message which will go to the new branch
-      console.log(`Created new branch from node ${nodeId}`);
+      if (newChat) {
+        console.log(`Created new branch chat ${newChat.id} from message ${message.id}`);
+      }
     } catch (e) {
       console.error("Failed to create branch:", e);
     }
@@ -211,8 +210,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
 
       <div ref={messagesEndRef} className="h-4" />
 
-      {/* Workflow Sync Visualizer */}
-      <WorkflowSyncVisualizer />
+      <div ref={messagesEndRef} className="h-4" />
     </div>
   );
 };

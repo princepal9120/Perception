@@ -224,6 +224,51 @@ async def delete_chat(
     )
 
 
+@router.post(
+    "/{chat_id}/branch/{message_id}",
+    response_model=ChatResponse,
+    status_code=status.HTTP_201_CREATED,
+    responses={
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        404: {"model": ErrorResponse}
+    }
+)
+async def branch_chat(
+    chat_id: int,
+    message_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Create a new chat branched from a specific message.
+    
+    Copies all messages up to and including the specified message
+    into a new chat. The new chat title is prefixed with "Branch:".
+    
+    - **chat_id**: Original chat ID
+    - **message_id**: Message ID to branch from
+    
+    Requires authentication and ownership of the original chat.
+    """
+    service = ChatService(db, current_user)
+    new_chat = await service.branch_from_message(chat_id, message_id)
+    
+    message_count = await service.get_message_count(new_chat.id)
+    
+    logger.info(f"User {current_user.id} branched chat {chat_id} from message {message_id} -> new chat {new_chat.id}")
+    
+    return ChatResponse(
+        id=new_chat.id,
+        user_id=new_chat.user_id,
+        title=new_chat.title,
+        checkpoint_id=new_chat.checkpoint_id,
+        created_at=new_chat.created_at,
+        updated_at=new_chat.updated_at,
+        message_count=message_count
+    )
+
+
 @router.get(
     "/{chat_id}/messages",
     response_model=MessageListResponse,

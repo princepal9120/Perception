@@ -103,13 +103,13 @@ class LLMClient:
                 doc_list = ', '.join(doc_names) if doc_names else 'unknown documents'
                 doc_count = document_context.get('document_count', 0)
                 
-                logger.info(f"📄 Chat has {doc_count} documents: {doc_list}")
+                logger.info(f"Chat has {doc_count} documents: {doc_list}")
                 
                 try:
                     from app.services.ingestion_service import ChatIngestor
                     
                     session_id = f"chat_{chat_id}"
-                    logger.info(f"🔍 Attempting to retrieve context from documents for session: {session_id}")
+                    logger.info(f"Attempting to retrieve context from documents for session: {session_id}")
                     
                     # Initialize ingestor with existing session
                     ingestor = ChatIngestor(
@@ -129,7 +129,7 @@ class LLMClient:
                     
                     # FALLBACK LOGIC: If no results found, try a broader query
                     if not docs or len(docs) == 0:
-                        logger.warning("⚠️ Initial search returned 0 results. Attempting fallback with broad query...")
+                        logger.warning("❌ Initial search returned 0 results. Attempting fallback with broad query...")
                         fallback_query = "summary introduction abstract main points"
                         docs = await retriever.ainvoke(fallback_query)
                         if docs:
@@ -154,7 +154,7 @@ class LLMClient:
                         logger.info(f"✅ Injected {len(retrieved_context)} characters of context into prompt")
                     else:
                         # No results found, but still inform AI about documents
-                        logger.warning(f"⚠️  Retriever returned 0 chunks for query")
+                        logger.warning(f"❌ Retriever returned 0 chunks for query")
                         
                         # Use prompt from library
                         prompt_fn = get_prompt("no_results_context_prompt")

@@ -59,24 +59,22 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
                 </TooltipContent>
             </Tooltip>
 
-            {/* Fork Button - Only in tree mode */}
-            {isTreeMode && (
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7"
-                            onClick={onFork}
-                        >
-                            <GitBranch className="h-3.5 w-3.5" />
-                        </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                        Branch out from here
-                    </TooltipContent>
-                </Tooltip>
-            )}
+            {/* Fork Button - Always available to start a branch */}
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7"
+                        onClick={onFork}
+                    >
+                        <GitBranch className="h-3.5 w-3.5" />
+                    </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                    Branch out from here
+                </TooltipContent>
+            </Tooltip>
 
             {/* Regenerate Button - Only for AI messages in tree mode */}
             {isTreeMode && role === 'assistant' && (

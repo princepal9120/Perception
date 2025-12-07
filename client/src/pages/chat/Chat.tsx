@@ -13,6 +13,7 @@ import { useTreeStore } from "@/store/treeStore";
 import { X, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { WorkflowSyncVisualizer } from "@/components/tree/WorkflowSyncVisualizer";
 
 const Chat = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default closed on mobile
@@ -127,6 +128,9 @@ const Chat = () => {
           </div>
 
           <ChatInput isTreeViewOpen={isTreeViewOpen} />
+
+          {/* Workflow Sync Visualizer - Always visible in chat area */}
+          <WorkflowSyncVisualizer />
         </motion.div>
 
         {/* Tree View Side Panel */}
