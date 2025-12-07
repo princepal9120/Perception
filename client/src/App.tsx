@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { ProtectedRoute } from "@/components/auth/protected-route";
-import Index from "./pages/Index";
+import LandingPage from "./pages/LandingPage";
 import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
 import Chat from "./pages/chat/Chat";
@@ -27,7 +27,7 @@ const AnimatedRoutes = () => {
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
         {/* Original routes */}
-        <Route path="/" element={<Index />} />
+        <Route path="/" element={<LandingPage />} />
         <Route path="/auth/login" element={<Login />} />
         <Route path="/auth/signup" element={<Signup />} />
 

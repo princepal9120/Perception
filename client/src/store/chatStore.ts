@@ -10,6 +10,43 @@ interface AgentProgressStep {
   timestamp?: number;
 }
 
+// Deep Research Types
+export type ResearchPhase = 'idle' | 'planning' | 'researching' | 'synthesizing' | 'complete';
+
+export interface ResearchArea {
+  id: string;
+  name: string;
+  status: 'pending' | 'in_progress' | 'complete';
+}
+
+export interface ResearchFinding {
+  id: string;
+  text: string;
+  timestamp: number;
+}
+
+export interface ResearchSource {
+  url: string;
+  title?: string;
+  domain: string;
+}
+
+export interface DeepResearchState {
+  phase: ResearchPhase;
+  topic: string;
+  researchAreas: ResearchArea[];
+  currentFocus: string;
+  progress: number;
+  sourcesAnalyzed: number;
+  totalSourcesEstimate: number;
+  searchesPerformed: number;
+  totalSearchesEstimate: number;
+  findings: ResearchFinding[];
+  sources: ResearchSource[];
+  startTime: number;
+  report?: string;
+}
+
 interface ChatState {
   // State
   chats: Chat[];
@@ -20,6 +57,7 @@ interface ChatState {
   streamingContent: string;
   currentEventSource: (() => void) | null;
   agentProgress: AgentProgressStep[];
+  deepResearchState: DeepResearchState;
 
   // Actions
   loadChats: () => Promise<void>;
@@ -110,6 +148,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streamingContent: "",
   currentEventSource: null,
   agentProgress: [],
+  deepResearchState: {
+    phase: 'idle',
+    topic: '',
+    researchAreas: [],
+    currentFocus: '',
+    progress: 0,
+    sourcesAnalyzed: 0,
+    totalSourcesEstimate: 100,
+    searchesPerformed: 0,
+    totalSearchesEstimate: 35,
+    findings: [],
+    sources: [],
+    startTime: 0,
+    report: undefined,
+  },
 
   // Load all chats for the user
   loadChats: async () => {

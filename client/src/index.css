@@ -319,4 +319,31 @@ All colors MUST be HSL.
     background-color: hsl(var(--primary) / 0.2);
     color: hsl(var(--foreground));
   }
+
+  /* Landing Page Utilities */
+  .glass-card {
+    background: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(18px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 20px rgba(123, 97, 255, 0.5);
+  }
+  
+  .glow-box {
+    box-shadow: 0 0 20px rgba(123, 97, 255, 0.3);
+  }
+
+  .text-gradient {
+    background: linear-gradient(90deg, #7B61FF, #4285FF);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  
+  .bg-gradient-ai {
+    background: linear-gradient(90deg, #7B61FF, #4285FF);
+  }
 }
