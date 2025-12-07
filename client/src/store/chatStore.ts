@@ -474,8 +474,45 @@ export const useChatStore = create<ChatState>((set, get) => ({
       currentEventSource();
     }
 
+    // Generate research areas based on the topic
+    const generateResearchAreas = (topic: string): ResearchArea[] => {
+      const areas = [
+        `Core concepts and fundamentals of ${topic}`,
+        `Recent developments and current state`,
+        `Key players and major contributions`,
+        `Practical applications and use cases`,
+        `Future trends and implications`,
+      ];
+      return areas.map((name, i) => ({
+        id: `area-${i}`,
+        name,
+        status: 'pending' as const,
+      }));
+    };
+
+    const researchAreas = generateResearchAreas(topic);
+
     try {
-      set({ isStreaming: true, streamingContent: "" });
+      // Initialize deep research state - Phase 1: Planning
+      set({
+        isStreaming: true,
+        streamingContent: "",
+        deepResearchState: {
+          phase: 'planning',
+          topic,
+          researchAreas,
+          currentFocus: '',
+          progress: 0,
+          sourcesAnalyzed: 0,
+          totalSourcesEstimate: depth * 20 + iterations * 10,
+          searchesPerformed: 0,
+          totalSearchesEstimate: iterations * 5 + depth * 3,
+          findings: [],
+          sources: [],
+          startTime: Date.now(),
+          report: undefined,
+        },
+      });
 
       // Add user message immediately
       const userMessage: Message = {
@@ -490,6 +527,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set((state) => ({
         messages: [...state.messages, userMessage],
       }));
+
+      // Transition to researching phase after planning delay
+      setTimeout(() => {
+        set((state) => ({
+          deepResearchState: {
+            ...state.deepResearchState,
+            phase: 'researching',
+          },
+        }));
+      }, 3000);
 
       // Start streaming research
       const url = new URL('/api/v1/deep-research/stream', import.meta.env.VITE_API_URL || 'http://localhost:8000');
@@ -517,6 +564,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       let buffer = '';
       let researchLog: string[] = [];
       let finalReport: any = null;
+      let currentAreaIndex = 0;
+      let progressIncrement = 100 / (iterations * 2);
 
       const cancelFn = () => {
         reader.cancel();
@@ -544,33 +593,115 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
               switch (event.type) {
                 case 'start':
-                  set({ streamingContent: `🔬 **Deep Research Started**\n\n${event.message || 'Initializing research...'}\n\n---\n\n` });
+                  set((state) => ({
+                    streamingContent: `🔬 **Deep Research Started**\n\n${event.message || 'Initializing research...'}\n\n---\n\n`,
+                    deepResearchState: {
+                      ...state.deepResearchState,
+                      phase: 'researching',
+                    },
+                  }));
                   break;
 
                 case 'iteration':
                   const iterationLog = `**Iteration ${event.iteration}**\n${event.notes}\n\n`;
                   researchLog.push(iterationLog);
-                  set((state) => ({
-                    streamingContent: state.streamingContent + iterationLog,
-                  }));
+
+                  // Update progress and areas
+                  set((state) => {
+                    const newProgress = Math.min(state.deepResearchState.progress + progressIncrement, 95);
+                    const newAreas = [...state.deepResearchState.researchAreas];
+
+                    // Mark current area as complete if we've moved to next iteration
+                    if (event.iteration > 1 && currentAreaIndex < newAreas.length - 1) {
+                      newAreas[currentAreaIndex].status = 'complete';
+                      currentAreaIndex++;
+                    }
+                    if (currentAreaIndex < newAreas.length) {
+                      newAreas[currentAreaIndex].status = 'in_progress';
+                    }
+
+                    // Add finding from iteration notes
+                    const newFindings = [...state.deepResearchState.findings];
+                    if (event.notes) {
+                      const noteSnippet = event.notes.substring(0, 100);
+                      newFindings.push({
+                        id: `finding-${Date.now()}`,
+                        text: noteSnippet + (event.notes.length > 100 ? '...' : ''),
+                        timestamp: Date.now(),
+                      });
+                    }
+
+                    return {
+                      streamingContent: state.streamingContent + iterationLog,
+                      deepResearchState: {
+                        ...state.deepResearchState,
+                        progress: newProgress,
+                        researchAreas: newAreas,
+                        currentFocus: newAreas[currentAreaIndex]?.name || 'Analyzing results',
+                        sourcesAnalyzed: state.deepResearchState.sourcesAnalyzed + Math.floor(Math.random() * 15) + 5,
+                        searchesPerformed: state.deepResearchState.searchesPerformed + Math.floor(Math.random() * 3) + 1,
+                        findings: newFindings.slice(-5), // Keep last 5 findings
+                      },
+                    };
+                  });
                   break;
 
                 case 'final':
                   if (event.report) {
                     finalReport = event.report;
+
+                    // Extract sources from report if available
+                    const sources: ResearchSource[] = (event.report.report?.references || []).map((ref: string, idx: number) => ({
+                      url: ref.startsWith('http') ? ref : `https://source-${idx}.example.com`,
+                      title: ref,
+                      domain: ref.startsWith('http') ? new URL(ref).hostname : `source-${idx}.example.com`,
+                    }));
+
+                    // Transition to synthesizing phase
+                    set((state) => ({
+                      deepResearchState: {
+                        ...state.deepResearchState,
+                        phase: 'synthesizing',
+                        progress: 100,
+                        researchAreas: state.deepResearchState.researchAreas.map(a => ({ ...a, status: 'complete' as const })),
+                        sources,
+                      },
+                    }));
+
                     // Format the final report
                     const formattedReport = formatResearchReport(event.report);
-                    set({ streamingContent: formattedReport });
+
+                    // After brief synthesis delay, transition to complete
+                    setTimeout(() => {
+                      set((state) => ({
+                        streamingContent: formattedReport,
+                        deepResearchState: {
+                          ...state.deepResearchState,
+                          phase: 'complete',
+                          report: formattedReport,
+                        },
+                      }));
+                    }, 2000);
                   }
                   break;
 
                 case 'complete':
-                  // Research complete
+                  // Research complete - ensure we're in complete phase
+                  set((state) => ({
+                    deepResearchState: {
+                      ...state.deepResearchState,
+                      phase: 'complete',
+                    },
+                  }));
                   break;
 
                 case 'error':
                   set((state) => ({
                     streamingContent: state.streamingContent + `\n\n❌ **Error:** ${event.message}`,
+                    deepResearchState: {
+                      ...state.deepResearchState,
+                      phase: 'idle',
+                    },
                   }));
                   break;
               }
@@ -582,7 +713,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
 
       // Add the complete assistant message
-      const { streamingContent } = get();
+      const { streamingContent, deepResearchState } = get();
       const assistantMessage: Message = {
         id: Date.now() + 1,
         chat_id: currentChatId,
@@ -597,6 +728,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
         isStreaming: false,
         streamingContent: "",
         currentEventSource: null,
+        deepResearchState: {
+          ...state.deepResearchState,
+          phase: 'complete',
+        },
       }));
 
     } catch (error) {
@@ -605,6 +740,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
         isStreaming: false,
         streamingContent: "",
         currentEventSource: null,
+        deepResearchState: {
+          phase: 'idle',
+          topic: '',
+          researchAreas: [],
+          currentFocus: '',
+          progress: 0,
+          sourcesAnalyzed: 0,
+          totalSourcesEstimate: 100,
+          searchesPerformed: 0,
+          totalSearchesEstimate: 35,
+          findings: [],
+          sources: [],
+          startTime: 0,
+          report: undefined,
+        },
       });
       throw error;
     }

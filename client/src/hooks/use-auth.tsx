@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { authAPI, User, AuthToken, SignupData, LoginData } from '@/lib/auth-api';
+import AuthService from '@/lib/auth-service';
 
 interface AuthContextType {
     user: User | null;
@@ -17,10 +18,6 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const TOKEN_KEY = 'perception_auth_token';
-const REFRESH_TOKEN_KEY = 'perception_refresh_token';
-const USER_KEY = 'perception_auth_user';
-
 interface AuthProviderProps {
     children: ReactNode;
 }
@@ -33,23 +30,37 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
     const isAuthenticated = !!user && !!token;
 
+    // Subscribe to AuthService session expiry events for IMMEDIATE logout
+    useEffect(() => {
+        const unsubscribe = AuthService.subscribe((event) => {
+            if (event === 'SESSION_EXPIRED' || event === 'LOGOUT') {
+                // Immediately clear local state
+                setUser(null);
+                setToken(null);
+                setRefreshToken(null);
+                setIsLoading(false);
+            } else if (event === 'TOKEN_REFRESHED') {
+                // Update token state with new token
+                const newToken = AuthService.getAccessToken();
+                const newRefreshToken = AuthService.getRefreshToken();
+                if (newToken) setToken(newToken);
+                if (newRefreshToken) setRefreshToken(newRefreshToken);
+            }
+        });
+
+        return unsubscribe;
+    }, []);
+
     // Load stored auth data on mount
     useEffect(() => {
-        const storedToken = localStorage.getItem(TOKEN_KEY);
-        const storedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
-        const storedUser = localStorage.getItem(USER_KEY);
+        const storedToken = AuthService.getAccessToken();
+        const storedRefreshToken = AuthService.getRefreshToken();
+        const storedUser = AuthService.getUser();
 
         if (storedToken && storedUser) {
-            try {
-                setToken(storedToken);
-                setRefreshToken(storedRefreshToken);
-                setUser(JSON.parse(storedUser));
-            } catch (error) {
-                console.error('Failed to parse stored user data:', error);
-                localStorage.removeItem(TOKEN_KEY);
-                localStorage.removeItem(REFRESH_TOKEN_KEY);
-                localStorage.removeItem(USER_KEY);
-            }
+            setToken(storedToken);
+            setRefreshToken(storedRefreshToken);
+            setUser(storedUser);
         }
 
         setIsLoading(false);
@@ -80,10 +91,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
             setUser(userData);
 
-            // Store in localStorage
-            localStorage.setItem(TOKEN_KEY, authResponse.access_token);
-            localStorage.setItem(REFRESH_TOKEN_KEY, authResponse.refresh_token);
-            localStorage.setItem(USER_KEY, JSON.stringify(userData));
+            // Store using AuthService
+            AuthService.setTokens(authResponse.access_token, authResponse.refresh_token, userData);
 
         } catch (error) {
             console.error('Login failed:', error);
@@ -111,10 +120,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
             setUser(userData);
 
-            // Store in localStorage
-            localStorage.setItem(TOKEN_KEY, authResponse.access_token);
-            localStorage.setItem(REFRESH_TOKEN_KEY, authResponse.refresh_token);
-            localStorage.setItem(USER_KEY, JSON.stringify(userData));
+            // Store using AuthService
+            AuthService.setTokens(authResponse.access_token, authResponse.refresh_token, userData);
         } catch (error) {
             console.error('Signup failed:', error);
             throw error;
@@ -131,15 +138,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
             }
         } catch (error) {
             console.error('Logout API call failed:', error);
-            // Continue with local logout even if API call fails
+            // AuthService.logout already clears tokens
         } finally {
             // Clear local state
             setUser(null);
             setToken(null);
             setRefreshToken(null);
-            localStorage.removeItem(TOKEN_KEY);
-            localStorage.removeItem(REFRESH_TOKEN_KEY);
-            localStorage.removeItem(USER_KEY);
+            AuthService.clearTokens();
             setIsLoading(false);
         }
     };
@@ -150,13 +155,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
         try {
             const userData = await authAPI.getProfile(token);
             setUser(userData);
-            localStorage.setItem(USER_KEY, JSON.stringify(userData));
+            // Update user in storage via AuthService
+            const currentToken = AuthService.getAccessToken();
+            const currentRefresh = AuthService.getRefreshToken();
+            if (currentToken && currentRefresh) {
+                AuthService.setTokens(currentToken, currentRefresh, userData);
+            }
         } catch (error) {
             console.error('Failed to update profile:', error);
-            // If token is invalid, logout
-            if (error instanceof Error && error.message.includes('401')) {
-                await logout();
-            }
+            // AuthService already handles session expiry
         }
     };
 

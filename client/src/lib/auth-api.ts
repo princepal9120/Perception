@@ -1,4 +1,7 @@
 // src/lib/auth-api.ts
+// Auth API client - uses AuthService for token management
+
+import AuthService from './auth-service';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
@@ -82,31 +85,27 @@ class AuthAPI {
   }
 
   async logout(token: string): Promise<APIResponse> {
-    const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-      method: "POST",
-      headers: this.getHeaders(token),
-    });
-
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Logout failed");
-    }
-
-    return response.json();
+    await AuthService.logout(token);
+    return { success: true, message: "Logged out successfully" };
   }
 
   async getProfile(token: string): Promise<User> {
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
-      method: "GET",
-      headers: this.getHeaders(token),
-    });
+    // Use AuthService's fetchWithAuth for automatic token refresh
+    try {
+      const response = await AuthService.fetchWithAuth(`${API_BASE_URL}/auth/me`, {
+        method: "GET",
+      });
 
-    if (!response.ok) {
-      const error = await response.json();
-      throw new Error(error.detail || "Failed to fetch profile");
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to fetch profile");
+      }
+
+      return response.json();
+    } catch (error) {
+      // fetchWithAuth already handles session expiry
+      throw error;
     }
-
-    return response.json();
   }
 
   async refreshToken(refreshToken: string): Promise<AuthToken> {

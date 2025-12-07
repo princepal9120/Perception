@@ -10,14 +10,9 @@ import type {
     BranchCreateRequest,
     CompareNodesRequest,
 } from '../types/tree';
+import AuthService from './auth-service';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
-
-// Get auth token from localStorage
-const getAuthToken = () => {
-    const token = localStorage.getItem('perception_auth_token');
-    return token;
-};
 
 // Axios instance with auth
 const apiClient = axios.create({
@@ -29,12 +24,37 @@ const apiClient = axios.create({
 
 // Add auth token to requests
 apiClient.interceptors.request.use((config) => {
-    const token = getAuthToken();
+    const token = AuthService.getAccessToken();
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
 });
+
+// Handle 401 responses - attempt token refresh, then logout if that fails
+apiClient.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+        const originalRequest = error.config;
+
+        // If we get a 401 and haven't already retried
+        if (error.response?.status === 401 && !originalRequest._retry) {
+            originalRequest._retry = true;
+
+            // Try to refresh the token using AuthService
+            const newToken = await AuthService.refreshAccessToken();
+
+            if (newToken) {
+                // Update the request with new token and retry
+                originalRequest.headers.Authorization = `Bearer ${newToken}`;
+                return apiClient(originalRequest);
+            }
+            // If refresh failed, AuthService already handles redirect
+        }
+
+        return Promise.reject(error);
+    }
+);
 
 export const treeApi = {
     /**
@@ -114,7 +134,7 @@ export const treeApi = {
         request: MessageSendRequest,
         onEvent: (event: any) => void
     ) {
-        const token = getAuthToken();
+        const token = AuthService.getAccessToken();
         const eventSource = new EventSource(
             `${API_BASE_URL}/tree/chats/${chatId}/send?node_id=${request.node_id}&message=${encodeURIComponent(request.message)}&regenerate=${request.regenerate || false}`,
             {
@@ -158,7 +178,7 @@ export const treeApi = {
         nodeId: string,
         onEvent: (event: any) => void
     ) {
-        const token = getAuthToken();
+        const token = AuthService.getAccessToken();
         const eventSource = new EventSource(
             `${API_BASE_URL}/tree/nodes/${nodeId}/regenerate?chat_id=${chatId}`,
             {

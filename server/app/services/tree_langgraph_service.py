@@ -108,25 +108,40 @@ class TreeLangGraphService:
                 ai_message=None
             )
             
+            # Helper to determine node type
+            def get_node_type(node: ConversationNode, parent_id_arg: str, is_regen: bool) -> str:
+                if not node.parent_id:
+                    return "root"
+                if is_regen or (node.branch_name and node.branch_name != "Main"):
+                    return "branch"
+                return "normal"
+
+            user_node_type = get_node_type(user_node, actual_parent_id, regenerate)
+            
+            # Initial User Node Event
             yield {
-                "type": "user_node_created",
-                "data": {
-                    "node_id": user_node.id,
-                    "parent_id": actual_parent_id,
-                    "depth": user_node.depth
+                "node": {
+                    "id": user_node.id,
+                    "parent_id": user_node.parent_id,
+                    "branch_of": actual_parent_id if regenerate else None,
+                    "type": user_node_type,
+                    "user_message": user_node.user_message,
+                    "ai_response": None
+                },
+                "workflow_sync": {
+                    "change_summary": "New user message node created",
+                    "linked_nodes": [actual_parent_id] if actual_parent_id else [],
+                    "status": "updated"
+                },
+                "ui_directives": {
+                    "show_branch_badge": user_node_type == "branch",
+                    "highlight_parent": True,
+                    "workflow_refresh": True
                 }
             }
             
             # Build message history from lineage
             messages = await self.build_message_history(user_node.id)
-            
-            yield {
-                "type": "lineage_built",
-                "data": {
-                    "message_count": len(messages),
-                    "depth": user_node.depth
-                }
-            }
             
             # Stream AI response
             ai_response_chunks = []
@@ -137,12 +152,37 @@ class TreeLangGraphService:
             }
             
             async for event in self.llm_client.stream_chat(messages, chat_id):
-                # Forward stream events
-                yield event
+                # We need to wrap chunks in the expected format too if we want real-time streaming to the UI 
+                # strictly following the schema. However, typically we just stream content chunks.
+                # If the UI expects the schema for *every* chunk, we must wrap it.
+                # Assuming standard text streaming for the content part, but the prompt asked for "EVERY MESSAGE".
+                # Let's wrap content chunks in the schema as a "partial" update.
                 
-                # Collect response chunks
                 if event.get("type") == "content":
-                    ai_response_chunks.append(event.get("content", ""))
+                    content = event.get("content", "")
+                    ai_response_chunks.append(content)
+                    current_response = "".join(ai_response_chunks)
+                    
+                    yield {
+                        "node": {
+                            "id": "temp_ai_node", # Placeholder until created
+                            "parent_id": user_node.id,
+                            "branch_of": None,
+                            "type": "normal",
+                            "user_message": None,
+                            "ai_response": current_response
+                        },
+                        "workflow_sync": {
+                            "change_summary": "Streaming response...",
+                            "linked_nodes": [user_node.id],
+                            "status": "draft"
+                        },
+                        "ui_directives": {
+                            "show_branch_badge": False,
+                            "highlight_parent": False,
+                            "workflow_refresh": False
+                        }
+                    }
                 
                 # Collect metadata
                 if event.get("type") == "tool_output":
@@ -168,35 +208,49 @@ class TreeLangGraphService:
                 metadata=ai_metadata
             )
             
+            # Final Completion Event
             yield {
-                "type": "ai_node_created",
-                "data": {
-                    "node_id": ai_node.id,
-                    "parent_id": user_node.id,
-                    "depth": ai_node.depth,
-                    "branch_name": ai_node.branch_name
-                }
-            }
-            
-            # Get lineage for response
-            lineage = await self.tree_service.get_lineage(ai_node.id)
-            lineage_ids = [node.id for node in lineage]
-            
-            yield {
-                "type": "complete",
-                "data": {
-                    "user_node_id": user_node.id,
-                    "ai_node_id": ai_node.id,
-                    "lineage": lineage_ids,
-                    "depth": ai_node.depth
+                "node": {
+                    "id": ai_node.id,
+                    "parent_id": ai_node.parent_id,
+                    "branch_of": None,
+                    "type": "normal",
+                    "user_message": None,
+                    "ai_response": ai_node.ai_message
+                },
+                "workflow_sync": {
+                    "change_summary": "AI response completed",
+                    "linked_nodes": [user_node.id],
+                    "status": "updated"
+                },
+                "ui_directives": {
+                    "show_branch_badge": False,
+                    "highlight_parent": False,
+                    "workflow_refresh": True
                 }
             }
             
         except Exception as e:
             logger.error(f"Error in send_message_with_tree: {str(e)}", exc_info=True)
             yield {
-                "type": "error",
-                "data": {"error": str(e)}
+                "node": {
+                    "id": "error",
+                    "parent_id": None,
+                    "branch_of": None,
+                    "type": "normal",
+                    "user_message": None,
+                    "ai_response": None
+                },
+                "workflow_sync": {
+                    "change_summary": f"Error: {str(e)}",
+                    "linked_nodes": [],
+                    "status": "updated"
+                },
+                "ui_directives": {
+                    "show_branch_badge": False,
+                    "highlight_parent": False,
+                    "workflow_refresh": False
+                }
             }
     
     async def regenerate_response(
@@ -218,8 +272,24 @@ class TreeLangGraphService:
         
         if not node.user_message:
             yield {
-                "type": "error",
-                "data": {"error": "Cannot regenerate: node has no user message"}
+                "node": {
+                    "id": node.id,
+                    "parent_id": node.parent_id,
+                    "branch_of": None,
+                    "type": "normal",
+                    "user_message": None,
+                    "ai_response": None
+                },
+                "workflow_sync": {
+                    "change_summary": "Error: Cannot regenerate node with no user message",
+                    "linked_nodes": [],
+                    "status": "updated"
+                },
+                "ui_directives": {
+                    "show_branch_badge": False,
+                    "highlight_parent": False,
+                    "workflow_refresh": False
+                }
             }
             return
         
@@ -227,15 +297,31 @@ class TreeLangGraphService:
         if node.parent_id:
             async for event in self.send_message_with_tree(
                 chat_id=chat_id,
-                parent_node_id=node.id,
+                parent_node_id=node.parent_id, # Use parent ID to create sibling
                 user_message=node.user_message,
                 regenerate=True
             ):
                 yield event
         else:
             yield {
-                "type": "error",
-                "data": {"error": "Cannot regenerate root node"}
+                "node": {
+                    "id": node.id,
+                    "parent_id": None,
+                    "branch_of": None,
+                    "type": "root",
+                    "user_message": None,
+                    "ai_response": None
+                },
+                "workflow_sync": {
+                    "change_summary": "Error: Cannot regenerate root node",
+                    "linked_nodes": [],
+                    "status": "updated"
+                },
+                "ui_directives": {
+                    "show_branch_badge": False,
+                    "highlight_parent": False,
+                    "workflow_refresh": False
+                }
             }
     
     async def continue_from_node(

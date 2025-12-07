@@ -27,6 +27,14 @@ interface TreeState {
     streamingContent: string;
     isStreaming: boolean;
 
+    // Workflow Sync State
+    workflowSyncState: {
+        status: 'draft' | 'updated';
+        change_summary: string;
+        linked_nodes: string[];
+        last_updated: number;
+    } | null;
+
     // Node cache
     nodeCache: Map<string, ConversationNode>;
 
@@ -41,6 +49,7 @@ interface TreeState {
     toggleTreeView: () => void;
     clearError: () => void;
     reset: () => void;
+    setWorkflowSync: (syncState: any) => void;
 
     // Helper methods
     getNodeById: (nodeId: string) => TreeNodeData | null;
@@ -60,11 +69,16 @@ export const useTreeStore = create<TreeState>((set, get) => ({
     streamingNodeId: null,
     streamingContent: '',
     isStreaming: false,
+    workflowSyncState: null,
     nodeCache: new Map(),
 
     // Actions
     setCurrentChatId: (chatId) => {
         set({ currentChatId: chatId });
+    },
+
+    setWorkflowSync: (syncState) => {
+        set({ workflowSyncState: syncState });
     },
 
     loadTree: async (chatId) => {
@@ -164,22 +178,50 @@ export const useTreeStore = create<TreeState>((set, get) => ({
                 currentChatId,
                 { node_id: nodeId, message, regenerate },
                 (event) => {
-                    if (event.type === 'content') {
-                        set((state) => ({
-                            streamingContent: state.streamingContent + (event.content || ''),
-                        }));
-                    } else if (event.type === 'complete') {
-                        set({
-                            isStreaming: false,
-                            streamingNodeId: null,
-                            streamingContent: '',
-                        });
+                    // Handle new strict schema
+                    if (event.node) {
+                        // Content update
+                        if (event.node.ai_response) {
+                            // If it's a partial update (streaming), it might just have the chunk
+                            // But our backend sends the ACCUMULATED response or chunks? 
+                            // The backend change I made:
+                            // yield { node: { ..., ai_response: current_response }, ... }
+                            // So it sends the FULL accumulated response so far if I look at "current_response = "".join(chunks)"
+                            // Wait, I see "current_response" in the backend code.
 
-                        // Reload tree
-                        get().loadTree(currentChatId);
-                    } else if (event.type === 'error') {
+                            set({ streamingContent: event.node.ai_response });
+                        }
+                    }
+
+                    // Handle generic workflow sync updates
+                    if (event.workflow_sync) {
                         set({
-                            error: event.data?.error || 'Streaming error',
+                            workflowSyncState: {
+                                ...event.workflow_sync,
+                                last_updated: Date.now()
+                            }
+                        });
+                    }
+
+                    // Handle completion/sync
+                    if (event.workflow_sync?.status === 'updated' && event.node?.type && !event.node.branch_of) {
+                        // This looks like a completion of a normal node or final update
+                        // Check change_summary to be sure? 
+                        // The backend sends "AI response completed" as change_summary
+                        if (event.workflow_sync.change_summary === 'AI response completed') {
+                            set({
+                                isStreaming: false,
+                                streamingNodeId: null,
+                                streamingContent: '',
+                            });
+                            // Reload tree
+                            get().loadTree(currentChatId);
+                        }
+                    }
+
+                    if (event.workflow_sync?.change_summary?.startsWith('Error')) {
+                        set({
+                            error: event.workflow_sync.change_summary,
                             isStreaming: false,
                             streamingNodeId: null,
                         });
@@ -208,22 +250,35 @@ export const useTreeStore = create<TreeState>((set, get) => ({
 
         try {
             await treeApi.regenerateResponse(currentChatId, nodeId, (event) => {
-                if (event.type === 'content') {
-                    set((state) => ({
-                        streamingContent: state.streamingContent + (event.content || ''),
-                    }));
-                } else if (event.type === 'complete') {
+                // Handle new strict schema
+                if (event.node) {
+                    if (event.node.ai_response) {
+                        set({ streamingContent: event.node.ai_response });
+                    }
+                }
+
+                // Handle generic workflow sync updates
+                if (event.workflow_sync) {
+                    set({
+                        workflowSyncState: {
+                            ...event.workflow_sync,
+                            last_updated: Date.now()
+                        }
+                    });
+                }
+
+                if (event.workflow_sync?.status === 'updated' && event.workflow_sync.change_summary === 'AI response completed') {
                     set({
                         isStreaming: false,
                         streamingNodeId: null,
                         streamingContent: '',
                     });
-
-                    // Reload tree
                     get().loadTree(currentChatId);
-                } else if (event.type === 'error') {
+                }
+
+                if (event.workflow_sync?.change_summary?.startsWith('Error')) {
                     set({
-                        error: event.data?.error || 'Regeneration error',
+                        error: event.workflow_sync.change_summary,
                         isStreaming: false,
                         streamingNodeId: null,
                     });

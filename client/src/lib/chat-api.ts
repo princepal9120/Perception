@@ -145,46 +145,11 @@ export interface StreamCallbacks {
 
 // ==================== Token Management ====================
 
-const TOKEN_KEY = 'perception_auth_token';
-const REFRESH_TOKEN_KEY = 'perception_refresh_token';
+import AuthService from './auth-service';
 
-async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
+// Use AuthService for all token operations
+const refreshAccessToken = () => AuthService.refreshAccessToken();
 
-  if (!refreshToken) {
-    return null;
-  }
-
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/token/refresh`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ refresh_token: refreshToken }),
-    });
-
-    if (!response.ok) {
-      // Refresh token is invalid or expired
-      localStorage.removeItem(TOKEN_KEY);
-      localStorage.removeItem(REFRESH_TOKEN_KEY);
-      return null;
-    }
-
-    const data = await response.json();
-    const newAccessToken = data.access_token;
-    const newRefreshToken = data.refresh_token;
-
-    // Update tokens in localStorage
-    localStorage.setItem(TOKEN_KEY, newAccessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken);
-
-    return newAccessToken;
-  } catch (error) {
-    console.error('Failed to refresh token:', error);
-    return null;
-  }
-}
 
 // ==================== Chat API Class ====================
 
