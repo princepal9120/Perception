@@ -263,6 +263,8 @@ async def branch_chat(
         user_id=new_chat.user_id,
         title=new_chat.title,
         checkpoint_id=new_chat.checkpoint_id,
+        parent_chat_id=new_chat.parent_chat_id,
+        branch_message_id=new_chat.branch_message_id,
         created_at=new_chat.created_at,
         updated_at=new_chat.updated_at,
         message_count=message_count

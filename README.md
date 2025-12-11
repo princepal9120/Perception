@@ -38,9 +38,11 @@ The **Branch-Your-LLM** system transforms linear chats into powerful conversatio
 
 ### How to Use
 1.  **Start a Chat**: Begin a conversation as usual.
-2.  **Fork**: Click the **⋮** menu on any message and select "Fork Branch".
-3.  **Visualize**: Click the **Tree View** tab to see your branches.
-4.  **Explore**: Click different nodes to switch contexts.
+2.  **Open Tree View**: Click the **GitBranch icon** (🌿) in the top-right header.
+3.  **Sync**: If asked, click **"Sync Chat to Tree"** to visualize your current conversation.
+4.  **Explore**: Use the interactive tree to navigate different conversation paths.
+
+*Note: Some advanced branching features are currently in beta.*
 
 *For setup instructions, see [SETUP.md](./SETUP.md).*
 
@@ -61,6 +63,28 @@ The **Branch-Your-LLM** system transforms linear chats into powerful conversatio
     -   **Depth** (1-5): Set the level of detail.
     -   **Iterations** (1-10): Set the thoroughness.
 3.  **Start**: Click "Start Research" and watch the real-time progress.
+
+## 📊 Real-Time Progress Tracking
+
+We've implemented **real-time progress tracking** for both Deep Research mode and regular chat, providing users with transparent visibility into what the AI is doing at every step.
+
+### 🔬 Deep Research Tracking
+Shows detailed, step-by-step progress during deep research iterations:
+- **Searching** 🔍: Web search with query display and source counts.
+- **Extracting** 📄: Claim extraction from sources.
+- **Verifying** ✅: Evidence-based claim verification.
+- **Analyzing** 🧠: Knowledge gap analysis.
+- **Synthesizing** ✨: Final report generation.
+
+### 💬 Chat Progress Tracking
+Shows real-time agent actions during regular chat conversations:
+- **Thinking** 🧠: Processing your request.
+- **Searching** 🔍: Web search with actual queries.
+- **Reading** 📄: Analyzing sources (shows domains).
+- **Analyzing** 🧠: Processing information.
+- **Completed** ✅: Task finished.
+
+*The UI features smooth animations, color-coded steps, and detailed data display (source counts, actual queries, etc.) to build trust and engagement.*
 
 ## 📚 Documentation
 

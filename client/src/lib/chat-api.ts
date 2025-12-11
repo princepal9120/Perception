@@ -10,6 +10,8 @@ export interface Chat {
   user_id: number;
   title: string;
   checkpoint_id: string | null;
+  parent_chat_id?: number | null;  // For branch tracking
+  branch_message_id?: number | null;  // Message this chat branched from
   created_at: string;
   updated_at: string;
   message_count?: number;

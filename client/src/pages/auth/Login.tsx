@@ -71,6 +71,7 @@ const Login = () => {
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
             <p className="text-muted-foreground">Sign in to continue your research</p>
+            <p className="text-green-500 font-bold">use placeholder fields for the login</p>
           </div>
 
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
@@ -81,7 +82,7 @@ const Login = () => {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="you@example.com"
+                  placeholder="user@example.com"
                   {...register("email")}
                   className={`pl-10 ${errors.email ? "border-red-500" : ""}`}
                 />
@@ -98,7 +99,7 @@ const Login = () => {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="Password@123"
                   {...register("password")}
                   className={`pl-10 ${errors.password ? "border-red-500" : ""}`}
                 />

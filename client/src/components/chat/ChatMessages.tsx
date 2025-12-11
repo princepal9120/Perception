@@ -7,6 +7,8 @@ import { WelcomeScreen } from "./WelcomeScreen";
 import { useChat } from "@/hooks/use-chat";
 import { AgentProgressTracker } from "./AgentProgressTracker";
 import { DeepResearchFlow } from "./DeepResearchFlow";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 import { MessageActions } from "./MessageActions";
 
@@ -21,6 +23,7 @@ interface ChatMessagesProps {
 
 export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = false }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   const {
     messages,
     isStreaming,
@@ -45,29 +48,71 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
   };
 
   const handleFork = async (message: any) => {
-    const { currentChatId, branchFromMessage } = useChatStore.getState();
+    const { currentChatId, branchFromMessage, loadMessages, chats } = useChatStore.getState();
 
     if (!currentChatId) {
-      console.error("Cannot branch: no current chat ID");
+      toast.error("Cannot branch: no current chat");
       return;
     }
 
     if (!message.id) {
-      console.error("Cannot branch: no message ID");
+      toast.error("Cannot branch: invalid message");
       return;
     }
 
+    // Check if message.id is a temporary Date.now() ID (too large for database int32)
+    const MAX_VALID_DB_ID = 2147483647;
+    if (message.id > MAX_VALID_DB_ID) {
+      toast.info("Refreshing messages...");
+      try {
+        await loadMessages(currentChatId);
+        toast.info("Messages refreshed. Please try branching again.");
+        return;
+      } catch (e) {
+        toast.error("Failed to refresh messages");
+        return;
+      }
+    }
+
+    // Get current chat name for better UX
+    const currentChat = chats.find(c => c.id === currentChatId);
+    const chatName = currentChat?.title || "chat";
+
     try {
+      toast.loading("Creating branch...", { id: "branch-loading" });
+
       // Create a new chat branched from this message
       const newChat = await branchFromMessage(currentChatId, message.id);
 
       if (newChat) {
+        toast.dismiss("branch-loading");
+
+        // Show success toast with workflow link
+        toast.success(
+          <div className="flex flex-col gap-2">
+            <span>✨ Branch created: <strong>{newChat.title}</strong></span>
+            <div className="flex gap-2 mt-1">
+              <button
+                onClick={() => navigate(`/workflow/${newChat.id}`)}
+                className="text-xs px-2 py-1 bg-primary/20 hover:bg-primary/30 rounded text-primary font-medium transition-colors"
+              >
+                View Workflow →
+              </button>
+            </div>
+          </div>,
+          {
+            duration: 5000,
+          }
+        );
+
         console.log(`Created new branch chat ${newChat.id} from message ${message.id}`);
       }
-    } catch (e) {
-      console.error("Failed to create branch:", e);
+    } catch (e: any) {
+      toast.dismiss("branch-loading");
+      toast.error(e.message || "Failed to create branch");
     }
   };
+
 
   const handleRegenerate = async (message: any) => {
     if (!message.metadata?.nodeId) return;

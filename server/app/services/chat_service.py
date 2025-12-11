@@ -401,6 +401,15 @@ class ChatService:
         Returns:
             Newly created chat with copied messages
         """
+        # Validate message_id is within valid int32 range
+        # Temporary client IDs (Date.now()) are too large for the database
+        MAX_INT32 = 2147483647
+        if message_id > MAX_INT32 or message_id < 1:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid message ID. Please refresh the chat and try again."
+            )
+        
         # Verify ownership of original chat
         original_chat = await self.get_chat(chat_id)
         
@@ -419,14 +428,17 @@ class ChatService:
                 detail="Message not found in this chat"
             )
         
-        # Create new branch chat
-        branch_title = f"Branch: {original_chat.title}"
+        # Create new branch chat with ChatGPT-style naming
+        # Format: "Branch from: [original chat name]"
+        branch_title = f"Branch from: {original_chat.title}"
         if len(branch_title) > 255:
             branch_title = branch_title[:252] + "..."
             
         new_chat = Chat(
             user_id=self.user.id,
-            title=branch_title
+            title=branch_title,
+            parent_chat_id=chat_id,  # Track parent chat for workflow visualization
+            branch_message_id=message_id  # Track which message we branched from
         )
         self.db.add(new_chat)
         await self.db.flush()  # Get the new chat ID

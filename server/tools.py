@@ -1,4 +1,5 @@
 # tools.py
+import os
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -9,13 +10,37 @@ import requests
 from app.prompts.prompt_library import get_prompt
 
 # -----------------
-# Tavily Search Tool
+# Lazy Tool Initialization (for Docker compatibility)
 # -----------------
-tavily_tool = TavilySearchResults(max_results=4)
+_tavily_tool = None
+_duck_tool = None
 
-# -----------------
-# DuckDuckGo Search Tool
-# -----------------
+def get_tavily_tool():
+    """Get Tavily tool with lazy initialization."""
+    global _tavily_tool
+    if _tavily_tool is None:
+        api_key = os.getenv("TAVILY_API_KEY")
+        if api_key:
+            _tavily_tool = TavilySearchResults(max_results=4)
+        else:
+            print("Warning: TAVILY_API_KEY not set, Tavily search disabled")
+            _tavily_tool = None
+    return _tavily_tool
+
+def get_duck_tool():
+    """Get DuckDuckGo tool with lazy initialization."""
+    global _duck_tool
+    if _duck_tool is None:
+        _duck_tool = DuckDuckGoSearchRun(region="us-en")
+    return _duck_tool
+
+# For backward compatibility - these will be None until first use
+tavily_tool = None
+duck_tool = None
+
+# Initialize tools if API keys are available (for local dev)
+if os.getenv("TAVILY_API_KEY"):
+    tavily_tool = TavilySearchResults(max_results=4)
 duck_tool = DuckDuckGoSearchRun(region="us-en")
 
 # -----------------
@@ -81,4 +106,7 @@ search_documents.description = SEARCH_DOCUMENTS_DESCRIPTION
 # -----------------
 # Export Tools
 # -----------------
-tools = [tavily_tool, duck_tool, calculator, get_stock_price, search_documents]
+# Build tools list dynamically - filter out None values (e.g., if TAVILY_API_KEY not set)
+_base_tools = [tavily_tool, duck_tool, calculator, get_stock_price, search_documents]
+tools = [t for t in _base_tools if t is not None]
+

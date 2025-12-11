@@ -465,6 +465,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
               ],
             }));
 
+            // Reload messages from backend to get proper database IDs
+            // This enables branching functionality to work correctly
+            setTimeout(async () => {
+              try {
+                await get().loadMessages(currentChatId);
+              } catch (e) {
+                console.error("Failed to reload messages after stream:", e);
+              }
+            }, 500);
+
             // Clear progress after a delay
             setTimeout(() => {
               set({ agentProgress: [] });

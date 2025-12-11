@@ -101,6 +101,8 @@ class ChatResponse(BaseModel):
     user_id: int
     title: str
     checkpoint_id: Optional[str]
+    parent_chat_id: Optional[int] = None
+    branch_message_id: Optional[int] = None
     created_at: datetime
     updated_at: datetime
     message_count: Optional[int] = None

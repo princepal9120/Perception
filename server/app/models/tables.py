@@ -37,6 +37,11 @@ class Chat(SQLModel, table=True):
     user_id: int = Field(foreign_key="users.id", index=True)
     title: str = Field(max_length=255)
     checkpoint_id: Optional[str] = Field(default=None, max_length=255, index=True)
+    
+    # Branch tracking (for ChatGPT-like branching)
+    parent_chat_id: Optional[int] = Field(default=None, foreign_key="chats.id", index=True)
+    branch_message_id: Optional[int] = Field(default=None, description="Message ID this chat branched from")
+    
     created_at: datetime = Field(
         default_factory=datetime.utcnow,
         sa_column=Column(DateTime(timezone=True), server_default=func.now())
@@ -57,6 +62,7 @@ class Chat(SQLModel, table=True):
     
     __table_args__ = (
         Index("ix_chats_user_created", "user_id", "created_at"),
+        Index("ix_chats_parent", "parent_chat_id"),
     )
 
 
