@@ -111,7 +111,15 @@ dependencies = [
     "sqlmodel==0.0.22",
     "email-validator==2.1.1",
     "itsdangerous>=2.1.2",
-    "redis[hiredis]==5.2.1"
+    "redis[hiredis]==5.2.1",
+    "duckduckgo-search>=8.1.1",
+    "langchain-pinecone>=0.2.13",
+    "langchain-text-splitters>=0.3.8",
+    "langchain-google-genai>=2.1.5",
+    "tavily-python>=0.7.14",
+    "pypdf>=6.4.1",
+    "docx2txt>=0.9",
+    "structlog>=25.5.0",
 ]
 
 [tool.uv]

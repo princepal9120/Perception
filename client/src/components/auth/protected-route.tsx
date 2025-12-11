@@ -43,9 +43,9 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
                                 </p>
                             </div>
                         </div>
-                        
+
                         <div className="space-y-3">
-                            <Link to="/auth/signup">
+                            <Link to="/signup">
                                 <Button className="w-full gradient-primary shadow-glow">
                                     Create Account
                                 </Button>
@@ -56,7 +56,7 @@ export function ProtectedRoute({ children }: ProtectedRouteProps) {
                                 </Button>
                             </Link>
                         </div>
-                        
+
                         <p className="text-xs text-muted-foreground">
                             <Lock className="w-3 h-3 inline mr-1" />
                             Your conversations are private and secure

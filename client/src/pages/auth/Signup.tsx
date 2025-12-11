@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,38 +9,32 @@ import { ArrowLeft, Mail, Lock, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { signupSchema, SignupFormData } from "@/lib/validations/auth";
 
 const Signup = () => {
   const navigate = useNavigate();
   const { signup, isLoading } = useAuth();
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleSignup = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: "",
+      confirm_password: "",
+    },
+  });
 
-    if (!name || !email || !password || !confirmPassword) {
-      toast.error("Please fill in all fields");
-      return;
-    }
-
-    if (password.length < 8) {
-      toast.error("Password must be at least 8 characters");
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
-    }
-
+  const onSubmit = async (data: SignupFormData) => {
     try {
       await signup({
-        name,
-        email,
-        password
+        name: data.name,
+        email: data.email,
+        password: data.password,
       });
       toast.success("Account created successfully!");
       navigate("/chat");
@@ -77,7 +73,7 @@ const Signup = () => {
             <p className="text-muted-foreground">Start your AI research journey</p>
           </div>
 
-          <form onSubmit={handleSignup} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="name" className="text-sm font-medium">Full Name</Label>
               <div className="relative">
@@ -86,12 +82,13 @@ const Signup = () => {
                   id="name"
                   type="text"
                   placeholder="John Doe"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="pl-10"
-                  required
+                  {...register("name")}
+                  className={`pl-10 ${errors.name ? "border-red-500" : ""}`}
                 />
               </div>
+              {errors.name && (
+                <p className="text-xs text-red-500">{errors.name.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -102,12 +99,13 @@ const Signup = () => {
                   id="email"
                   type="email"
                   placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  required
+                  {...register("email")}
+                  className={`pl-10 ${errors.email ? "border-red-500" : ""}`}
                 />
               </div>
+              {errors.email && (
+                <p className="text-xs text-red-500">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -118,13 +116,13 @@ const Signup = () => {
                   id="password"
                   type="password"
                   placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
-                  required
-                  minLength={8}
+                  {...register("password")}
+                  className={`pl-10 ${errors.password ? "border-red-500" : ""}`}
                 />
               </div>
+              {errors.password && (
+                <p className="text-xs text-red-500">{errors.password.message}</p>
+              )}
               <p className="text-xs text-muted-foreground">Must be at least 8 characters</p>
             </div>
 
@@ -136,13 +134,13 @@ const Signup = () => {
                   id="confirmPassword"
                   type="password"
                   placeholder="••••••••"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="pl-10"
-                  required
-                  minLength={8}
+                  {...register("confirm_password")}
+                  className={`pl-10 ${errors.confirm_password ? "border-red-500" : ""}`}
                 />
               </div>
+              {errors.confirm_password && (
+                <p className="text-xs text-red-500">{errors.confirm_password.message}</p>
+              )}
             </div>
 
             <Button
@@ -157,7 +155,7 @@ const Signup = () => {
           <div className="mt-6 text-center text-sm">
             <span className="text-muted-foreground">Already have an account? </span>
             <button
-              onClick={() => navigate("/auth/login")}
+              onClick={() => navigate("/login")}
               className="text-primary hover:underline font-medium"
             >
               Sign in

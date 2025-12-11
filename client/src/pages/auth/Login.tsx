@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -8,24 +10,32 @@ import { ArrowLeft, Mail, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
+import { loginSchema, LoginFormData } from "@/lib/validations/auth";
 
 const Login = () => {
   const navigate = useNavigate();
   const { login, isLoading } = useAuth();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
-    if (!email || !password) {
-      toast.error("Please fill in all fields");
-      return;
-    }
-
+  const onSubmit = async (data: LoginFormData) => {
     try {
-      await login({ email, password, remember_me: rememberMe });
+      await login({
+        email: data.email,
+        password: data.password,
+        remember_me: rememberMe
+      });
       toast.success("Login successful!");
       navigate("/chat");
     } catch (error) {
@@ -63,7 +73,7 @@ const Login = () => {
             <p className="text-muted-foreground">Sign in to continue your research</p>
           </div>
 
-          <form onSubmit={handleLogin} className="space-y-6">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="email" className="text-sm font-medium">Email</Label>
               <div className="relative">
@@ -72,12 +82,13 @@ const Login = () => {
                   id="email"
                   type="email"
                   placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  required
+                  {...register("email")}
+                  className={`pl-10 ${errors.email ? "border-red-500" : ""}`}
                 />
               </div>
+              {errors.email && (
+                <p className="text-xs text-red-500">{errors.email.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -88,12 +99,13 @@ const Login = () => {
                   id="password"
                   type="password"
                   placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
-                  required
+                  {...register("password")}
+                  className={`pl-10 ${errors.password ? "border-red-500" : ""}`}
                 />
               </div>
+              {errors.password && (
+                <p className="text-xs text-red-500">{errors.password.message}</p>
+              )}
             </div>
 
             <div className="flex items-center space-x-2">
@@ -122,7 +134,7 @@ const Login = () => {
           <div className="mt-6 text-center text-sm">
             <span className="text-muted-foreground">Don't have an account? </span>
             <button
-              onClick={() => navigate("/auth/signup")}
+              onClick={() => navigate("/signup")}
               className="text-primary hover:underline font-medium"
             >
               Sign up

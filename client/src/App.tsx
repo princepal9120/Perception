@@ -12,10 +12,6 @@ import Login from "./pages/auth/Login";
 import Signup from "./pages/auth/Signup";
 import Chat from "./pages/chat/Chat";
 import NotFound from "./pages/NotFound";
-import LoginPage from "@/pages/LoginPage";
-import SignupPage from "@/pages/SignupPage";
-import DashboardPage from "@/pages/DashboardPage";
-
 import WorkflowPage from "@/pages/WorkflowPage";
 
 const queryClient = new QueryClient();
@@ -26,14 +22,14 @@ const AnimatedRoutes = () => {
   return (
     <AnimatePresence mode="wait">
       <Routes location={location} key={location.pathname}>
-        {/* Original routes */}
+        {/* Public routes */}
         <Route path="/" element={<LandingPage />} />
-        <Route path="/auth/login" element={<Login />} />
-        <Route path="/auth/signup" element={<Signup />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
 
-        {/* New authentication routes */}
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
+        {/* Legacy redirect for old links if any */}
+        <Route path="/auth/login" element={<Navigate to="/login" replace />} />
+        <Route path="/auth/signup" element={<Navigate to="/signup" replace />} />
 
         {/* Protected chat route */}
         <Route
@@ -45,15 +41,7 @@ const AnimatedRoutes = () => {
           }
         />
 
-        {/* Protected dashboard route */}
-        <Route
-          path="/dashboard"
-          element={
-            <ProtectedRoute>
-              <DashboardPage />
-            </ProtectedRoute>
-          }
-        />
+
 
         {/* Protected workflow route */}
         <Route
