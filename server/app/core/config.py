@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
     SESSION_SECRET_KEY: str
     
+    # Clerk Authentication
+    CLERK_SECRET_KEY: str = ""
+    CLERK_PUBLISHABLE_KEY: str = "pk_test_YWRlcXVhdGUtaGVuLTcuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    
     # Database
     DATABASE_URL: str
     DB_POOL_SIZE: int = 10

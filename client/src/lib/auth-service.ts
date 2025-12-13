@@ -140,8 +140,8 @@ export const AuthService = {
         this.emit('SESSION_EXPIRED');
 
         // Redirect to login immediately
-        if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
-            window.location.href = '/login?session_expired=true';
+        if (typeof window !== 'undefined' && window.location.pathname !== '/sign-in') {
+            window.location.href = '/sign-in?session_expired=true';
         }
     },
 
@@ -168,7 +168,7 @@ export const AuthService = {
         this.emit('LOGOUT');
 
         if (typeof window !== 'undefined') {
-            window.location.href = '/login';
+            window.location.href = '/sign-in';
         }
     },
 

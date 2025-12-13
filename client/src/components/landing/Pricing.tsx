@@ -1,40 +1,47 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const plans = [
     {
-        name: "Starter",
-        price: "Free",
-        description: "Perfect for exploring agentic AI capabilities.",
-        features: ["50 queries/month", "Basic web search", "1 active agent", "Community support"],
-        gradient: "from-gray-800 to-gray-900",
-        buttonVariant: "outline" as const
+        name: 'Starter',
+        description: 'Perfect for exploring agentic AI capabilities.',
+        monthly: 'Free',
+        yearly: 'Free',
+        features: ['50 queries/month', 'Basic web search', '1 active agent', 'Community support'],
+        gradient: 'from-gray-800 to-gray-900',
+        buttonVariant: 'outline' as const,
     },
     {
-        name: "Pro",
-        price: "$29",
-        period: "/month",
-        description: "For power users who need serious execution.",
-        features: ["Unlimited queries", "Deep research mode", "5 active agents", "Priority support", "MCP Connectors"],
-        gradient: "from-ai-primary/20 to-ai-secondary/20",
-        border: "border-ai-primary/50",
-        buttonVariant: "default" as const,
-        popular: true
+        name: 'Pro',
+        description: 'For power users who need serious execution.',
+        monthly: '$12',
+        yearly: '$120', // 2 months free
+        periodMonthly: '/month',
+        periodYearly: '/year',
+        features: ['Unlimited queries', 'Deep research mode', '5 active agents', 'Priority support', 'MCP Connectors'],
+        gradient: 'from-ai-primary/20 to-ai-secondary/20',
+        border: 'border-ai-primary/50',
+        buttonVariant: 'default' as const,
+        popular: true,
     },
     {
-        name: "Team",
-        price: "$99",
-        period: "/month",
-        description: "Collaborative workspace for your entire team.",
-        features: ["Everything in Pro", "Shared workspaces", "Unlimited agents", "SSO & Admin controls", "Custom integrations"],
-        gradient: "from-gray-800 to-gray-900",
-        buttonVariant: "outline" as const
-    }
+        name: 'Team',
+        description: 'Collaborative workspace for your entire team.',
+        monthly: '$39',
+        yearly: '$390',
+        periodMonthly: '/month',
+        periodYearly: '/year',
+        features: ['Everything in Pro', 'Shared workspaces', 'Unlimited agents', 'SSO & Admin controls', 'Custom integrations'],
+        gradient: 'from-gray-800 to-gray-900',
+        buttonVariant: 'outline' as const,
+    },
 ];
 
 export const Pricing = () => {
+    const [billing, setBilling] = useState<'monthly' | 'yearly'>('monthly');
+
     return (
         <section className="py-24 bg-black relative">
             <div className="container mx-auto px-4">
@@ -42,9 +49,26 @@ export const Pricing = () => {
                     <h2 className="text-3xl md:text-5xl font-bold mb-6">
                         Simple, Transparent <span className="text-gradient">Pricing</span>
                     </h2>
-                    <p className="text-gray-400 max-w-2xl mx-auto text-lg">
+                    <p className="text-gray-400 max-w-2xl mx-auto text-lg mb-8">
                         Start for free, scale as you grow.
                     </p>
+
+                    {/* Billing Toggle */}
+                    <div className="inline-flex items-center gap-2 p-1 rounded-full border border-ai-border bg-white/5">
+                        <button
+                            onClick={() => setBilling('monthly')}
+                            className={`px-4 py-2 rounded-full text-sm transition-all ${billing === 'monthly' ? 'bg-white/10 text-white' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            Monthly
+                        </button>
+                        <button
+                            onClick={() => setBilling('yearly')}
+                            className={`px-4 py-2 rounded-full text-sm transition-all ${billing === 'yearly' ? 'bg-gradient-ai text-white shadow-glow' : 'text-gray-400 hover:text-white'}`}
+                        >
+                            Yearly
+                            <span className="ml-2 text-xs text-ai-primary">Save 20%</span>
+                        </button>
+                    </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
@@ -66,9 +90,18 @@ export const Pricing = () => {
                             <div className="mb-8">
                                 <h3 className="text-xl font-bold mb-2">{plan.name}</h3>
                                 <div className="flex items-baseline gap-1 mb-4">
-                                    <span className="text-4xl font-bold">{plan.price}</span>
-                                    {plan.period && <span className="text-gray-400 text-sm">{plan.period}</span>}
+                                    <span className="text-4xl font-bold">
+                                        {billing === 'monthly' ? plan.monthly : plan.yearly}
+                                    </span>
+                                    {(plan.periodMonthly || plan.periodYearly) && (
+                                        <span className="text-gray-400 text-sm">
+                                            {billing === 'monthly' ? plan.periodMonthly : plan.periodYearly}
+                                        </span>
+                                    )}
                                 </div>
+                                {billing === 'yearly' && plan.monthly !== 'Free' && (
+                                    <p className="text-xs text-ai-primary mb-2">2 months free with yearly billing</p>
+                                )}
                                 <p className="text-gray-400 text-sm">{plan.description}</p>
                             </div>
 

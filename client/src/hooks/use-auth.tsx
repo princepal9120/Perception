@@ -1,19 +1,29 @@
 // src/hooks/use-auth.tsx
+// Auth hook that integrates Clerk with the existing app interface
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { authAPI, User, AuthToken, SignupData, LoginData } from '@/lib/auth-api';
-import AuthService from '@/lib/auth-service';
+import { useUser, useAuth as useClerkAuth, useClerk } from '@clerk/clerk-react';
+import { createContext, useContext, ReactNode, useEffect, useState } from 'react';
+
+// Storage key for compatibility with chatStore
+const TOKEN_KEY = 'perception_auth_token';
+
+// Keep User interface compatible with backend API
+export interface User {
+    id: string;
+    name: string;
+    email: string;
+    imageUrl?: string;
+    created_at?: string;
+}
 
 interface AuthContextType {
     user: User | null;
     token: string | null;
-    refreshToken: string | null;
     isLoading: boolean;
     isAuthenticated: boolean;
-    login: (data: LoginData) => Promise<void>;
-    signup: (data: SignupData) => Promise<void>;
-    logout: () => Promise<void>;
-    updateProfile: () => Promise<void>;
+    signOut: () => Promise<void>;
+    openSignIn: () => void;
+    openSignUp: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -23,145 +33,65 @@ interface AuthProviderProps {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-    const [user, setUser] = useState<User | null>(null);
+    const { user: clerkUser, isLoaded: isUserLoaded, isSignedIn } = useUser();
+    const { getToken, isLoaded: isAuthLoaded } = useClerkAuth();
+    const { signOut: clerkSignOut, openSignIn, openSignUp } = useClerk();
     const [token, setToken] = useState<string | null>(null);
-    const [refreshToken, setRefreshToken] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(true);
 
-    const isAuthenticated = !!user && !!token;
+    const isLoading = !isUserLoaded || !isAuthLoaded;
+    const isAuthenticated = !!isSignedIn && !!clerkUser;
 
-    // Subscribe to AuthService session expiry events for IMMEDIATE logout
+    // Map Clerk user to our User interface
+    const user: User | null = clerkUser
+        ? {
+            id: clerkUser.id,
+            name: clerkUser.fullName || clerkUser.firstName || 'User',
+            email: clerkUser.primaryEmailAddress?.emailAddress || '',
+            imageUrl: clerkUser.imageUrl,
+            created_at: clerkUser.createdAt?.toISOString(),
+        }
+        : null;
+
+    // Get Clerk session token for API calls and sync to localStorage for chatStore
     useEffect(() => {
-        const unsubscribe = AuthService.subscribe((event) => {
-            if (event === 'SESSION_EXPIRED' || event === 'LOGOUT') {
-                // Immediately clear local state
-                setUser(null);
+        const fetchToken = async () => {
+            if (isAuthenticated) {
+                try {
+                    const sessionToken = await getToken();
+                    setToken(sessionToken);
+                    // Store in localStorage for chatStore compatibility
+                    if (sessionToken) {
+                        localStorage.setItem(TOKEN_KEY, sessionToken);
+                    }
+                } catch (error) {
+                    console.error('Failed to get Clerk token:', error);
+                    setToken(null);
+                    localStorage.removeItem(TOKEN_KEY);
+                }
+            } else {
                 setToken(null);
-                setRefreshToken(null);
-                setIsLoading(false);
-            } else if (event === 'TOKEN_REFRESHED') {
-                // Update token state with new token
-                const newToken = AuthService.getAccessToken();
-                const newRefreshToken = AuthService.getRefreshToken();
-                if (newToken) setToken(newToken);
-                if (newRefreshToken) setRefreshToken(newRefreshToken);
+                localStorage.removeItem(TOKEN_KEY);
             }
-        });
+        };
 
-        return unsubscribe;
-    }, []);
+        fetchToken();
 
-    // Load stored auth data on mount
-    useEffect(() => {
-        const storedToken = AuthService.getAccessToken();
-        const storedRefreshToken = AuthService.getRefreshToken();
-        const storedUser = AuthService.getUser();
+        // Refresh token periodically (Clerk tokens expire after ~1 minute)
+        const interval = setInterval(fetchToken, 30000);
+        return () => clearInterval(interval);
+    }, [isAuthenticated, getToken]);
 
-        if (storedToken && storedUser) {
-            setToken(storedToken);
-            setRefreshToken(storedRefreshToken);
-            setUser(storedUser);
-        }
-
-        setIsLoading(false);
-    }, []);
-
-    // Note: We no longer need to fetch profile after login because:
-    // 1. Login/signup already return user data in TokenResponse
-    // 2. User is set immediately in login/signup functions
-    // This eliminates an unnecessary API call that was causing login delays
-
-    const login = async (data: LoginData) => {
+    const signOut = async () => {
         try {
-            setIsLoading(true);
-            const authResponse: AuthToken = await authAPI.login(data);
-
-            setToken(authResponse.access_token);
-            setRefreshToken(authResponse.refresh_token);
-
-            // Use user data from response if available, otherwise fetch profile
-            let userData: User;
-            if (authResponse.user) {
-                userData = authResponse.user;
-            } else {
-                // Fallback to fetching profile if not included in response
-                userData = await authAPI.getProfile(authResponse.access_token);
-            }
-            setUser(userData);
-
-            // Store using AuthService
-            AuthService.setTokens(authResponse.access_token, authResponse.refresh_token, userData);
-
-        } catch (error) {
-            console.error('Login failed:', error);
-            throw error;
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const signup = async (data: SignupData) => {
-        try {
-            setIsLoading(true);
-            const authResponse: AuthToken = await authAPI.signup(data);
-
-            setToken(authResponse.access_token);
-            setRefreshToken(authResponse.refresh_token);
-
-            // Use user data from response if available, otherwise fetch profile
-            let userData: User;
-            if (authResponse.user) {
-                userData = authResponse.user;
-            } else {
-                // Fallback to fetching profile if not included in response
-                userData = await authAPI.getProfile(authResponse.access_token);
-            }
-            setUser(userData);
-
-            // Store using AuthService
-            AuthService.setTokens(authResponse.access_token, authResponse.refresh_token, userData);
-        } catch (error) {
-            console.error('Signup failed:', error);
-            throw error;
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    const logout = async () => {
-        try {
-            setIsLoading(true);
-            if (token) {
-                await authAPI.logout(token);
-            }
-        } catch (error) {
-            console.error('Logout API call failed:', error);
-            // AuthService.logout already clears tokens
-        } finally {
-            // Clear local state
-            setUser(null);
+            localStorage.removeItem(TOKEN_KEY);
+            await clerkSignOut();
             setToken(null);
-            setRefreshToken(null);
-            AuthService.clearTokens();
-            setIsLoading(false);
-        }
-    };
-
-    const updateProfile = async () => {
-        if (!token) return;
-
-        try {
-            const userData = await authAPI.getProfile(token);
-            setUser(userData);
-            // Update user in storage via AuthService
-            const currentToken = AuthService.getAccessToken();
-            const currentRefresh = AuthService.getRefreshToken();
-            if (currentToken && currentRefresh) {
-                AuthService.setTokens(currentToken, currentRefresh, userData);
+            // Redirect to home page after logout
+            if (typeof window !== 'undefined') {
+                window.location.href = '/';
             }
         } catch (error) {
-            console.error('Failed to update profile:', error);
-            // AuthService already handles session expiry
+            console.error('Sign out failed:', error);
         }
     };
 
@@ -170,13 +100,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
             value={{
                 user,
                 token,
-                refreshToken,
                 isLoading,
                 isAuthenticated,
-                login,
-                signup,
-                logout,
-                updateProfile,
+                signOut,
+                openSignIn,
+                openSignUp,
             }}
         >
             {children}

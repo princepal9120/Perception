@@ -18,6 +18,8 @@ import { DeepResearchModal, ResearchConfig } from "./DeepResearchModal";
 import { useTreeStore } from "@/store/treeStore";
 import { treeApi } from "@/lib/tree-api";
 import { useChatStore } from "@/store/chatStore";
+import { useGuestChatLimit } from "@/hooks/useGuestChatLimit";
+import { AuthLimitModal } from "@/components/auth/AuthLimitModal";
 
 interface ChatInputProps {
   isTreeViewOpen?: boolean;
@@ -32,12 +34,16 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [isDragOver, setIsDragOver] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { sendMessage, isStreaming, stopStreaming, currentChat, messages } = useChat();
   const { sendDeepResearch } = useChatStore();
-  const { token } = useAuth();
+  const { token, isAuthenticated } = useAuth();
   const [isVoiceChatOpen, setIsVoiceChatOpen] = useState(false);
+
+  // Guest chat limit tracking
+  const { messagesUsed, hasReachedLimit, incrementCount } = useGuestChatLimit();
 
   const { activeNodeId, treeStructure, loadTree } = useTreeStore();
 
@@ -51,8 +57,19 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
 
   const handleSend = async () => {
     if (message.trim() && !isStreaming) {
+
+      if (!isAuthenticated && hasReachedLimit) {
+        setIsAuthModalOpen(true);
+        return;
+      }
+
       const userMessage = message.trim();
       setMessage("");
+
+
+      if (!isAuthenticated) {
+        incrementCount();
+      }
 
       // If in tree mode, use tree API
       if (isTreeViewOpen && currentChat) {
@@ -337,6 +354,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
         isOpen={isDeepResearchModalOpen}
         onClose={() => setIsDeepResearchModalOpen(false)}
         onStartResearch={handleStartDeepResearch}
+      />
+
+      <AuthLimitModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        messagesUsed={messagesUsed}
       />
     </div>
   );

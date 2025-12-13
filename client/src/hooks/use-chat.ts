@@ -97,12 +97,8 @@ export const useChat = () => {
         return;
       }
 
-      if (!isAuthenticated) {
-        toast.error("Please login to send messages", {
-          description: "You need to be authenticated to participate in conversations."
-        });
-        return;
-      }
+      // Note: Guest chat limit is enforced in ChatInput component
+      // This allows guests to send messages with their 3-message limit
 
       if (isStreaming) {
         toast.warning("Please wait for the current response to complete", {

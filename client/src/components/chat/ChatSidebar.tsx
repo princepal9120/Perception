@@ -13,7 +13,7 @@ interface ChatSidebarProps {
 
 export const ChatSidebar = ({ isOpen, onToggle }: ChatSidebarProps) => {
   const { chats, currentChatId, selectChat, deleteChat, createChat, isLoading } = useChat();
-  const { logout, user } = useAuth();
+  const { signOut, user } = useAuth();
 
   return (
     <AnimatePresence>
@@ -113,7 +113,7 @@ export const ChatSidebar = ({ isOpen, onToggle }: ChatSidebarProps) => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={logout}
+                  onClick={signOut}
                   className="h-8 w-8 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <LogOut className="w-4 h-4" />
