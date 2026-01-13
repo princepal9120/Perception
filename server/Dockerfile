@@ -40,11 +40,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
+# Create a non-root user
+RUN groupadd -r appuser && useradd -r -g appuser appuser
+
 # Copy virtual environment from builder
-COPY --from=builder /app/.venv /app/.venv
+COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
 
 # Copy application code
-COPY . .
+COPY --chown=appuser:appuser . .
 
 # Runtime environment variables
 ENV PATH="/app/.venv/bin:$PATH"
@@ -55,6 +58,9 @@ ENV PORT=8000
 
 # Expose the API port
 EXPOSE 8000
+
+# Switch to non-root user
+USER appuser
 
 # Healthcheck - verify the service is responding
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \

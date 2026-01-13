@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: perception-server
+    runtime: docker
+    repo: https://github.com/princepal9120/Perception # Update this with your actual repo URL if different
+    region: oregon # or frankfurt, etc.
+    plan: free # or starter, standard, etc.
+    branch: main
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.0
+      - key: PORT
+        value: 8000
+    dockerContext: server
+    dockerfilePath: server/Dockerfile
+    healthCheckPath: /health
+    autoDeploy: true
