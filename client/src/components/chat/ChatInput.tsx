@@ -256,7 +256,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
           />
         </div>
 
-        <div className="relative flex items-end w-full p-3 bg-[#f4f4f4] dark:bg-[#212121] rounded-3xl border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 shadow-sm transition-all">
+        <div className="relative flex items-end w-full p-2 md:p-3 bg-[#f4f4f4] dark:bg-[#212121] rounded-3xl border border-transparent focus-within:border-gray-300 dark:focus-within:border-gray-600 shadow-sm transition-all">
           {/* Hidden File Input */}
           <input
             ref={fileInputRef}
@@ -273,7 +273,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
             variant="ghost"
             size="icon"
             onClick={() => fileInputRef.current?.click()}
-            className="h-10 w-10 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full"
+            className="h-10 w-10 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 rounded-full flex-shrink-0"
             disabled={isStreaming}
           >
             <Paperclip className="w-5 h-5" />
@@ -286,12 +286,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
             onKeyDown={handleKeyDown}
             placeholder="Message Perception..."
             disabled={isStreaming}
-            className="flex-1 min-h-[44px] max-h-[200px] bg-transparent border-0 focus-visible:ring-0 resize-none py-3 px-2 text-base"
+            className="flex-1 min-w-0 min-h-[44px] max-h-[200px] bg-transparent border-0 focus-visible:ring-0 resize-none py-3 px-2 text-base"
             rows={1}
           />
 
           {/* Right Actions */}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-1 flex-shrink-0">
             {/* Deep Research Button */}
             <Tooltip>
               <TooltipTrigger asChild>

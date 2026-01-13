@@ -40,8 +40,16 @@ export const HowItWorks = () => {
                 </div>
 
                 <div className="relative max-w-5xl mx-auto">
-                    {/* Connecting Line (Desktop) */}
-                    <div className="hidden md:block absolute top-1/2 left-0 w-full h-0.5 bg-gradient-to-r from-transparent via-ai-border to-transparent -translate-y-1/2 z-0" />
+                    {/* Connecting Line (Desktop) - Animated Progress Bar */}
+                    <div className="hidden md:block absolute top-10 left-0 w-full h-1 bg-gray-800 -translate-y-1/2 z-0 rounded-full overflow-hidden">
+                        <motion.div
+                            initial={{ width: "0%" }}
+                            whileInView={{ width: "100%" }}
+                            viewport={{ once: true }}
+                            transition={{ duration: 1.5, ease: "easeInOut", delay: 0.2 }}
+                            className="h-full bg-gradient-to-r from-ai-primary via-purple-500 to-ai-secondary"
+                        />
+                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative z-10">
                         {steps.map((step, index) => (

@@ -118,7 +118,7 @@ export const Pricing = () => {
 
                             <Button
                                 variant={plan.buttonVariant}
-                                className={`w-full ${plan.buttonVariant === 'default' ? 'bg-gradient-ai hover:opacity-90 border-0 shadow-glow' : 'border-ai-border hover:bg-white/5'}`}
+                                className={`w-full text-white ${plan.buttonVariant === 'default' ? 'bg-gradient-ai hover:opacity-90 border-0 shadow-glow' : 'bg-transparent border-ai-border hover:bg-white/5'}`}
                             >
                                 Get Started <ArrowRight className="ml-2 w-4 h-4" />
                             </Button>

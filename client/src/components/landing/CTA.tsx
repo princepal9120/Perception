@@ -2,48 +2,66 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
+
+// --- Helper Component ---
+
+const Reveal = ({ children, delay = 0 }: { children: React.ReactNode; delay?: number }) => {
+    return (
+        <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            whileInView={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.8, delay, ease: [0.22, 1, 0.36, 1] }}
+            viewport={{ once: true, margin: "-10%" }}
+        >
+            {children}
+        </motion.div>
+    );
+};
 
 export const CTA = () => {
     return (
-        <section className="py-32 relative overflow-hidden flex items-center justify-center">
+        <section className="py-32 relative overflow-hidden bg-[#050505]">
             {/* Background Gradients */}
-            <div className="absolute inset-0 bg-ai-background z-0" />
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-ai-primary/20 rounded-full blur-[120px] animate-pulse-glow z-0" />
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-ai-primary/20 rounded-full blur-[120px] animate-pulse-glow" />
 
-            <div className="container mx-auto px-4 relative z-10 text-center">
-                <motion.h2
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    className="text-4xl md:text-6xl lg:text-7xl font-bold mb-8 tracking-tight"
-                >
-                    The Agent That <br />
-                    <span className="text-gradient">Actually Executes.</span>
-                </motion.h2>
+            <div className="container mx-auto px-6 relative z-10">
+                {/* Mission Statement */}
+                <Reveal>
+                    <div className="max-w-4xl mx-auto text-center mb-16">
+                        <h2 className="text-3xl md:text-5xl lg:text-6xl leading-tight text-white/90 mb-8 font-serif">
+                            We design the negative space where your AI truly lives.
+                        </h2>
+                        <p className="text-xl md:text-2xl text-gray-500 leading-relaxed font-light">
+                            Elegance is execution. We remove the noise so your agent delivers with absolute clarity.
+                        </p>
+                    </div>
+                </Reveal>
 
-                <motion.p
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.2 }}
-                    className="text-xl text-gray-400 mb-10 max-w-2xl mx-auto"
-                >
-                    Stop chatting and start building. Join thousands of developers using Perception to automate their workflows.
-                </motion.p>
+                {/* CTA */}
+                <Reveal delay={0.2}>
+                    <div className="text-center">
+                        <Link to="/chat">
+                            <Button
+                                size="lg"
+                                className="bg-white text-black hover:bg-gray-200 h-14 px-10 rounded-full text-lg font-bold transition-all hover:scale-105"
+                            >
+                                Get Started Now <ArrowRight className="ml-2 w-5 h-5" />
+                            </Button>
+                        </Link>
+                    </div>
+                </Reveal>
 
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    whileInView={{ opacity: 1, scale: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: 0.4 }}
-                >
-                    <Button
-                        size="lg"
-                        className="bg-white text-black hover:bg-gray-200 h-14 px-10 rounded-full text-lg font-bold shadow-glow transition-all hover:scale-105"
-                    >
-                        Get Started Now <ArrowRight className="ml-2 w-5 h-5" />
-                    </Button>
-                </motion.div>
+                {/* Client Logos */}
+                <Reveal delay={0.3}>
+                    <div className="mt-24 grid grid-cols-2 md:grid-cols-4 gap-8 items-center justify-items-center opacity-40 grayscale hover:grayscale-0 hover:opacity-60 transition-all duration-500">
+                        {['ANTHROPIC', 'OPENAI', 'GEMINI', 'MISTRAL'].map((logo, i) => (
+                            <div key={logo} className="font-bold text-lg tracking-widest text-white/60">
+                                {logo}
+                            </div>
+                        ))}
+                    </div>
+                </Reveal>
             </div>
         </section>
     );

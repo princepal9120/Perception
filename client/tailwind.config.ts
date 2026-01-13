@@ -15,6 +15,7 @@ export default {
     extend: {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
+        serif: ['"Playfair Display"', 'Georgia', 'serif'],
       },
       colors: {
         border: "var(--border)",
@@ -60,9 +61,9 @@ export default {
           border: "var(--sidebar-border)",
           ring: "var(--sidebar-ring)",
         },
-        "ai-primary": "#7B61FF",
-        "ai-secondary": "#4285FF",
-        "ai-background": "#0A0A0F",
+        "ai-primary": "#FF4500",
+        "ai-secondary": "#FF6B35",
+        "ai-background": "#050505",
         "ai-surface": "rgba(255,255,255,0.06)",
         "ai-border": "rgba(255,255,255,0.12)",
       },
