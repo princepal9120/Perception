@@ -33,6 +33,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { sendMessage, isStreaming, stopStreaming, currentChat, messages, createChat: createChatAction } = useChat();
   const { sendDeepResearch, loadChats, selectChat } = useChatStore();
   const { token, isAuthenticated } = useAuth();
@@ -46,6 +47,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
   // Get last message for voice synthesis
   const lastMessage = messages.length > 0 ? messages[messages.length - 1] : null;
   const lastMessageContent = lastMessage?.role === 'assistant' ? lastMessage.content : undefined;
+
+  // Auto-resize textarea as user types (like ChatGPT/Claude)
+  useEffect(() => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      // Reset height to auto to get the correct scrollHeight
+      textarea.style.height = 'auto';
+      // Set the height to scrollHeight, capped at max-height (200px)
+      const newHeight = Math.min(textarea.scrollHeight, 200);
+      textarea.style.height = `${newHeight}px`;
+    }
+  }, [message]);
 
   const handleVoiceTranscript = (text: string) => {
     sendMessage(text);
@@ -276,14 +289,20 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
 
           {/* Text Input */}
           <Textarea
+            ref={textareaRef}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder="Message Perception..."
             disabled={isStreaming}
-            className="flex-1 min-w-0 min-h-[44px] max-h-[200px] bg-transparent border-0 focus-visible:ring-0 resize-none py-3 px-2 text-base"
+            className="flex-1 min-w-0 min-h-[44px] max-h-[200px] bg-transparent border-0 focus-visible:ring-0 resize-none py-3 px-2 text-base overflow-y-auto"
             rows={1}
+            aria-label="Message input"
+            aria-describedby="keyboard-hint"
           />
+          <span id="keyboard-hint" className="sr-only">
+            Press Enter to send, Shift+Enter for new line
+          </span>
 
           {/* Right Actions */}
           <div className="flex items-center gap-1 flex-shrink-0">
@@ -332,9 +351,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
           </div>
         </div>
 
-        <p className="text-xs text-center text-gray-400 mt-2">
-          Perception can make mistakes. Consider checking important information.
-        </p>
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-3 mt-2">
+          <p className="text-xs text-gray-400">
+            Perception can make mistakes. Consider checking important information.
+          </p>
+          <p className="text-xs text-gray-400/70 hidden sm:block">
+            <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] font-mono">Enter</kbd>
+            {" "}to send
+            <span className="mx-1.5">·</span>
+            <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] font-mono">Shift+Enter</kbd>
+            {" "}new line
+          </p>
+        </div>
       </div>
 
       <VoiceChat

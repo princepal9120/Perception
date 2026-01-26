@@ -1,7 +1,8 @@
 /**
  * Message Action Buttons - Fork, Regenerate, Copy
+ * Shows on hover for desktop, always visible on mobile (touch devices)
  */
-import React from 'react';
+import React, { memo } from 'react';
 import { Button } from '../ui/button';
 import { GitBranch, RefreshCw, Copy, Check } from 'lucide-react';
 import {
@@ -20,7 +21,7 @@ interface MessageActionsProps {
     isTreeMode?: boolean;
 }
 
-export const MessageActions: React.FC<MessageActionsProps> = ({
+export const MessageActions: React.FC<MessageActionsProps> = memo(({
     messageId,
     role,
     content,
@@ -37,20 +38,22 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
     };
 
     return (
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        // Visible by default on mobile (sm:opacity-0), shows on hover for desktop
+        <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" role="group" aria-label="Message actions">
             {/* Copy Button */}
             <Tooltip>
                 <TooltipTrigger asChild>
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7"
+                        className="h-8 w-8 sm:h-7 sm:w-7"
                         onClick={handleCopy}
+                        aria-label={copied ? 'Copied to clipboard' : 'Copy message'}
                     >
                         {copied ? (
-                            <Check className="h-3.5 w-3.5 text-green-500" />
+                            <Check className="h-4 w-4 sm:h-3.5 sm:w-3.5 text-green-500" />
                         ) : (
-                            <Copy className="h-3.5 w-3.5" />
+                            <Copy className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                         )}
                     </Button>
                 </TooltipTrigger>
@@ -65,10 +68,11 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
                     <Button
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7"
+                        className="h-8 w-8 sm:h-7 sm:w-7"
                         onClick={onFork}
+                        aria-label="Branch conversation from here"
                     >
-                        <GitBranch className="h-3.5 w-3.5" />
+                        <GitBranch className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                     </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -83,10 +87,11 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7"
+                            className="h-8 w-8 sm:h-7 sm:w-7"
                             onClick={onRegenerate}
+                            aria-label="Regenerate response"
                         >
-                            <RefreshCw className="h-3.5 w-3.5" />
+                            <RefreshCw className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
                         </Button>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -96,4 +101,6 @@ export const MessageActions: React.FC<MessageActionsProps> = ({
             )}
         </div>
     );
-};
+});
+
+MessageActions.displayName = 'MessageActions';

@@ -1,15 +1,17 @@
 import ReactMarkdown from 'react-markdown';
 import { Components } from 'react-markdown';
 import { CodeBlock } from './CodeBlock';
+import { ExternalLink } from 'lucide-react';
+import { memo } from 'react';
 
 interface MarkdownMessageProps {
   content: string;
   isStreaming?: boolean;
 }
 
-export const MarkdownMessage = ({ content, isStreaming = false }: MarkdownMessageProps) => {
+export const MarkdownMessage = memo(({ content, isStreaming = false }: MarkdownMessageProps) => {
   const components: Components = {
-    code({ node, className, children, ...props }) {
+    code({ className, children, ...props }) {
       const match = /language-(\w+)/.exec(className || '');
       const codeContent = String(children).replace(/\n$/, '');
       const isInline = !className && !codeContent.includes('\n');
@@ -25,6 +27,21 @@ export const MarkdownMessage = ({ content, isStreaming = false }: MarkdownMessag
         </code>
       );
     },
+    // Links with proper styling and external indicator
+    a({ href, children }) {
+      const isExternal = href?.startsWith('http');
+      return (
+        <a
+          href={href}
+          target={isExternal ? '_blank' : undefined}
+          rel={isExternal ? 'noopener noreferrer' : undefined}
+          className="text-primary hover:text-primary/80 underline underline-offset-2 decoration-primary/30 hover:decoration-primary/60 transition-colors inline-flex items-center gap-0.5"
+        >
+          {children}
+          {isExternal && <ExternalLink className="w-3 h-3 inline-block ml-0.5" />}
+        </a>
+      );
+    },
     p({ children }) {
       return <p className="mb-2 last:mb-0 leading-relaxed text-sm sm:text-base">{children}</p>;
     },
@@ -33,6 +50,9 @@ export const MarkdownMessage = ({ content, isStreaming = false }: MarkdownMessag
     },
     ol({ children }) {
       return <ol className="list-decimal list-inside mb-2 space-y-1 text-sm sm:text-base">{children}</ol>;
+    },
+    li({ children }) {
+      return <li className="text-sm sm:text-base">{children}</li>;
     },
     h1({ children }) {
       return <h1 className="text-xl sm:text-2xl font-bold mb-3 mt-4 first:mt-0">{children}</h1>;
@@ -50,6 +70,34 @@ export const MarkdownMessage = ({ content, isStreaming = false }: MarkdownMessag
         </blockquote>
       );
     },
+    // Tables
+    table({ children }) {
+      return (
+        <div className="overflow-x-auto my-3">
+          <table className="min-w-full border-collapse border border-border text-sm">
+            {children}
+          </table>
+        </div>
+      );
+    },
+    th({ children }) {
+      return <th className="border border-border bg-muted px-3 py-2 text-left font-semibold">{children}</th>;
+    },
+    td({ children }) {
+      return <td className="border border-border px-3 py-2">{children}</td>;
+    },
+    // Horizontal rule
+    hr() {
+      return <hr className="my-4 border-border" />;
+    },
+    // Strong/Bold
+    strong({ children }) {
+      return <strong className="font-semibold">{children}</strong>;
+    },
+    // Emphasis/Italic
+    em({ children }) {
+      return <em className="italic">{children}</em>;
+    },
   };
 
   return (
@@ -58,8 +106,10 @@ export const MarkdownMessage = ({ content, isStreaming = false }: MarkdownMessag
         {content}
       </ReactMarkdown>
       {isStreaming && (
-        <span className="inline-block w-1.5 h-4 sm:h-5 bg-primary ml-0.5 animate-pulse" />
+        <span className="inline-block w-1.5 h-4 sm:h-5 bg-primary ml-0.5 animate-pulse" aria-label="Generating response" />
       )}
     </div>
   );
-};
+});
+
+MarkdownMessage.displayName = 'MarkdownMessage';

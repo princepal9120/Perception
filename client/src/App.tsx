@@ -1,3 +1,4 @@
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -9,10 +10,13 @@ import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { ProtectedRoute } from "@/components/auth/protected-route";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import LandingPage from "./pages/LandingPage";
-import Chat from "./pages/chat/Chat";
-import NotFound from "./pages/NotFound";
-import WorkflowPage from "@/pages/WorkflowPage";
+import { PageLoader } from "@/components/PageLoader";
+
+// Lazy load heavy pages for better initial load performance
+const LandingPage = lazy(() => import("./pages/LandingPage"));
+const Chat = lazy(() => import("./pages/chat/Chat"));
+const WorkflowPage = lazy(() => import("@/pages/WorkflowPage"));
+const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient();
 
@@ -29,8 +33,9 @@ const AnimatedRoutes = () => {
   const location = useLocation();
 
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
+    <Suspense fallback={<PageLoader />}>
+      <AnimatePresence mode="wait">
+        <Routes location={location} key={location.pathname}>
         {/* Public routes */}
         <Route path="/" element={<LandingPage />} />
 
@@ -93,7 +98,8 @@ const AnimatedRoutes = () => {
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
-    </AnimatePresence>
+      </AnimatePresence>
+    </Suspense>
   );
 };
 

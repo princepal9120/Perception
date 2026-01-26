@@ -4,17 +4,30 @@ import { Bot, User } from "lucide-react";
 import { MarkdownMessage } from "./MarkdownMessage";
 import { TypingIndicator } from "./TypingIndicator";
 import { WelcomeScreen } from "./WelcomeScreen";
+import { MessageSkeleton } from "./MessageSkeleton";
 import { useChat } from "@/hooks/use-chat";
 import { AgentProgressTracker } from "./AgentProgressTracker";
 import { DeepResearchFlow } from "./DeepResearchFlow";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { format, isToday, isYesterday } from "date-fns";
 
 import { MessageActions } from "./MessageActions";
 
 import { useTreeStore } from "@/store/treeStore";
-import { treeApi } from "@/lib/tree-api";
 import { useChatStore } from "@/store/chatStore";
+
+// Format timestamp for display
+const formatMessageTime = (dateString: string): string => {
+  const date = new Date(dateString);
+  if (isToday(date)) {
+    return format(date, 'h:mm a');
+  }
+  if (isYesterday(date)) {
+    return `Yesterday ${format(date, 'h:mm a')}`;
+  }
+  return format(date, 'MMM d, h:mm a');
+};
 
 
 interface ChatMessagesProps {
@@ -125,6 +138,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
     streamingContent &&
     (!lastMessage || lastMessage.role !== "assistant");
 
+  // Show skeleton loader during initial load
+  if (isLoading && messages.length === 0) {
+    return <MessageSkeleton count={3} />;
+  }
+
   return (
     <div className="w-full max-w-3xl mx-auto px-4 py-6 space-y-6">
       {/* Welcome screen when no messages */}
@@ -141,14 +159,19 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
               transition={{ duration: 0.3 }}
               className={`group w-full text-foreground border-b border-black/5 dark:border-white/5 pb-6 last:border-0 ${message.role === "assistant" ? "bg-transparent" : "bg-transparent"
                 }`}
+              role="article"
+              aria-label={`${message.role === 'assistant' ? 'AI' : 'User'} message`}
             >
               <div className="flex gap-4 md:gap-6 m-auto">
                 {/* Avatar */}
                 <div className="flex-shrink-0 flex flex-col relative items-end">
-                  <div className={`w-8 h-8 rounded-sm flex items-center justify-center ${message.role === "assistant"
-                    ? "bg-green-500"
-                    : "bg-gray-500"
-                    }`}>
+                  <div
+                    className={`w-8 h-8 rounded-sm flex items-center justify-center ${message.role === "assistant"
+                      ? "bg-green-500"
+                      : "bg-gray-500"
+                      }`}
+                    aria-hidden="true"
+                  >
                     {message.role === "assistant" ? (
                       <Bot className="w-5 h-5 text-white" />
                     ) : (
@@ -160,10 +183,17 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
                 {/* Message Content */}
                 <div className="relative flex-1 overflow-hidden">
                   <div className="font-semibold text-sm mb-1 opacity-90 flex justify-between items-center">
-                    <span>{message.role === "assistant" ? "Perception" : "You"}</span>
+                    <div className="flex items-center gap-2">
+                      <span>{message.role === "assistant" ? "Perception" : "You"}</span>
+                      {message.created_at && (
+                        <span className="text-xs font-normal text-muted-foreground">
+                          {formatMessageTime(message.created_at)}
+                        </span>
+                      )}
+                    </div>
                     <MessageActions
                       messageId={message.id}
-                      role={message.role as any}
+                      role={message.role as "user" | "assistant"}
                       content={message.content}
                       isTreeMode={isTreeViewOpen}
                       onFork={() => handleFork(message)}

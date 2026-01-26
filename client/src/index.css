@@ -385,3 +385,51 @@ All colors MUST be HSL.
     transform: translateY(0);
   }
 }
+
+/* Accessibility: Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Screen reader only utility */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Enhanced focus styles for keyboard navigation */
+:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* Skip link for keyboard users */
+.skip-link {
+  position: absolute;
+  top: -40px;
+  left: 0;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+  padding: 8px 16px;
+  z-index: 100;
+  border: 1px solid hsl(var(--border));
+  border-radius: 4px;
+}
+
+.skip-link:focus {
+  top: 0;
+}
