@@ -107,12 +107,6 @@ export const TreeVisualization: React.FC<TreeVisualizationProps> = ({ chatId }) 
         const flowEdges: Edge[] = [];
         const { nodes: treeNodes } = treeStructure;
 
-        console.log('[TreeViz] Processing tree:', {
-            totalNodes: treeNodes.length,
-            activeNodeId: treeStructure.tree_metadata.active_node_id,
-            adjacencyList: treeStructure.adjacency_list
-        });
-
         treeNodes.forEach((node) => {
             // Only render nodes that have a user message (questions)
             // We skip empty root nodes or nodes that are just AI responses without user query (rare in this model)
@@ -156,12 +150,6 @@ export const TreeVisualization: React.FC<TreeVisualizationProps> = ({ chatId }) 
                 }
                 // If parent is root (no user message), we don't connect it, so this becomes a root in viz
             }
-        });
-
-        console.log('[TreeViz] Created nodes and edges:', {
-            flowNodesCount: flowNodes.length,
-            flowEdgesCount: flowEdges.length,
-            flowNodes: flowNodes
         });
 
         const layouted = getLayoutedElements(flowNodes, flowEdges);

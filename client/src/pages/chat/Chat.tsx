@@ -44,11 +44,9 @@ const Chat = () => {
       // First, try to get existing tree
       try {
         const existingTree = await treeApi.getTreeStructure(currentChat.id);
-        console.log('[Sync] Found existing tree with', existingTree.nodes.length, 'nodes');
 
         // If tree exists but only has root node, we need to re-migrate
         if (existingTree.nodes.length <= 1) {
-          console.log('[Sync] Tree is empty, will re-migrate');
           toast.info('Refreshing tree with chat messages...');
         } else {
           toast.info('Tree already exists with ' + existingTree.nodes.length + ' nodes');
@@ -56,15 +54,12 @@ const Chat = () => {
           setIsSyncing(false);
           return;
         }
-      } catch (error: any) {
-        // Tree doesn't exist, that's fine
-        console.log('[Sync] No existing tree, will create new one');
+      } catch {
+        // Tree doesn't exist, that's fine - will create new one
       }
 
       // Migrate chat to tree
-      console.log('[Sync] Starting migration for chat', currentChat.id);
       const result = await treeApi.migrateToTree(currentChat.id);
-      console.log('[Sync] Migration result:', result);
 
       toast.success(`Chat synced! Created ${result.nodes_created || 0} nodes`);
 

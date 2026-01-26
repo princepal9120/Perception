@@ -328,17 +328,14 @@ const FinalReportPhase: React.FC<{
 
     const handleExportPDF = () => {
         // TODO: Implement PDF export
-        console.log('Export PDF');
     };
 
     const handleExportDoc = () => {
         // TODO: Implement Doc export
-        console.log('Export Doc');
     };
 
     const handleShare = () => {
         // TODO: Implement sharing
-        console.log('Share');
     };
 
     return (

@@ -16,7 +16,6 @@ export const TreePanel: React.FC<TreePanelProps> = ({ chatId }) => {
     const { loadTree, error, isLoading, treeStructure } = useTreeStore();
 
     useEffect(() => {
-        console.log('[TreePanel] Loading tree for chat:', chatId);
         loadTree(chatId);
     }, [chatId, loadTree]);
 

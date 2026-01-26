@@ -80,7 +80,6 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
 
           if (!parentId) {
             // Fallback to regular chat if no tree context
-            console.warn("No active node or root node found, falling back to regular chat");
             await sendMessage(userMessage);
             return;
           }
@@ -100,8 +99,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
             message: userMessage,
             node_id: parentId,
             regenerate: false
-          }, (event) => {
-            console.log("Tree event:", event);
+          }, (_event) => {
             // TODO: Update UI with streaming content
           });
 

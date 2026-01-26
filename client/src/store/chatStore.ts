@@ -394,7 +394,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
             }));
           },
           onSearchStart: (query: string) => {
-            console.log("Search started:", query);
             set((state) => ({
               agentProgress: [
                 ...state.agentProgress,
@@ -408,7 +407,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
             }));
           },
           onSearchResults: (urls: string[]) => {
-            console.log("Search results:", urls);
             set((state) => ({
               agentProgress: [
                 ...state.agentProgress,
@@ -421,8 +419,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
               ],
             }));
           },
-          onToolOutput: (output: any) => {
-            console.log("Tool output:", output);
+          onToolOutput: (_output: unknown) => {
             // Add analyzing step for tool outputs
             set((state) => ({
               agentProgress: [
@@ -435,8 +432,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
               ],
             }));
           },
-          onCheckpoint: (checkpointId: string) => {
-            console.log("Checkpoint:", checkpointId);
+          onCheckpoint: (_checkpointId: string) => {
+            // Checkpoint received
           },
           onEnd: () => {
             // Add the complete assistant message

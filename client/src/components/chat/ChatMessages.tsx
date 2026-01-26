@@ -105,7 +105,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
           }
         );
 
-        console.log(`Created new branch chat ${newChat.id} from message ${message.id}`);
       }
     } catch (e: any) {
       toast.dismiss("branch-loading");
@@ -116,9 +115,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
 
   const handleRegenerate = async (message: any) => {
     if (!message.metadata?.nodeId) return;
-    // Regenerate logic here
-    // For now just log
-    console.log('Regenerate', message.id);
+    // TODO: Implement regenerate logic
   };
 
   // Prevent duplicate rendering when assistant message is already completed

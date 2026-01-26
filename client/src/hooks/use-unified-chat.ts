@@ -22,19 +22,14 @@ export const useUnifiedChat = (options: UseUnifiedChatOptions = {}) => {
      */
     const sendMessage = useCallback(async (content: string) => {
         if (!regularChat.currentChat) {
-            console.error('[UnifiedChat] No current chat');
             return;
         }
 
         if (isTreeViewOpen) {
             // Use tree API
-            console.log('[UnifiedChat] Sending via tree API');
-
-            // Get active node or root
             const activeNode = treeStore.activeNodeId || treeStore.treeStructure?.tree_metadata.root_node_id;
 
             if (!activeNode) {
-                console.error('[UnifiedChat] No active node in tree');
                 // Fall back to regular chat
                 await chatStore.sendMessage(content);
                 return;
@@ -44,7 +39,6 @@ export const useUnifiedChat = (options: UseUnifiedChatOptions = {}) => {
             await treeStore.sendMessage(activeNode, content, false);
         } else {
             // Use regular chat API
-            console.log('[UnifiedChat] Sending via regular chat API');
             await chatStore.sendMessage(content);
         }
     }, [isTreeViewOpen, regularChat.currentChat, treeStore, chatStore]);
@@ -59,8 +53,7 @@ export const useUnifiedChat = (options: UseUnifiedChatOptions = {}) => {
             // Regenerate in tree
             await treeStore.regenerateResponse(treeStore.activeNodeId);
         } else {
-            // For regular chat, we'd need to implement this
-            console.warn('[UnifiedChat] Regenerate not implemented for regular chat');
+            // For regular chat, regenerate is not implemented yet
         }
     }, [isTreeViewOpen, regularChat.currentChat, treeStore]);
 
@@ -72,9 +65,8 @@ export const useUnifiedChat = (options: UseUnifiedChatOptions = {}) => {
 
         if (isTreeViewOpen) {
             await treeStore.forkNode(nodeId, branchName);
-        } else {
-            console.warn('[UnifiedChat] Fork only available in tree view');
         }
+        // Fork is only available in tree view
     }, [isTreeViewOpen, regularChat.currentChat, treeStore]);
 
     return {
