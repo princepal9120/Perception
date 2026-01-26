@@ -8,6 +8,7 @@ import { SignIn, SignUp } from "@clerk/clerk-react";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { ProtectedRoute } from "@/components/auth/protected-route";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import LandingPage from "./pages/LandingPage";
 import Chat from "./pages/chat/Chat";
 import NotFound from "./pages/NotFound";
@@ -68,14 +69,23 @@ const AnimatedRoutes = () => {
         <Route path="/auth/signup" element={<Navigate to="/sign-up" replace />} />
 
         {/* Chat route - now accessible to guests with limit */}
-        <Route path="/chat" element={<Chat />} />
+        <Route
+          path="/chat"
+          element={
+            <ErrorBoundary>
+              <Chat />
+            </ErrorBoundary>
+          }
+        />
 
         {/* Protected workflow route */}
         <Route
           path="/workflow/:chatId"
           element={
             <ProtectedRoute>
-              <WorkflowPage />
+              <ErrorBoundary>
+                <WorkflowPage />
+              </ErrorBoundary>
             </ProtectedRoute>
           }
         />

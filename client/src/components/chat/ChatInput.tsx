@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Send, Mic, Paperclip, Square, Zap, Brain } from "lucide-react";
-import { motion } from "framer-motion";
+import { Send, Mic, Paperclip, Square, Brain } from "lucide-react";
 import { useChat } from "@/hooks/use-chat";
 import {
   Tooltip,
@@ -16,7 +15,6 @@ import { chatAPI } from "@/lib/chat-api";
 import { VoiceChat } from "./VoiceChat";
 import { DeepResearchModal, ResearchConfig } from "./DeepResearchModal";
 import { useTreeStore } from "@/store/treeStore";
-import { treeApi } from "@/lib/tree-api";
 import { useChatStore } from "@/store/chatStore";
 import { useGuestChatLimit } from "@/hooks/useGuestChatLimit";
 import { AuthLimitModal } from "@/components/auth/AuthLimitModal";
@@ -27,18 +25,16 @@ interface ChatInputProps {
 
 export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) => {
   const [message, setMessage] = useState("");
-  const [isRecording, setIsRecording] = useState(false);
   const [deepResearchMode, setDeepResearchMode] = useState(false);
   const [isDeepResearchModalOpen, setIsDeepResearchModalOpen] = useState(false);
   const [attachedDocuments, setAttachedDocuments] = useState<Document[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
-  const [isDragOver, setIsDragOver] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { sendMessage, isStreaming, stopStreaming, currentChat, messages } = useChat();
-  const { sendDeepResearch } = useChatStore();
+  const { sendMessage, isStreaming, stopStreaming, currentChat, messages, createChat: createChatAction } = useChat();
+  const { sendDeepResearch, loadChats, selectChat } = useChatStore();
   const { token, isAuthenticated } = useAuth();
   const [isVoiceChatOpen, setIsVoiceChatOpen] = useState(false);
 
@@ -143,8 +139,9 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
       try {
         const newChat = await chatAPI.createChat("New Chat", token);
         chatId = newChat.id;
-        // Reload chats to update the UI
-        window.location.reload();
+        // Update state properly without page reload
+        await loadChats();
+        await selectChat(chatId);
       } catch (error) {
         console.error('Failed to create chat:', error);
         return;

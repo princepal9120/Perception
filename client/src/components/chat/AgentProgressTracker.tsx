@@ -2,9 +2,18 @@
  * Agent Progress Tracker Component
  * Displays real-time AI agent progress (thinking, searching, analyzing) in chat
  */
-import React from 'react';
+import React, { memo, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Search, Brain, CheckCircle2, Globe, FileText } from 'lucide-react';
+
+// Utility to safely extract domain from URL
+const extractDomain = (url: string): string => {
+    try {
+        return new URL(url).hostname.replace('www.', '');
+    } catch {
+        return url;
+    }
+};
 
 export interface AgentProgressStep {
     type: 'thinking' | 'searching' | 'analyzing' | 'reading' | 'completed';
@@ -52,7 +61,7 @@ const stepConfig = {
     },
 };
 
-export const AgentProgressTracker: React.FC<AgentProgressTrackerProps> = ({
+export const AgentProgressTracker: React.FC<AgentProgressTrackerProps> = memo(({
     steps,
     isActive
 }) => {
@@ -128,17 +137,14 @@ export const AgentProgressTracker: React.FC<AgentProgressTrackerProps> = ({
                                             <span>Reviewing {step.sources.length} sources</span>
                                         </div>
                                         <div className="flex flex-wrap gap-1">
-                                            {step.sources.slice(0, 3).map((source, idx) => {
-                                                const domain = new URL(source).hostname.replace('www.', '');
-                                                return (
-                                                    <span
-                                                        key={idx}
-                                                        className="text-xs bg-background/70 border border-border rounded px-2 py-0.5 font-mono"
-                                                    >
-                                                        {domain}
-                                                    </span>
-                                                );
-                                            })}
+                                            {step.sources.slice(0, 3).map((source, idx) => (
+                                                <span
+                                                    key={idx}
+                                                    className="text-xs bg-background/70 border border-border rounded px-2 py-0.5 font-mono"
+                                                >
+                                                    {extractDomain(source)}
+                                                </span>
+                                            ))}
                                             {step.sources.length > 3 && (
                                                 <span className="text-xs text-muted-foreground px-2 py-0.5">
                                                     +{step.sources.length - 3} more
@@ -166,6 +172,8 @@ export const AgentProgressTracker: React.FC<AgentProgressTrackerProps> = ({
             )}
         </motion.div>
     );
-};
+});
+
+AgentProgressTracker.displayName = 'AgentProgressTracker';
 
 export default AgentProgressTracker;

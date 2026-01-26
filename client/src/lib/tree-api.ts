@@ -127,91 +127,204 @@ export const treeApi = {
     },
 
     /**
-     * Send message with streaming
+     * Send message with streaming (fetch-based SSE for proper auth)
      */
     async sendMessage(
         chatId: number,
         request: MessageSendRequest,
-        onEvent: (event: any) => void
-    ) {
+        onEvent: (event: unknown) => void
+    ): Promise<{ cancel: () => void }> {
         const token = AuthService.getAccessToken();
-        const eventSource = new EventSource(
-            `${API_BASE_URL}/tree/chats/${chatId}/send?node_id=${request.node_id}&message=${encodeURIComponent(request.message)}&regenerate=${request.regenerate || false}`,
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 min timeout
+
+        const response = await fetch(
+            `${API_BASE_URL}/tree/chats/${chatId}/send`,
             {
+                method: 'POST',
                 headers: {
-                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
                 },
-            } as any
+                body: JSON.stringify({
+                    node_id: request.node_id,
+                    message: request.message,
+                    regenerate: request.regenerate || false,
+                }),
+                signal: controller.signal,
+            }
         );
 
-        return new Promise((resolve, reject) => {
-            eventSource.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    onEvent(data);
+        if (!response.ok) {
+            clearTimeout(timeoutId);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
 
-                    if (data.type === 'complete') {
-                        eventSource.close();
-                        resolve(data);
-                    } else if (data.type === 'error') {
-                        eventSource.close();
-                        reject(new Error(data.data?.error || 'Unknown error'));
+        if (!response.body) {
+            clearTimeout(timeoutId);
+            throw new Error('No response body');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        const processStream = async () => {
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+
+                    if (done) {
+                        // Process any remaining buffer
+                        if (buffer.trim()) {
+                            const lines = buffer.split('\n');
+                            for (const line of lines) {
+                                if (line.startsWith('data: ')) {
+                                    try {
+                                        const data = JSON.parse(line.slice(6));
+                                        onEvent(data);
+                                    } catch { /* ignore parse errors for incomplete data */ }
+                                }
+                            }
+                        }
+                        break;
                     }
-                } catch (error) {
-                    console.error('Error parsing SSE event:', error);
-                }
-            };
 
-            eventSource.onerror = (error) => {
-                console.error('SSE error:', error);
-                eventSource.close();
-                reject(error);
-            };
-        });
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                onEvent(data);
+
+                                if (data.type === 'complete' || data.type === 'error') {
+                                    clearTimeout(timeoutId);
+                                    return;
+                                }
+                            } catch {
+                                // Ignore parse errors for incomplete JSON
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                if ((error as Error).name !== 'AbortError') {
+                    console.error('Stream error:', error);
+                }
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        };
+
+        processStream();
+
+        return {
+            cancel: () => {
+                clearTimeout(timeoutId);
+                controller.abort();
+            },
+        };
     },
 
     /**
-     * Regenerate response
+     * Regenerate response (fetch-based SSE for proper auth)
      */
     async regenerateResponse(
         chatId: number,
         nodeId: string,
-        onEvent: (event: any) => void
-    ) {
+        onEvent: (event: unknown) => void
+    ): Promise<{ cancel: () => void }> {
         const token = AuthService.getAccessToken();
-        const eventSource = new EventSource(
-            `${API_BASE_URL}/tree/nodes/${nodeId}/regenerate?chat_id=${chatId}`,
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 min timeout
+
+        const response = await fetch(
+            `${API_BASE_URL}/tree/nodes/${nodeId}/regenerate`,
             {
+                method: 'POST',
                 headers: {
-                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
                 },
-            } as any
+                body: JSON.stringify({ chat_id: chatId }),
+                signal: controller.signal,
+            }
         );
 
-        return new Promise((resolve, reject) => {
-            eventSource.onmessage = (event) => {
-                try {
-                    const data = JSON.parse(event.data);
-                    onEvent(data);
+        if (!response.ok) {
+            clearTimeout(timeoutId);
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
 
-                    if (data.type === 'complete') {
-                        eventSource.close();
-                        resolve(data);
-                    } else if (data.type === 'error') {
-                        eventSource.close();
-                        reject(new Error(data.data?.error || 'Unknown error'));
+        if (!response.body) {
+            clearTimeout(timeoutId);
+            throw new Error('No response body');
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        const processStream = async () => {
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+
+                    if (done) {
+                        if (buffer.trim()) {
+                            const lines = buffer.split('\n');
+                            for (const line of lines) {
+                                if (line.startsWith('data: ')) {
+                                    try {
+                                        const data = JSON.parse(line.slice(6));
+                                        onEvent(data);
+                                    } catch { /* ignore */ }
+                                }
+                            }
+                        }
+                        break;
                     }
-                } catch (error) {
-                    console.error('Error parsing SSE event:', error);
-                }
-            };
 
-            eventSource.onerror = (error) => {
-                console.error('SSE error:', error);
-                eventSource.close();
-                reject(error);
-            };
-        });
+                    buffer += decoder.decode(value, { stream: true });
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop() || '';
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                onEvent(data);
+
+                                if (data.type === 'complete' || data.type === 'error') {
+                                    clearTimeout(timeoutId);
+                                    return;
+                                }
+                            } catch {
+                                // Ignore parse errors
+                            }
+                        }
+                    }
+                }
+            } catch (error) {
+                if ((error as Error).name !== 'AbortError') {
+                    console.error('Stream error:', error);
+                }
+            } finally {
+                clearTimeout(timeoutId);
+            }
+        };
+
+        processStream();
+
+        return {
+            cancel: () => {
+                clearTimeout(timeoutId);
+                controller.abort();
+            },
+        };
     },
 
     /**

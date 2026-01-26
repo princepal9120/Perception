@@ -349,6 +349,7 @@ class ChatAPI {
   /**
    * Send a message and stream the AI response
    * Uses EventSource for Server-Sent Events (SSE)
+   * Includes timeout protection to prevent zombie streams
    */
   async sendMessageStream(
     chatId: number,
@@ -356,6 +357,9 @@ class ChatAPI {
     token: string,
     callbacks: StreamCallbacks
   ): Promise<() => void> {
+    const STREAM_TIMEOUT_MS = 120000; // 2 minute timeout
+    const CHUNK_TIMEOUT_MS = 30000; // 30 second timeout between chunks
+
     // Create a custom fetch request with streaming
     const response = await this.fetchWithTokenRefresh(
       `${API_BASE_URL}/chats/${chatId}/message`,
@@ -382,16 +386,51 @@ class ChatAPI {
 
     let buffer = "";
     let cancelled = false;
+    let lastChunkTime = Date.now();
+    let chunkTimeoutId: ReturnType<typeof setTimeout> | null = null;
+    let streamTimeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    const clearTimeouts = () => {
+      if (chunkTimeoutId) clearTimeout(chunkTimeoutId);
+      if (streamTimeoutId) clearTimeout(streamTimeoutId);
+    };
+
+    const resetChunkTimeout = () => {
+      if (chunkTimeoutId) clearTimeout(chunkTimeoutId);
+      lastChunkTime = Date.now();
+      chunkTimeoutId = setTimeout(() => {
+        if (!cancelled) {
+          cancelled = true;
+          callbacks.onError(new Error("Stream timeout: No data received for 30 seconds"));
+          reader.cancel();
+        }
+      }, CHUNK_TIMEOUT_MS);
+    };
+
+    // Overall stream timeout
+    streamTimeoutId = setTimeout(() => {
+      if (!cancelled) {
+        cancelled = true;
+        callbacks.onError(new Error("Stream timeout: Maximum duration exceeded"));
+        reader.cancel();
+      }
+    }, STREAM_TIMEOUT_MS);
 
     const processStream = async () => {
       try {
+        resetChunkTimeout();
+
         while (!cancelled) {
           const { done, value } = await reader.read();
 
           if (done) {
+            clearTimeouts();
             callbacks.onEnd();
             break;
           }
+
+          // Reset chunk timeout on each chunk received
+          resetChunkTimeout();
 
           // Decode the chunk
           buffer += decoder.decode(value, { stream: true });
@@ -433,24 +472,28 @@ class ChatAPI {
                   break;
 
                 case "error":
+                  clearTimeouts();
                   callbacks.onError(new Error(data.message));
                   break;
 
                 case "end":
+                  clearTimeouts();
                   callbacks.onEnd();
                   cancelled = true;
                   break;
               }
-            } catch (error) {
-              console.error("Error parsing SSE message:", error, line);
+            } catch {
+              // Silently ignore parse errors for incomplete JSON chunks
             }
           }
         }
       } catch (error) {
+        clearTimeouts();
         if (!cancelled) {
           callbacks.onError(error as Error);
         }
       } finally {
+        clearTimeouts();
         reader.releaseLock();
       }
     };
@@ -460,6 +503,7 @@ class ChatAPI {
 
     // Return cancel function
     return () => {
+      clearTimeouts();
       cancelled = true;
       reader.cancel();
     };
