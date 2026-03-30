@@ -16,7 +16,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.core.lifespan import lifespan, service_manager
 from app.core.logging_config import setup_logging
-from app.core.middleware import RequestIDMiddleware, RequestLoggingMiddleware
+from app.core.middleware import RequestIDMiddleware, RequestLoggingMiddleware, SecurityHeadersMiddleware
 from app.services.redis_utils import redis_client
 
 # Route imports
@@ -44,7 +44,28 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Session middleware
+# ---------------------------------------------------------------------------
+# Middleware stack (Starlette executes in REVERSE order of add_middleware)
+# Execution order: RequestID → Logging → Session → CORS → SecurityHeaders → App
+# ---------------------------------------------------------------------------
+
+# 5. Security headers — runs INSIDE CORS so it never strips CORS headers
+app.add_middleware(SecurityHeadersMiddleware, debug=settings.DEBUG)
+
+# 4. CORS — must be the outermost "real" middleware so preflight OPTIONS
+#    requests are handled before anything else touches the response.
+_is_wildcard_cors = settings.CORS_ORIGINS == ["*"]
+_cors_origins = ["*"] if _is_wildcard_cors else settings.CORS_ORIGINS
+logger.info(f"CORS origins: {_cors_origins} (credentials={'off' if _is_wildcard_cors else 'on'})")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=_cors_origins,
+    allow_credentials=not _is_wildcard_cors,
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["*"],
+)
+
+# 3. Session
 app.add_middleware(
     SessionMiddleware,
     secret_key=settings.SESSION_SECRET_KEY,
@@ -53,34 +74,10 @@ app.add_middleware(
     https_only=not settings.DEBUG,
 )
 
-# CORS middleware
-# Note: allow_credentials=True is incompatible with allow_origins=["*"] per CORS spec.
-# When origins contain "*", we disable credentials and use wildcard mode.
-_is_wildcard_cors = settings.CORS_ORIGINS == ["*"]
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"] if _is_wildcard_cors else settings.CORS_ORIGINS,
-    allow_credentials=not _is_wildcard_cors,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["*"],
-)
-
-
-# Security Headers Middleware
-@app.middleware("http")
-async def add_security_headers(request, call_next):
-    response = await call_next(request)
-    response.headers["X-Content-Type-Options"] = "nosniff"
-    response.headers["X-Frame-Options"] = "DENY"
-    response.headers["X-XSS-Protection"] = "1; mode=block"
-    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-    if not settings.DEBUG:
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    return response
-
-
-# Request tracking middleware
+# 2. Request logging
 app.add_middleware(RequestLoggingMiddleware)
+
+# 1. Request ID — outermost, sets ID before anything else
 app.add_middleware(RequestIDMiddleware)
 
 # Include routers
@@ -181,6 +178,7 @@ async def health_check():
         "status": "healthy",
         "database": "connected",
         "redis": "connected" if redis_client.connected else "unavailable",
+        "cors_origins": settings.CORS_ORIGINS,
     }
 
     try:

@@ -1,4 +1,4 @@
-"""Application middleware for request tracking and logging."""
+"""Application middleware for request tracking, logging, and security headers."""
 import time
 import uuid
 import logging
@@ -52,4 +52,28 @@ class RequestLoggingMiddleware(BaseHTTPMiddleware):
             },
         )
 
+        return response
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Middleware that adds security headers to responses.
+
+    Must be added INSIDE CORSMiddleware (i.e. after it in add_middleware order)
+    so it does not interfere with CORS preflight responses.
+    """
+
+    def __init__(self, app, debug: bool = False):
+        super().__init__(app)
+        self.debug = debug
+
+    async def dispatch(self, request: Request, call_next) -> Response:
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        if not self.debug:
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
         return response
