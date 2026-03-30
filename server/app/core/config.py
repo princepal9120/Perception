@@ -25,6 +25,7 @@ class Settings(BaseSettings):
     APP_NAME: str = "Perception AI Chat API"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
+    ENABLE_DOCS: bool = True
     
     # Security
     SECRET_KEY: str
