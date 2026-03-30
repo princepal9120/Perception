@@ -8,7 +8,7 @@ from app.graph.llm import llm
 from app.services.mcp_client_manager import mcp_manager
 from app.services.ingestion_service import ChatIngestor
 from app.prompts.prompt_library import get_prompt
-from tools import tools
+from utils.tools import tools
 
 logger = logging.getLogger(__name__)
 

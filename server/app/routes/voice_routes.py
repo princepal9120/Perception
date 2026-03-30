@@ -9,7 +9,7 @@ import os
 import io
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
-from tools import get_tavily_tool, duck_tool
+from utils.tools import get_tavily_tool, duck_tool
 from langgraph.prebuilt import create_react_agent
 
 logger = logging.getLogger(__name__)

@@ -4,8 +4,8 @@ import re
 import uuid
 from pathlib import Path
 from typing import Iterable, List
-from logger.custom_logger import CustomLogger
-from logger.custom_exception import DocumentPortalException
+from app.logger.custom_logger import CustomLogger
+from app.logger.custom_exception import DocumentPortalException
 
 SUPPORTED_EXTENSIONS = {".pdf", ".docx", ".txt", ".pptx", ".md", ".csv", ".xlsx", ".xls", ".db", ".sqlite", ".sqlite3"}
 

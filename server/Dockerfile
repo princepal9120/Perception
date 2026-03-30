@@ -49,6 +49,9 @@ COPY --from=builder --chown=appuser:appuser /app/.venv /app/.venv
 # Copy application code
 COPY --chown=appuser:appuser . .
 
+# Create logs and uploads directories writable by appuser
+RUN mkdir -p /app/logs /app/uploads && chown -R appuser:appuser /app/logs /app/uploads
+
 # Runtime environment variables
 ENV PATH="/app/.venv/bin:$PATH"
 ENV PYTHONUNBUFFERED=1
