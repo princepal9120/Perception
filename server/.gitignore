@@ -53,3 +53,6 @@ htmlcov/
 
 # Misc
 *.sqlite3
+chatbot.db
+test.db
+*.db

@@ -4,7 +4,6 @@ Database initialization utilities.
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from app.models.tables import User, Chat, Message
-from app.core.security import hash_password
 import logging
 
 
