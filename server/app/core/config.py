@@ -56,7 +56,9 @@ class Settings(BaseSettings):
     SESSION_CACHE_TTL: int = 3600  # 1 hour
     
     # CORS - Can be set as comma-separated string in env: CORS_ORIGINS="https://app.example.com,https://www.example.com"
+    # Use "*" to allow all origins (credentials will be disabled automatically)
     CORS_ORIGINS: List[str] = [
+        "https://perception.princepal.dev",
         "http://localhost:3000",
         "http://localhost:5173",
         "http://localhost:5174",

@@ -54,10 +54,13 @@ app.add_middleware(
 )
 
 # CORS middleware
+# Note: allow_credentials=True is incompatible with allow_origins=["*"] per CORS spec.
+# When origins contain "*", we disable credentials and use wildcard mode.
+_is_wildcard_cors = settings.CORS_ORIGINS == ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.CORS_ORIGINS,
-    allow_credentials=True,
+    allow_origins=["*"] if _is_wildcard_cors else settings.CORS_ORIGINS,
+    allow_credentials=not _is_wildcard_cors,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )

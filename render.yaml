@@ -60,7 +60,7 @@ services:
 
       # App Config
       - key: CORS_ORIGINS
-        value: "*" # Update with frontend URL in dashboard
+        value: "https://perception.princepal.dev,http://localhost:3000,http://localhost:5173,http://localhost:8080"
       - key: RATE_LIMIT_MESSAGES_PER_MINUTE
         value: 20
       - key: RATE_LIMIT_WINDOW_SECONDS
