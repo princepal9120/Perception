@@ -5,7 +5,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_pinecone import PineconeVectorStore
 from pinecone import Pinecone, ServerlessSpec
-from app.utils.model_loder import ModelLoader
+from app.utils.model_loader import ModelLoader
 from app.logger import GLOBAL_LOGGER as log
 from app.logger.custom_exception import DocumentPortalException
 from app.core.config import settings

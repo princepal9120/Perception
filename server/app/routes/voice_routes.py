@@ -1,3 +1,4 @@
+import logging
 from fastapi import APIRouter, UploadFile, File, HTTPException, Body
 from fastapi.responses import JSONResponse, StreamingResponse
 from app.core.config import settings
@@ -11,6 +12,7 @@ from langchain_core.messages import HumanMessage, SystemMessage
 from tools import get_tavily_tool, duck_tool
 from langgraph.prebuilt import create_react_agent
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
 
 # Initialize OpenAI client for STT/TTS
@@ -89,7 +91,7 @@ async def chat_with_agent(text: str = Body(..., embed=True)):
         return JSONResponse(content={"text": response_text})
         
     except Exception as e:
-        print(f"Agent error: {e}")
+        logger.error(f"Agent error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
@@ -125,7 +127,7 @@ async def synthesize_speech(text: str = Body(..., embed=True)):
                 if response.status_code == 200:
                     audio_content = response.content
             except Exception as e:
-                print(f"ElevenLabs error: {e}")
+                logger.error(f"ElevenLabs error: {e}")
                 # Fallback to OpenAI
         
         if not audio_content:

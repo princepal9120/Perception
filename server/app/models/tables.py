@@ -1,7 +1,7 @@
 """
 SQLModel database tables for users, chats, and messages.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional, List
 from sqlmodel import SQLModel, Field, Relationship
 from sqlalchemy import Column, DateTime, Text, Index
@@ -18,7 +18,7 @@ class User(SQLModel, table=True):
     email: str = Field(unique=True, index=True, max_length=255)
     password_hash: str = Field(max_length=255)
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), server_default=func.now())
     )
     
@@ -43,11 +43,11 @@ class Chat(SQLModel, table=True):
     branch_message_id: Optional[int] = Field(default=None, description="Message ID this chat branched from")
     
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), server_default=func.now())
     )
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(
             DateTime(timezone=True),
             server_default=func.now(),
@@ -78,7 +78,7 @@ class Message(SQLModel, table=True):
     content: str = Field(sa_column=Column(Text))
     metadata_json: Optional[str] = Field(default=None, sa_column=Column(Text))
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), server_default=func.now())
     )
     
@@ -110,11 +110,11 @@ class Document(SQLModel, table=True):
     chunk_count: int = Field(default=0)  # Number of chunks after splitting
     indexed: bool = Field(default=False)  # Whether document is indexed in vector store
     created_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), server_default=func.now())
     )
     updated_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(
             DateTime(timezone=True),
             server_default=func.now(),

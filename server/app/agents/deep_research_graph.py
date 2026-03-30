@@ -9,7 +9,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 from langchain_groq import ChatGroq
 from app.chains.deep_research_chains import DeepResearchChains
 from app.services.ingestion_service import ChatIngestor
-from app.utils.model_loder import ModelLoader
+from app.utils.model_loader import ModelLoader
 import json
 
 logger = logging.getLogger(__name__)

@@ -128,7 +128,6 @@ async def login(
         )
     
     # Generate tokens
-    # Generate tokens
     access_token = create_access_token(data={"sub": str(user.id)})
     
     # Check remember_me flag

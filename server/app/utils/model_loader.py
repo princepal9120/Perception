@@ -5,8 +5,8 @@ from dotenv import load_dotenv
 from app.utils.config_loader import load_config
 from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
 from langchain_groq import ChatGroq
-from logger import GLOBAL_LOGGER as log
-from logger.custom_exception import DocumentPortalException
+from app.logger import GLOBAL_LOGGER as log
+from app.logger.custom_exception import DocumentPortalException
 
 
 

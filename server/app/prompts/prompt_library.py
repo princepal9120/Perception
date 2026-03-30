@@ -432,7 +432,4 @@ def get_prompt(prompt_name: str):
         raise KeyError(f"Prompt '{prompt_name}' not found in registry. Available prompts: {list(PROMPT_REGISTRY.keys())}")
     return PROMPT_REGISTRY[prompt_name]
 
-
-
-
     

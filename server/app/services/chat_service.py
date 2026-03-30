@@ -4,7 +4,7 @@ Chat service for managing chats and messages with caching and rate limiting.
 import json
 import logging
 from typing import List, Optional, Tuple
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, delete
 from app.models.tables import Chat, Message, User, Document
@@ -12,7 +12,6 @@ from app.models.schemas import MessageResponse
 from app.services.redis_utils import redis_client
 from app.core.config import settings
 from fastapi import HTTPException, status
-from sqlalchemy import select
 
 
 logger = logging.getLogger(__name__)
@@ -137,7 +136,7 @@ class ChatService:
         if title is not None:
             chat.title = title
         
-        chat.updated_at = datetime.utcnow()
+        chat.updated_at = datetime.now(timezone.utc)
         await self.db.commit()
         await self.db.refresh(chat)
         
@@ -194,10 +193,7 @@ class ChatService:
         if use_cache:
             cached = await redis_client.get_cached_messages(chat_id)
             if cached:
-                logger.info(f"Retrieved {len(cached)} messages from cache for chat {chat_id}")
-                # Convert cached dicts to Message objects for consistency
-                # Return cached data with estimated count
-                return [], len(cached)  # We'll return the cache data differently
+                logger.debug(f"Cache hit for chat {chat_id} with {len(cached)} messages")
         
         # Get from database
         count_query = select(func.count(Message.id)).where(Message.chat_id == chat_id)
@@ -266,7 +262,7 @@ class ChatService:
         self.db.add(message)
         
         # Update chat's updated_at
-        chat.updated_at = datetime.utcnow()
+        chat.updated_at = datetime.now(timezone.utc)
         
         await self.db.commit()
         await self.db.refresh(message)

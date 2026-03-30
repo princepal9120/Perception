@@ -1,0 +1,24 @@
+# Ruff linter configuration
+target-version = "py312"
+line-length = 120
+
+[lint]
+select = [
+    "E",    # pycodestyle errors
+    "W",    # pycodestyle warnings
+    "F",    # pyflakes
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults (FastAPI Depends)
+    "B904",   # raise from in except (too noisy)
+]
+
+[lint.per-file-ignores]
+"alembic/*" = ["F401"]  # Allow unused imports in migrations
+
+[format]
+quote-style = "double"

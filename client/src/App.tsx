@@ -18,7 +18,15 @@ const Chat = lazy(() => import("./pages/chat/Chat"));
 const WorkflowPage = lazy(() => import("@/pages/WorkflowPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 2,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 // Clerk auth page wrapper with consistent styling
 const ClerkAuthPage = ({ children }: { children: React.ReactNode }) => (

@@ -20,17 +20,29 @@ security = HTTPBearer(auto_error=False)
 
 def decode_clerk_token(token: str) -> Dict[str, Any]:
     """
-    Decode a Clerk JWT token without full verification.
-    In production, you'd verify with Clerk's JWKS.
+    Decode a Clerk JWT token with basic validation.
+
+    Note: Full JWKS signature verification requires the `clerk-backend-api`
+    package or fetching keys from Clerk's JWKS endpoint. This implementation
+    validates token expiry but does not verify the cryptographic signature.
     """
     try:
-        # Get unverified claims - Clerk tokens are verified by Clerk on their end
         unverified = jwt.get_unverified_claims(token)
+        # Verify expiry
+        import time
+        exp = unverified.get("exp")
+        if exp and exp < time.time():
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Clerk token has expired",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
         return unverified
     except JWTError as e:
+        logger.error(f"Clerk token decode error: {e}")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail=f"Invalid Clerk token: {str(e)}",
+            detail="Invalid Clerk token",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -150,7 +162,7 @@ async def get_current_user(
             logger.error(f"Clerk auth error: {e}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail=f"Clerk authentication failed: {str(e)}",
+                detail="Clerk authentication failed",
                 headers={"WWW-Authenticate": "Bearer"},
             )
     

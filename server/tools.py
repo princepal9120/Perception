@@ -1,9 +1,12 @@
 # tools.py
 import os
+import logging
 from dotenv import load_dotenv
 load_dotenv()
 
 from langchain_core.tools import tool
+
+logger = logging.getLogger(__name__)
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_community.tools import DuckDuckGoSearchRun
 import requests
@@ -23,7 +26,7 @@ def get_tavily_tool():
         if api_key:
             _tavily_tool = TavilySearchResults(max_results=4)
         else:
-            print("Warning: TAVILY_API_KEY not set, Tavily search disabled")
+            logger.warning("TAVILY_API_KEY not set, Tavily search disabled")
             _tavily_tool = None
     return _tavily_tool
 
@@ -78,7 +81,8 @@ def get_stock_price(symbol: str) -> dict:
     Fetch latest stock price for a given symbol (e.g. 'AAPL', 'TSLA')
     using Alpha Vantage API.
     """
-    url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey=C9PE94QUEW9VWGFM"
+    api_key = os.getenv("ALPHA_VANTAGE_API_KEY", "")
+    url = f"https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol={symbol}&apikey={api_key}"
     r = requests.get(url)
     return r.json()
 

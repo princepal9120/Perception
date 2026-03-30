@@ -35,7 +35,7 @@ class Settings(BaseSettings):
     
     # Clerk Authentication
     CLERK_SECRET_KEY: str = ""
-    CLERK_PUBLISHABLE_KEY: str = "pk_test_YWRlcXVhdGUtaGVuLTcuY2xlcmsuYWNjb3VudHMuZGV2JA"
+    CLERK_PUBLISHABLE_KEY: str = ""
     
     # Database
     DATABASE_URL: str
@@ -75,6 +75,9 @@ class Settings(BaseSettings):
     TAVILY_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
     ELEVENLABS_API_KEY: str = ""
+    ALPHA_VANTAGE_API_KEY: str = ""
+    PERPLEXITY_API_KEY: str = ""
+    GITHUB_TOKEN: str = ""
     
     # Document Management
     UPLOAD_DIR: str = "uploads"
