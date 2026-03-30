@@ -22,7 +22,7 @@ from fastapi.responses import JSONResponse
 from langgraph.graph import StateGraph, END, add_messages
 from langgraph.checkpoint.postgres import PostgresSaver
 from langchain_core.messages import HumanMessage, AIMessageChunk, ToolMessage, BaseMessage, SystemMessage
-from langchain_groq import ChatGroq
+from langchain_google_genai import ChatGoogleGenerativeAI
 
 # Import tools
 from tools import tools, tavily_tool, duck_tool, calculator, get_stock_price
@@ -67,9 +67,9 @@ class ChatState(TypedDict):
 SYSTEM_PROMPT = get_prompt("perception_system")
 
 # -------------------
-# 3. LLM
+# 3. LLM (Gemini)
 # -------------------
-llm = ChatGroq(model="meta-llama/llama-4-scout-17b-16e-instruct")
+llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash")
 llm_with_tools = llm.bind_tools(tools)
 
 # -------------------
@@ -593,10 +593,12 @@ async def services_health():
 if __name__ == "__main__":
     print("Industry-Grade Application started with Neon PostgreSQL backend")
     import uvicorn
+    port = int(os.getenv("PORT", 8000))
+    debug = os.getenv("DEBUG", "false").lower() == "true"
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
-        reload=True,
+        port=port,
+        reload=debug,  # Only reload in debug mode
         log_level="info"
     )

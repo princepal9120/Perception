@@ -111,7 +111,7 @@ dependencies = [
     "sqlmodel==0.0.22",
     "email-validator==2.1.1",
     "itsdangerous>=2.1.2",
-    "redis[hiredis]==5.2.1",
+    "upstash-redis>=1.0.0",
     "duckduckgo-search>=8.1.1",
     "langchain-pinecone>=0.2.13",
     "langchain-text-splitters>=0.3.8",

@@ -1,11 +1,10 @@
 """
-Redis utilities for caching and rate limiting.
+Redis utilities for caching and rate limiting using Upstash REST API.
 """
 import json
 import logging
 from typing import Optional, List, Any
-from datetime import timedelta
-import redis.asyncio as redis
+from upstash_redis import Redis
 from app.core.config import settings
 
 
@@ -13,38 +12,38 @@ logger = logging.getLogger(__name__)
 
 
 class RedisClient:
-    """Async Redis client wrapper for chat caching and rate limiting."""
+    """Upstash Redis client wrapper for chat caching and rate limiting."""
     
     def __init__(self):
         """Initialize Redis client."""
-        self.client: Optional[redis.Redis] = None
+        self.client: Optional[Redis] = None
         self.connected = False
     
     async def connect(self):
-        """Establish connection to Redis."""
+        """Establish connection to Upstash Redis."""
         try:
-            self.client = redis.from_url(
-                settings.REDIS_URL,
-                password=settings.REDIS_PASSWORD if settings.REDIS_PASSWORD else None,
-                db=settings.REDIS_DB,
-                encoding="utf-8",
-                decode_responses=True
+            if not settings.UPSTASH_REDIS_REST_URL or not settings.UPSTASH_REDIS_REST_TOKEN:
+                logger.warning("❌ Upstash Redis credentials not configured")
+                self.connected = False
+                return
+            
+            self.client = Redis(
+                url=settings.UPSTASH_REDIS_REST_URL,
+                token=settings.UPSTASH_REDIS_REST_TOKEN
             )
             # Test connection
-            await self.client.ping()
+            self.client.ping()
             self.connected = True
-            logger.info("✅ Redis connection established")
+            logger.info("✅ Upstash Redis connection established")
         except Exception as e:
-            logger.error(f"❌ Failed to connect to Redis: {e}")
+            logger.error(f"❌ Failed to connect to Upstash Redis: {e}")
             logger.warning("❌ Running without Redis cache")
             self.connected = False
     
     async def disconnect(self):
-        """Close Redis connection."""
-        if self.client:
-            await self.client.close()
-            self.connected = False
-            logger.info("✅ Redis connection closed")
+        """Close Redis connection (no-op for Upstash REST)."""
+        self.connected = False
+        logger.info("✅ Upstash Redis connection closed")
     
     # ==================== Cache Operations ====================
     
@@ -66,9 +65,9 @@ class RedisClient:
         try:
             serialized = json.dumps(value)
             if expire:
-                await self.client.setex(key, expire, serialized)
+                self.client.setex(key, expire, serialized)
             else:
-                await self.client.set(key, serialized)
+                self.client.set(key, serialized)
             return True
         except Exception as e:
             logger.error(f"Redis SET error for key {key}: {e}")
@@ -88,7 +87,7 @@ class RedisClient:
             return None
         
         try:
-            value = await self.client.get(key)
+            value = self.client.get(key)
             if value:
                 return json.loads(value)
             return None
@@ -110,7 +109,7 @@ class RedisClient:
             return False
         
         try:
-            await self.client.delete(key)
+            self.client.delete(key)
             return True
         except Exception as e:
             logger.error(f"Redis DELETE error for key {key}: {e}")
@@ -130,7 +129,7 @@ class RedisClient:
             return False
         
         try:
-            return await self.client.exists(key) > 0
+            return self.client.exists(key) > 0
         except Exception as e:
             logger.error(f"Redis EXISTS error for key {key}: {e}")
             return False
@@ -153,7 +152,7 @@ class RedisClient:
         
         try:
             serialized = [json.dumps(v) for v in values]
-            await self.client.lpush(key, *serialized)
+            self.client.lpush(key, *serialized)
             return True
         except Exception as e:
             logger.error(f"Redis LPUSH error for key {key}: {e}")
@@ -175,7 +174,7 @@ class RedisClient:
         
         try:
             serialized = [json.dumps(v) for v in values]
-            await self.client.rpush(key, *serialized)
+            self.client.rpush(key, *serialized)
             return True
         except Exception as e:
             logger.error(f"Redis RPUSH error for key {key}: {e}")
@@ -197,8 +196,8 @@ class RedisClient:
             return []
         
         try:
-            values = await self.client.lrange(key, start, end)
-            return [json.loads(v) for v in values]
+            values = self.client.lrange(key, start, end)
+            return [json.loads(v) for v in values if v]
         except Exception as e:
             logger.error(f"Redis LRANGE error for key {key}: {e}")
             return []
@@ -219,7 +218,7 @@ class RedisClient:
             return False
         
         try:
-            await self.client.ltrim(key, start, end)
+            self.client.ltrim(key, start, end)
             return True
         except Exception as e:
             logger.error(f"Redis LTRIM error for key {key}: {e}")
@@ -246,11 +245,11 @@ class RedisClient:
             key = f"rate_limit:user:{user_id}"
             
             # Increment counter
-            count = await self.client.incr(key)
+            count = self.client.incr(key)
             
             # Set expiration on first request
             if count == 1:
-                await self.client.expire(key, window)
+                self.client.expire(key, window)
             
             allowed = count <= limit
             remaining = max(0, limit - count)
@@ -275,7 +274,7 @@ class RedisClient:
         
         try:
             key = f"rate_limit:user:{user_id}"
-            ttl = await self.client.ttl(key)
+            ttl = self.client.ttl(key)
             return max(0, ttl)
         except Exception as e:
             logger.error(f"Redis TTL error for user {user_id}: {e}")
@@ -315,7 +314,7 @@ class RedisClient:
                 # Trim to max messages
                 await self.ltrim(key, -max_messages, -1)
                 # Set expiration
-                await self.client.expire(key, settings.SESSION_CACHE_TTL)
+                self.client.expire(key, settings.SESSION_CACHE_TTL)
             return success
         return True
     
@@ -349,7 +348,7 @@ class RedisClient:
             # Trim to max messages
             await self.ltrim(key, -settings.CACHE_MAX_MESSAGES, -1)
             # Refresh expiration
-            await self.client.expire(key, settings.SESSION_CACHE_TTL)
+            self.client.expire(key, settings.SESSION_CACHE_TTL)
         return success
     
     async def add_user_session(self, user_id: int, chat_id: int) -> bool:
@@ -395,7 +394,7 @@ class RedisClient:
         
         try:
             key = self.get_user_sessions_key(user_id)
-            await self.client.lrem(key, 0, json.dumps(chat_id))
+            self.client.lrem(key, 0, json.dumps(chat_id))
             return True
         except Exception as e:
             logger.error(f"Redis LREM error for key {key}: {e}")

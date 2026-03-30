@@ -3,9 +3,19 @@ Core configuration settings for the application.
 Loads environment variables and provides centralized configuration.
 """
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from typing import List
 import os
 from functools import lru_cache
+
+
+def parse_cors_origins(v: str | List[str]) -> List[str]:
+    """Parse CORS origins from comma-separated string or list."""
+    if isinstance(v, list):
+        return v
+    if isinstance(v, str):
+        return [origin.strip() for origin in v.split(",") if origin.strip()]
+    return []
 
 
 class Settings(BaseSettings):
@@ -32,10 +42,9 @@ class Settings(BaseSettings):
     DB_POOL_SIZE: int = 10
     DB_MAX_OVERFLOW: int = 20
     
-    # Redis
-    REDIS_URL: str = "redis://localhost:6379"
-    REDIS_PASSWORD: str = ""
-    REDIS_DB: int = 0
+    # Upstash Redis (REST API)
+    UPSTASH_REDIS_REST_URL: str = ""
+    UPSTASH_REDIS_REST_TOKEN: str = ""
     
     # Rate Limiting
     RATE_LIMIT_MESSAGES_PER_MINUTE: int = 20
@@ -45,7 +54,7 @@ class Settings(BaseSettings):
     CACHE_MAX_MESSAGES: int = 100
     SESSION_CACHE_TTL: int = 3600  # 1 hour
     
-    # CORS
+    # CORS - Can be set as comma-separated string in env: CORS_ORIGINS="https://app.example.com,https://www.example.com"
     CORS_ORIGINS: List[str] = [
         "http://localhost:3000",
         "http://localhost:5173",
@@ -55,8 +64,14 @@ class Settings(BaseSettings):
         "http://localhost:8082",
     ]
     
+    @field_validator("CORS_ORIGINS", mode="before")
+    @classmethod
+    def validate_cors_origins(cls, v):
+        return parse_cors_origins(v)
+    
     # LLM Configuration
-    GROQ_API_KEY: str = ""
+    GOOGLE_API_KEY: str = ""  # Gemini API
+    GROQ_API_KEY: str = ""    # Fallback
     TAVILY_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
     ELEVENLABS_API_KEY: str = ""

@@ -34,11 +34,8 @@ jsonschema-specifications==2025.4.1
 kombu==5.5.3
 langchain==0.3.23
 langchain-community==0.3.21
-
-langchain==0.3.23
 langchain-core>=0.3.51,<1.0.0
 langgraph>=0.2.53
-
 langgraph-checkpoint>=3.0.1
 langgraph-checkpoint-postgres>=3.0.1
 langgraph-prebuilt
@@ -113,6 +110,16 @@ itsdangerous>=2.1.2
 
 # Redis for caching and rate limiting
 redis[hiredis]==5.2.1
+upstash-redis>=1.0.0
+langchain-google-genai>=2.0.0
+langchain-groq>=0.1.0
+langchain-pinecone>=0.2.0
+langchain-openai>=0.1.0
+duckduckgo-search>=6.0.0
+tavily-python>=0.3.0
+pypdf>=4.0.0
+docx2txt>=0.8
+structlog>=24.0.0
 
 
 

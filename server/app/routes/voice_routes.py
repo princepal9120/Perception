@@ -6,23 +6,34 @@ import requests
 import tempfile
 import os
 import io
-from langchain_groq import ChatGroq
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import HumanMessage, SystemMessage
-from tools import tavily_tool
+from tools import get_tavily_tool, duck_tool
 from langgraph.prebuilt import create_react_agent
 
 router = APIRouter()
 
 # Initialize OpenAI client for STT/TTS
-openai_client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
+openai_client = openai.OpenAI(api_key=settings.OPENAI_API_KEY) if settings.OPENAI_API_KEY else None
 
-# Initialize Agent with Tools
-llm = ChatGroq(
-    model="llama-3.3-70b-versatile",
-    api_key=settings.GROQ_API_KEY
-)
-tools = [tavily_tool]
-agent_executor = create_react_agent(llm, tools)
+# Initialize Agent with Tools (lazy initialization)
+agent_executor = None
+
+def get_agent_executor():
+    global agent_executor
+    if agent_executor is None:
+        if not settings.GOOGLE_API_KEY:
+            return None
+        llm = ChatGoogleGenerativeAI(
+            model="gemini-2.0-flash",
+            api_key=settings.GOOGLE_API_KEY
+        )
+        # Build tools list, filtering out None
+        tools = [t for t in [get_tavily_tool(), duck_tool] if t is not None]
+        if not tools:
+            return None
+        agent_executor = create_react_agent(llm, tools)
+    return agent_executor
 
 @router.post("/transcribe")
 async def transcribe_audio(file: UploadFile = File(...)):
@@ -62,10 +73,14 @@ async def chat_with_agent(text: str = Body(..., embed=True)):
     Process text with an agentic LLM (with search tools).
     Returns the text response.
     """
+    executor = get_agent_executor()
+    if executor is None:
+        raise HTTPException(status_code=503, detail="Agent not available. Check GROQ_API_KEY and tool configuration.")
+    
     try:
         # Run the agent
         inputs = {"messages": [("user", text)]}
-        result = await agent_executor.ainvoke(inputs)
+        result = await executor.ainvoke(inputs)
         
         # Get the last message content
         last_message = result["messages"][-1]
