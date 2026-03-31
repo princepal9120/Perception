@@ -5,7 +5,7 @@ services:
     repo: https://github.com/princepal9120/Perception
     region: oregon
     plan: free
-    branch: main
+    branch: main-2
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.0
