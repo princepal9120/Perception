@@ -21,10 +21,8 @@ export const useChat = () => {
     selectChat,
     updateChat,
     deleteChat,
-    loadMessages,
     sendMessage,
     stopStreaming,
-    clearCurrentChat,
   } = useChatStore();
 
   const { isAuthenticated, token } = useAuth();
@@ -138,7 +136,7 @@ export const useChat = () => {
         });
       }
     },
-    [sendMessage, isStreaming, isAuthenticated]
+    [sendMessage, isStreaming]
   );
 
   /**

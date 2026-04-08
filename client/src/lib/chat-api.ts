@@ -390,7 +390,6 @@ class ChatAPI {
 
     let buffer = "";
     let cancelled = false;
-    let lastChunkTime = Date.now();
     let chunkTimeoutId: ReturnType<typeof setTimeout> | null = null;
     let streamTimeoutId: ReturnType<typeof setTimeout> | null = null;
 
@@ -401,7 +400,6 @@ class ChatAPI {
 
     const resetChunkTimeout = () => {
       if (chunkTimeoutId) clearTimeout(chunkTimeoutId);
-      lastChunkTime = Date.now();
       chunkTimeoutId = setTimeout(() => {
         if (!cancelled) {
           cancelled = true;

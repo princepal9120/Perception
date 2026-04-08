@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Mic, X, Loader2, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,61 +34,7 @@ export const VoiceChat = ({ isOpen, onClose, onTranscript, isStreaming, lastMess
         };
     }, []);
 
-    // Start recording when opened
-    useEffect(() => {
-        if (isOpen && status === "idle") {
-            startRecording();
-        } else if (!isOpen) {
-            stopRecording();
-            setStatus("idle");
-        }
-    }, [isOpen]);
-
-    // Handle AI response synthesis
-    useEffect(() => {
-        if (isOpen && !isStreaming && lastMessage && !hasSpokenLastMessage && status === "processing") {
-            synthesizeAudio(lastMessage);
-            setHasSpokenLastMessage(true);
-        }
-    }, [isOpen, isStreaming, lastMessage, hasSpokenLastMessage, status]);
-
-    const startRecording = async () => {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const recorder = new MediaRecorder(stream);
-
-            recorder.ondataavailable = (e) => {
-                if (e.data.size > 0) {
-                    audioChunks.current.push(e.data);
-                }
-            };
-
-            recorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks.current, { type: "audio/webm" });
-                audioChunks.current = []; // Reset chunks
-                await transcribeAudio(audioBlob);
-            };
-
-            recorder.start();
-            setMediaRecorder(recorder);
-            setStatus("listening");
-            setHasSpokenLastMessage(false);
-        } catch (err) {
-            console.error("Error accessing microphone:", err);
-            onClose();
-        }
-    };
-
-    const stopRecording = () => {
-        if (mediaRecorder && mediaRecorder.state !== "inactive") {
-            mediaRecorder.stop();
-            mediaRecorder.stream.getTracks().forEach(track => track.stop());
-            setMediaRecorder(null);
-            setStatus("processing");
-        }
-    };
-
-    const transcribeAudio = async (audioBlob: Blob) => {
+    const transcribeAudio = useCallback(async (audioBlob: Blob) => {
         if (!token) return;
 
         const formData = new FormData();
@@ -105,10 +51,9 @@ export const VoiceChat = ({ isOpen, onClose, onTranscript, isStreaming, lastMess
 
             if (!response.ok) throw new Error("Transcription failed");
 
-            const data = await response.json();
+            const data = await response.json() as { text?: string };
             if (data.text) {
                 onTranscript(data.text);
-                // Status remains "processing" while we wait for AI response (isStreaming)
             } else {
                 setStatus("idle");
             }
@@ -117,9 +62,9 @@ export const VoiceChat = ({ isOpen, onClose, onTranscript, isStreaming, lastMess
             console.error("Transcription error:", error);
             setStatus("idle");
         }
-    };
+    }, [onTranscript, token]);
 
-    const synthesizeAudio = async (text: string) => {
+    const synthesizeAudio = useCallback(async (text: string) => {
         if (!token) return;
 
         try {
@@ -147,7 +92,61 @@ export const VoiceChat = ({ isOpen, onClose, onTranscript, isStreaming, lastMess
             console.error("Synthesis error:", error);
             setStatus("idle");
         }
-    };
+    }, [token]);
+
+    const startRecording = useCallback(async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const recorder = new MediaRecorder(stream);
+
+            recorder.ondataavailable = (e) => {
+                if (e.data.size > 0) {
+                    audioChunks.current.push(e.data);
+                }
+            };
+
+            recorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunks.current, { type: "audio/webm" });
+                audioChunks.current = []; // Reset chunks
+                await transcribeAudio(audioBlob);
+            };
+
+            recorder.start();
+            setMediaRecorder(recorder);
+            setStatus("listening");
+            setHasSpokenLastMessage(false);
+        } catch (err) {
+            console.error("Error accessing microphone:", err);
+            onClose();
+        }
+    }, [onClose, transcribeAudio]);
+
+    const stopRecording = useCallback(() => {
+        if (mediaRecorder && mediaRecorder.state !== "inactive") {
+            mediaRecorder.stop();
+            mediaRecorder.stream.getTracks().forEach(track => track.stop());
+            setMediaRecorder(null);
+            setStatus("processing");
+        }
+    }, [mediaRecorder]);
+
+    // Start recording when opened
+    useEffect(() => {
+        if (isOpen && status === "idle") {
+            void startRecording();
+        } else if (!isOpen) {
+            stopRecording();
+            setStatus("idle");
+        }
+    }, [isOpen, startRecording, status, stopRecording]);
+
+    // Handle AI response synthesis
+    useEffect(() => {
+        if (isOpen && !isStreaming && lastMessage && !hasSpokenLastMessage && status === "processing") {
+            void synthesizeAudio(lastMessage);
+            setHasSpokenLastMessage(true);
+        }
+    }, [hasSpokenLastMessage, isOpen, isStreaming, lastMessage, status, synthesizeAudio]);
 
     const handleToggle = () => {
         if (status === "listening") {

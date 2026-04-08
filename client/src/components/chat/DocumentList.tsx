@@ -1,11 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { 
   File, 
   Trash2, 
-  Download, 
   CheckCircle, 
   Clock, 
   AlertCircle,
@@ -43,9 +42,9 @@ export const DocumentList = ({
 
   useEffect(() => {
     loadDocuments();
-  }, [chatId, token]);
+  }, [loadDocuments]);
 
-  const loadDocuments = async () => {
+  const loadDocuments = useCallback(async () => {
     try {
       setLoading(true);
       const response = await chatAPI.getChatDocuments(chatId, token);
@@ -62,7 +61,7 @@ export const DocumentList = ({
     } finally {
       setLoading(false);
     }
-  };
+  }, [chatId, onDocumentsLoaded, toast, token]);
 
   const handleDelete = async (documentId: number) => {
     try {

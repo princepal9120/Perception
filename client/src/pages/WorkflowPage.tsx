@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { TreeVisualization } from '@/components/tree/TreeVisualization';
 import { Button } from '@/components/ui/button';

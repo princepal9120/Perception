@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Send, Mic, Paperclip, Square, Brain } from "lucide-react";
@@ -25,7 +25,6 @@ interface ChatInputProps {
 
 export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) => {
   const [message, setMessage] = useState("");
-  const [deepResearchMode, setDeepResearchMode] = useState(false);
   const [isDeepResearchModalOpen, setIsDeepResearchModalOpen] = useState(false);
   const [attachedDocuments, setAttachedDocuments] = useState<Document[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -34,10 +33,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const { sendMessage, isStreaming, stopStreaming, currentChat, messages, createChat: createChatAction } = useChat();
+  const { sendMessage, isStreaming, stopStreaming, currentChat, messages } = useChat();
   const { sendDeepResearch, loadChats, selectChat } = useChatStore();
   const { token, isAuthenticated } = useAuth();
   const [isVoiceChatOpen, setIsVoiceChatOpen] = useState(false);
+  const deepResearchMode = false;
 
   // Guest chat limit tracking
   const { messagesUsed, hasReachedLimit, incrementCount } = useGuestChatLimit();
@@ -170,7 +170,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
         chatId,
         fileArray,
         token,
-        (progress) => {
+        () => {
           // This is a simplified progress for all files. 
           // Ideally we'd track per file, but for now we'll just show it on the last one or generic
         }
@@ -200,31 +200,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
     }
   };
 
-  const handleDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    setIsDragOver(false);
-
-    const files = e.dataTransfer.files;
-    if (files && files.length > 0) {
-      handleDocumentUpload(files);
-    }
-  };
-
   const handleDocumentRemove = (documentId: number) => {
     setAttachedDocuments(prev => prev.filter(doc => doc.id !== documentId));
   };
 
-  const loadChatDocuments = async () => {
+  const loadChatDocuments = useCallback(async () => {
     if (!currentChat || !token) return;
 
     try {
@@ -233,7 +213,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
     } catch (error) {
       console.error('Failed to load documents:', error);
     }
-  };
+  }, [currentChat, token]);
 
   const handleStartDeepResearch = async (config: ResearchConfig) => {
     try {
@@ -248,7 +228,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
     if (currentChat && token) {
       loadChatDocuments();
     }
-  }, [currentChat, token]);
+  }, [currentChat, token, loadChatDocuments]);
 
   return (
     <div className="w-full bg-gradient-to-t from-background via-background to-transparent pb-6 pt-10 px-4 fixed bottom-0 md:relative md:bottom-auto z-20">

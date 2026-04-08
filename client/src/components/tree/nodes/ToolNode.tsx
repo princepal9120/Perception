@@ -1,6 +1,6 @@
 import { memo, useState } from 'react';
 import { Handle, Position } from 'reactflow';
-import { Wrench, ChevronDown, ChevronUp, ExternalLink, Search, Calculator, Database, Code } from 'lucide-react';
+import { Wrench, ChevronDown, ChevronUp, Search, Calculator, Database, Code } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

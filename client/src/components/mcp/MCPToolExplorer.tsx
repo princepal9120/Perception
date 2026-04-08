@@ -14,7 +14,7 @@ export const MCPToolExplorer = () => {
     useEffect(() => {
         fetchServers();
         fetchTools();
-    }, []);
+    }, [fetchServers, fetchTools]);
 
     return (
         <div className="h-full flex flex-col space-y-4 p-4">

@@ -22,7 +22,7 @@ interface MessageActionsProps {
 }
 
 export const MessageActions: React.FC<MessageActionsProps> = memo(({
-    messageId,
+    messageId: _messageId,
     role,
     content,
     onFork,

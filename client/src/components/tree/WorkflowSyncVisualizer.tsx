@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { GitBranch, RefreshCw, CheckCircle, AlertCircle, FileText } from 'lucide-react';
+import { GitBranch, RefreshCw, CheckCircle, FileText } from 'lucide-react';
 import { useTreeStore } from '../../store/treeStore';
 
 export const WorkflowSyncVisualizer: React.FC = () => {

@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Handle, Position } from 'reactflow';
-import { Bot, Sparkles, RefreshCw, Copy, Check } from 'lucide-react';
+import { Bot, RefreshCw, Copy, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';

@@ -792,7 +792,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }
 
       // Add the complete assistant message
-      const { streamingContent, deepResearchState } = get();
+      const { streamingContent } = get();
       const assistantMessage: Message = {
         id: Date.now() + 1,
         chat_id: currentChatId,

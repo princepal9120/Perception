@@ -74,7 +74,7 @@ interface DeepResearchFlowProps {
 }
 
 // Sub-components
-const PlanningPhase: React.FC<{ topic: string; areas: ResearchArea[] }> = ({ topic, areas }) => {
+const PlanningPhase: React.FC<{ topic: string; areas: ResearchArea[] }> = ({ topic: _topic, areas }) => {
     const [showPlan, setShowPlan] = useState(false);
 
     useEffect(() => {
@@ -322,7 +322,7 @@ const SynthesisPhase: React.FC<{ state: DeepResearchState }> = ({ state }) => {
 const FinalReportPhase: React.FC<{
     state: DeepResearchState;
     report: string;
-}> = ({ state, report }) => {
+}> = ({ state, report: _report }) => {
     const [showAllSources, setShowAllSources] = useState(false);
     const displayedSources = showAllSources ? state.sources : state.sources.slice(0, 5);
 

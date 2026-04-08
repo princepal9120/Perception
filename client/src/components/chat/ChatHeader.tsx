@@ -1,6 +1,5 @@
 import { Button } from "@/components/ui/button";
 import { Menu, GitBranch } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Tooltip,
@@ -20,14 +19,12 @@ interface ChatHeaderProps {
 
 export const ChatHeader = ({
   onToggleSidebar,
-  onToggleDocumentManager,
+  onToggleDocumentManager: _onToggleDocumentManager,
   onOpenTreeView,
   isTreeViewOpen = false,
   onOpenMCP,
   isMCPOpen = false
 }: ChatHeaderProps) => {
-  const navigate = useNavigate();
-
   return (
     <header className="h-14 sm:h-16 border-b border-border flex items-center justify-between px-3 sm:px-6 bg-card/80 backdrop-blur-sm sticky top-0 z-10">
       <div className="flex items-center gap-2 sm:gap-4">

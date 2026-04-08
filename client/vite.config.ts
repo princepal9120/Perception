@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react-swc";
 import path from "path";
 
 // https://vitejs.dev/config/
-export default defineConfig(({ mode }) => ({
+export default defineConfig(() => ({
   server: {
     host: "::",
     port: 8080,
@@ -39,7 +39,8 @@ export default defineConfig(({ mode }) => ({
           'vendor-visualization': ['reactflow', 'dagre', 'recharts'],
 
           // Markdown and syntax highlighting
-          'vendor-markdown': ['react-markdown', 'react-syntax-highlighter'],
+          'vendor-markdown': ['react-markdown'],
+          'vendor-syntax': ['react-syntax-highlighter'],
 
           // State and data fetching
           'vendor-state': ['zustand', '@tanstack/react-query', 'axios'],

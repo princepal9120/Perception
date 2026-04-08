@@ -6,8 +6,6 @@ import { Button } from "@/components/ui/button";
 import { 
   FileText, 
   Upload,
-  BarChart3,
-  Settings
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { Document } from "@/lib/chat-api";
@@ -18,7 +16,6 @@ import {
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "@/components/ui/sheet";
 
 interface DocumentManagerProps {
@@ -61,7 +58,6 @@ export const DocumentManager = ({
       indexed,
       processing,
       totalSize,
-      averageSize: documents.length > 0 ? totalSize / documents.length : 0
     };
   };
 

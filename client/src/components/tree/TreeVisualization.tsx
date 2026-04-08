@@ -116,7 +116,7 @@ export const TreeVisualization: React.FC<TreeVisualizationProps> = ({ chatId }) 
                 console.error('Failed to load branch:', error);
             }
         },
-        [setActiveNode, setMessages]
+        [chatId, setActiveNode, setMessages]
     );
 
     // Transform tree structure to React Flow elements

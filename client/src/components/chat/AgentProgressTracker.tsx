@@ -2,7 +2,7 @@
  * Agent Progress Tracker Component
  * Displays real-time AI agent progress (thinking, searching, analyzing) in chat
  */
-import React, { memo, useMemo } from 'react';
+import React, { memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2, Search, Brain, CheckCircle2, Globe, FileText } from 'lucide-react';
 
