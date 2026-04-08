@@ -26,6 +26,12 @@ class Settings(BaseSettings):
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = False
     ENABLE_DOCS: bool = True
+
+    # Runtime modes
+    AUTH_MODE: str = "disabled"
+    MODEL_PROVIDER: str = "openai_compatible"
+    EMBEDDING_PROVIDER: str = "openai_compatible"
+    SEARCH_PROVIDER: str = "duckduckgo"
     
     # Security
     SECRET_KEY: str
@@ -71,16 +77,31 @@ class Settings(BaseSettings):
     @classmethod
     def validate_cors_origins(cls, v):
         return parse_cors_origins(v)
+
+    @field_validator("AUTH_MODE", "MODEL_PROVIDER", "EMBEDDING_PROVIDER", "SEARCH_PROVIDER", mode="before")
+    @classmethod
+    def normalize_mode_values(cls, v):
+        if isinstance(v, str):
+            return v.strip().lower()
+        return v
     
     # LLM Configuration
     GOOGLE_API_KEY: str = ""  # Gemini API
     GROQ_API_KEY: str = ""    # Fallback
     TAVILY_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
+    OPENAI_API_BASE_URL: str = "https://api.openai.com/v1"
+    OPENAI_MODEL: str = "gpt-4o-mini"
+    OPENAI_EMBEDDING_MODEL: str = "text-embedding-3-small"
     ELEVENLABS_API_KEY: str = ""
     ALPHA_VANTAGE_API_KEY: str = ""
     PERPLEXITY_API_KEY: str = ""
     GITHUB_TOKEN: str = ""
+
+    # Local OSS demo mode
+    LOCAL_DEV_USER_NAME: str = "Local OSS User"
+    LOCAL_DEV_USER_EMAIL: str = "local@perception.dev"
+    LOCAL_DEV_TOKEN: str = "perception-local-dev-token"
     
     # Document Management
     UPLOAD_DIR: str = "uploads"
@@ -110,6 +131,15 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = True
         extra = "allow"
+
+    def is_auth_disabled(self) -> bool:
+        return self.AUTH_MODE == "disabled"
+
+    def is_clerk_auth(self) -> bool:
+        return self.AUTH_MODE == "clerk"
+
+    def is_jwt_auth(self) -> bool:
+        return self.AUTH_MODE == "jwt"
 
 
 @lru_cache()

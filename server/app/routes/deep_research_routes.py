@@ -3,15 +3,14 @@ Deep Research API Routes.
 Provides SSE streaming endpoint for deep research mode.
 """
 import logging
-from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from app.db.session import get_db
 from app.core.dependencies import get_current_user
+from app.core.config import settings
 from app.models.tables import User
 from app.agents.deep_research_graph import DeepResearchGraph
-from langchain_groq import ChatGroq
+from app.services.provider_factory import create_chat_model
 import json
 import asyncio
 
@@ -63,10 +62,7 @@ async def stream_deep_research(
         """Generate SSE stream for research progress."""
         try:
             # Initialize research graph
-            llm = ChatGroq(
-                model="meta-llama/llama-4-scout-17b-16e-instruct",
-                temperature=0.3
-            )
+            llm = create_chat_model(temperature=0.3)
             research_graph = DeepResearchGraph(llm=llm)
             
             # Send start event
@@ -149,13 +145,12 @@ async def deep_research_health():
         Service status
     """
     try:
-        # Test LLM connection
-        llm = ChatGroq(model="meta-llama/llama-4-scout-17b-16e-instruct")
-        
         return {
             "status": "healthy",
             "service": "deep_research",
-            "llm_model": "meta-llama/llama-4-scout-17b-16e-instruct",
+            "model_provider": settings.MODEL_PROVIDER,
+            "search_provider": settings.SEARCH_PROVIDER,
+            "llm_model": settings.OPENAI_MODEL if settings.MODEL_PROVIDER == "openai_compatible" else settings.MODEL_PROVIDER,
             "features": {
                 "streaming": True,
                 "max_depth": 5,

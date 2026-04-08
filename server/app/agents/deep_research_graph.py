@@ -3,14 +3,10 @@ Deep Research LangGraph Agent.
 Implements iterative research with RAG, claim extraction, verification, and synthesis.
 """
 import logging
-from typing import TypedDict, Annotated, List, Dict, Any, Optional
+from typing import TypedDict, List, Dict, Any, Optional
 from langgraph.graph import StateGraph, END
-from langchain_core.messages import HumanMessage, AIMessage
-from langchain_groq import ChatGroq
 from app.chains.deep_research_chains import DeepResearchChains
-from app.services.ingestion_service import ChatIngestor
-from app.utils.model_loader import ModelLoader
-import json
+from app.services.provider_factory import create_chat_model, run_configured_search
 
 logger = logging.getLogger(__name__)
 
@@ -49,17 +45,14 @@ class DeepResearchState(TypedDict):
 class DeepResearchGraph:
     """LangGraph-based deep research agent."""
     
-    def __init__(self, llm: Optional[ChatGroq] = None):
+    def __init__(self, llm: Optional[Any] = None):
         """
         Initialize deep research graph.
         
         Args:
-            llm: Optional ChatGroq instance
+            llm: Optional chat model instance
         """
-        self.llm = llm or ChatGroq(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
-            temperature=0.3
-        )
+        self.llm = llm or create_chat_model(temperature=0.3)
         
         # Initialize chains
         self.chains = DeepResearchChains(self.llm)
@@ -140,10 +133,6 @@ class DeepResearchGraph:
         })
         
         try:
-            # Use existing retriever infrastructure
-            # For deep research, we'll use web search tools
-            from tools import tavily_tool
-            
             # Retrieve for each query
             all_docs = []
             sources = []
@@ -160,7 +149,7 @@ class DeepResearchGraph:
                 })
                 
                 try:
-                    results = await tavily_tool.ainvoke({"query": query})
+                    results = await run_configured_search(query)
                     
                     # Format results as documents
                     if isinstance(results, list):

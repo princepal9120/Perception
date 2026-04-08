@@ -6,9 +6,10 @@ import logging
 from typing import List, Dict, Any, Optional
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser, JsonOutputParser
-from langchain_groq import ChatGroq
 from pydantic import BaseModel, Field
 import json
+
+from app.services.provider_factory import create_chat_model
 
 logger = logging.getLogger(__name__)
 
@@ -55,17 +56,14 @@ class ResearchReport(BaseModel):
 class DeepResearchChains:
     """Collection of chains for deep research mode."""
     
-    def __init__(self, llm: Optional[ChatGroq] = None):
+    def __init__(self, llm: Optional[Any] = None):
         """
         Initialize research chains.
         
         Args:
-            llm: Optional ChatGroq instance. If not provided, creates default.
+            llm: Optional chat model instance. If not provided, creates default.
         """
-        self.llm = llm or ChatGroq(
-            model="meta-llama/llama-4-scout-17b-16e-instruct",
-            temperature=0.3
-        )
+        self.llm = llm or create_chat_model(temperature=0.3)
         
         # Initialize chains
         self._init_extraction_chain()

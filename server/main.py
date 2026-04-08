@@ -135,6 +135,9 @@ async def root():
     return {
         "message": "Perception AI Chat API",
         "version": settings.APP_VERSION,
+        "auth_mode": settings.AUTH_MODE,
+        "model_provider": settings.MODEL_PROVIDER,
+        "search_provider": settings.SEARCH_PROVIDER,
         "docs_url": "/docs" if settings.DEBUG else "Documentation disabled in production",
         "endpoints": {
             "auth": {
@@ -179,6 +182,9 @@ async def health_check():
         "database": "connected",
         "redis": "connected" if redis_client.connected else "unavailable",
         "cors_origins": settings.CORS_ORIGINS,
+        "auth_mode": settings.AUTH_MODE,
+        "model_provider": settings.MODEL_PROVIDER,
+        "search_provider": settings.SEARCH_PROVIDER,
     }
 
     try:

@@ -1,5 +1,4 @@
 # tools.py
-import os
 import logging
 from dotenv import load_dotenv
 load_dotenv()
@@ -7,10 +6,13 @@ load_dotenv()
 from langchain_core.tools import tool
 
 logger = logging.getLogger(__name__)
-from langchain_community.tools.tavily_search import TavilySearchResults
-from langchain_community.tools import DuckDuckGoSearchRun
 import requests
 from app.prompts.prompt_library import get_prompt
+from app.services.provider_factory import (
+    create_duckduckgo_search_tool,
+    create_tavily_search_tool,
+    get_search_tools,
+)
 
 # -----------------
 # Lazy Tool Initialization (for Docker compatibility)
@@ -18,33 +20,28 @@ from app.prompts.prompt_library import get_prompt
 _tavily_tool = None
 _duck_tool = None
 
+
 def get_tavily_tool():
     """Get Tavily tool with lazy initialization."""
     global _tavily_tool
     if _tavily_tool is None:
-        api_key = os.getenv("TAVILY_API_KEY")
-        if api_key:
-            _tavily_tool = TavilySearchResults(max_results=4)
-        else:
-            logger.warning("TAVILY_API_KEY not set, Tavily search disabled")
-            _tavily_tool = None
+        _tavily_tool = create_tavily_search_tool()
     return _tavily_tool
+
 
 def get_duck_tool():
     """Get DuckDuckGo tool with lazy initialization."""
     global _duck_tool
     if _duck_tool is None:
-        _duck_tool = DuckDuckGoSearchRun(region="us-en")
+        _duck_tool = create_duckduckgo_search_tool()
     return _duck_tool
 
 # For backward compatibility - these will be None until first use
 tavily_tool = None
 duck_tool = None
 
-# Initialize tools if API keys are available (for local dev)
-if os.getenv("TAVILY_API_KEY"):
-    tavily_tool = TavilySearchResults(max_results=4)
-duck_tool = DuckDuckGoSearchRun(region="us-en")
+tavily_tool = get_tavily_tool()
+duck_tool = get_duck_tool()
 
 # -----------------
 # Calculator Tool
@@ -110,7 +107,7 @@ search_documents.description = SEARCH_DOCUMENTS_DESCRIPTION
 # -----------------
 # Export Tools
 # -----------------
-# Build tools list dynamically - filter out None values (e.g., if TAVILY_API_KEY not set)
-_base_tools = [tavily_tool, duck_tool, calculator, get_stock_price, search_documents]
+# Build tools list dynamically - include only configured search tools.
+_configured_search_tools = get_search_tools()
+_base_tools = [*_configured_search_tools, calculator, get_stock_price, search_documents]
 tools = [t for t in _base_tools if t is not None]
-

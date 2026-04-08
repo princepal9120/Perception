@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from jose import jwt, JWTError
 from app.core.config import settings
+from app.core.security import decode_token, verify_token_type, hash_password
 from app.db.session import get_db
 from app.models.tables import User
 
@@ -116,6 +117,25 @@ async def get_or_create_clerk_user(
         )
 
 
+async def get_or_create_local_dev_user(db: AsyncSession) -> User:
+    """Get or create the local OSS demo user for AUTH_MODE=disabled."""
+    result = await db.execute(select(User).where(User.email == settings.LOCAL_DEV_USER_EMAIL))
+    user = result.scalar_one_or_none()
+    if user:
+        return user
+
+    user = User(
+        name=settings.LOCAL_DEV_USER_NAME,
+        email=settings.LOCAL_DEV_USER_EMAIL,
+        password_hash=hash_password(settings.LOCAL_DEV_TOKEN),
+    )
+    db.add(user)
+    await db.commit()
+    await db.refresh(user)
+    logger.info("Created local OSS demo user", extra={"user_id": user.id, "auth_mode": settings.AUTH_MODE})
+    return user
+
+
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
     db: AsyncSession = Depends(get_db)
@@ -124,6 +144,9 @@ async def get_current_user(
     Get the current authenticated user from JWT token.
     Supports both legacy JWT and Clerk authentication.
     """
+    if settings.is_auth_disabled():
+        return await get_or_create_local_dev_user(db)
+
     if credentials is None:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -133,8 +156,15 @@ async def get_current_user(
     
     token = credentials.credentials
     
-    # Check if it's a Clerk token
-    if is_clerk_token(token):
+    # Clerk auth mode only accepts Clerk-issued tokens
+    if settings.is_clerk_auth():
+        if not is_clerk_token(token):
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Clerk authentication required",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+
         try:
             payload = decode_clerk_token(token)
             clerk_user_id = payload.get("sub")
@@ -165,9 +195,15 @@ async def get_current_user(
                 detail="Clerk authentication failed",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-    
-    # Legacy JWT auth (fallback)
-    from app.core.security import decode_token, verify_token_type
+
+    if settings.is_clerk_auth():
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Clerk authentication failed",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Legacy JWT auth
     
     payload = decode_token(token)
     verify_token_type(payload, "access")
@@ -214,6 +250,9 @@ async def get_optional_current_user(
     db: AsyncSession = Depends(get_db)
 ) -> Optional[User]:
     """Get the current user if token is provided, None otherwise."""
+    if settings.is_auth_disabled():
+        return await get_or_create_local_dev_user(db)
+
     if credentials is None:
         return None
     
