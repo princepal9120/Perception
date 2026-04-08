@@ -6,7 +6,13 @@ from fastapi import HTTPException
 
 @pytest.fixture
 def mock_db():
-    return AsyncMock()
+    db = MagicMock()
+    db.add = MagicMock()
+    db.commit = AsyncMock()
+    db.refresh = AsyncMock()
+    db.execute = AsyncMock()
+    db.scalar = AsyncMock()
+    return db
 
 @pytest.fixture
 def mock_user():

@@ -3,6 +3,7 @@ Provider factory for OSS-friendly runtime configuration.
 """
 from __future__ import annotations
 
+import warnings
 from typing import Any, Dict, List
 
 from langchain_community.tools import DuckDuckGoSearchResults
@@ -100,7 +101,13 @@ def get_search_tools() -> List[Any]:
 async def run_configured_search(query: str) -> List[Dict[str, Any]]:
     """Run a search query and normalize the results."""
     tool = get_search_tools()[0]
-    raw = await tool.ainvoke({"query": query})
+    with warnings.catch_warnings():
+        warnings.filterwarnings(
+            "ignore",
+            message=r"This package .*ddgs.*",
+            category=RuntimeWarning,
+        )
+        raw = await tool.ainvoke({"query": query})
 
     if isinstance(raw, list):
         normalized: List[Dict[str, Any]] = []

@@ -6,6 +6,8 @@ Tests the chains, graph, and API endpoints
 import asyncio
 import sys
 import os
+import warnings
+import pytest
 
 # Add parent directory to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -13,6 +15,14 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.chains.deep_research_chains import DeepResearchChains
 from app.agents.deep_research_graph import DeepResearchGraph
 from langchain_groq import ChatGroq
+
+pytestmark = pytest.mark.filterwarnings("ignore:This package .*ddgs.*:RuntimeWarning")
+
+warnings.filterwarnings(
+    "ignore",
+    message=r"This package .*ddgs.*",
+    category=RuntimeWarning,
+)
 
 
 async def test_chains():
@@ -77,11 +87,13 @@ async def test_graph():
     print("\nRunning mini research on 'Quantum Computing'...")
     print("   Depth: 2, Iterations: 2\n")
     
-    result = await graph.run_research(
-        topic="Quantum Computing basics",
-        depth=2,
-        iterations=2
-    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        result = await graph.run_research(
+            topic="Quantum Computing basics",
+            depth=2,
+            iterations=2
+        )
     
     print("\n✅ Research Results:")
     print(f"   Iteration Updates: {len(result.get('iteration_updates', []))}")
