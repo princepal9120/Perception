@@ -5,6 +5,11 @@ import { Link } from 'react-router-dom';
 
 export const Navbar = () => {
     const [isScrolled, setIsScrolled] = React.useState(false);
+    const navItems = [
+        { label: 'Features', href: '#features' },
+        { label: 'Demo', href: '#demo' },
+        { label: 'GitHub', href: 'https://github.com/princepal9120/Perception' },
+    ];
 
     React.useEffect(() => {
         const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -27,13 +32,13 @@ export const Navbar = () => {
 
                 {/* Navigation Links */}
                 <div className="hidden md:flex items-center space-x-8">
-                    {['Features', 'Pricing', 'Documentation'].map((item) => (
+                    {navItems.map((item) => (
                         <a
-                            key={item}
-                            href={`#${item.toLowerCase()}`}
+                            key={item.label}
+                            href={item.href}
                             className="text-sm text-gray-400 hover:text-white transition-colors duration-300"
                         >
-                            {item}
+                            {item.label}
                         </a>
                     ))}
                 </div>
@@ -41,7 +46,7 @@ export const Navbar = () => {
                 {/* CTA Button */}
                 <Link to="/chat">
                     <Button className="bg-white text-black hover:bg-gray-200 rounded-full px-6 py-2 text-sm font-medium transition-all hover:scale-105">
-                        Get Started
+                        Open Workspace
                     </Button>
                 </Link>
             </div>

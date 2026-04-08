@@ -6,22 +6,22 @@ const steps = [
     {
         id: 1,
         icon: CheckCircle,
-        title: "Select Task",
-        description: "Define your objective or simply ask a question. The agent understands intent and context.",
+        title: "Clone and Configure",
+        description: "Run the stack locally, set your auth mode, and point Perception at your preferred model and search providers.",
         color: "text-blue-400"
     },
     {
         id: 2,
         icon: Brain,
-        title: "Agent Plans",
-        description: "Perception breaks down complex goals into actionable steps, researching and reasoning along the way.",
+        title: "Ask and Explore",
+        description: "Start in chat or Deep Research mode. The agent searches, cites, branches, and keeps progress visible while it works.",
         color: "text-purple-400"
     },
     {
         id: 3,
         icon: Zap,
-        title: "Agent Executes",
-        description: "The agent uses tools, writes code, and connects to APIs to deliver the final result.",
+        title: "Extend the Workspace",
+        description: "Add documents, connect MCP tools, branch conversations, and adapt the stack for your own research workflows.",
         color: "text-yellow-400"
     }
 ];
@@ -35,7 +35,7 @@ export const HowItWorks = () => {
                         How <span className="text-gradient">Perception</span> Works
                     </h2>
                     <p className="text-gray-400 max-w-2xl mx-auto text-lg">
-                        From intent to execution in three simple steps.
+                        From local setup to reproducible research in three steps.
                     </p>
                 </div>
 

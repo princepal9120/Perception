@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useChat } from "@/hooks/use-chat";
 import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/hooks/use-auth";
+import { isLocalAuthDisabled } from "@/lib/auth-config";
 
 interface ChatSidebarProps {
   isOpen: boolean;
@@ -257,16 +258,20 @@ export const ChatSidebar = ({ isOpen, onToggle }: ChatSidebarProps) => {
                   {user?.email?.[0].toUpperCase() || "U"}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{user?.email}</p>
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {user?.email || (isLocalAuthDisabled ? "Local OSS Mode" : "Signed out")}
+                  </p>
                 </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={signOut}
-                  className="h-8 w-8 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
-                >
-                  <LogOut className="w-4 h-4" />
-                </Button>
+                {!isLocalAuthDisabled && (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={signOut}
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </Button>
+                )}
               </div>
             </div>
           </motion.aside>

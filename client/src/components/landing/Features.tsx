@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { motion, useScroll, useTransform } from 'framer-motion';
-import { ArrowRight, Star, Search, GitBranch, Mic, FileText, Zap, Bot } from 'lucide-react';
+import { Search, GitBranch, Mic, FileText, Zap, Bot } from 'lucide-react';
 
 // --- Helper Components ---
 
@@ -48,8 +48,8 @@ const ParallaxCard = ({
 
 const features = [
     {
-        title: "Voice Intelligence",
-        description: "Hands-free interaction. Speak naturally and listen to real-time, emotive AI responses.",
+        title: "BYO Model Runtime",
+        description: "Point Perception at your own OpenAI-compatible endpoint or swap providers without rewriting the app.",
         icon: Mic,
         accentColor: "violet",
     },
@@ -60,8 +60,8 @@ const features = [
         accentColor: "indigo",
     },
     {
-        title: "MCP Integrations",
-        description: "Connect to the world. Extend Perception with external tools, APIs, and live data sources.",
+        title: "Agentic Search",
+        description: "Run Tavily or DuckDuckGo-backed search flows with citations and transparent progress updates.",
         icon: Zap,
         accentColor: "yellow",
     },
@@ -82,14 +82,14 @@ export const Features = () => {
                 {/* Section Title */}
                 <Reveal>
                     <h2 className="text-5xl md:text-7xl text-center mb-8 font-serif">
-                        Advanced <br />
-                        <span className="italic text-gradient">Agentic Intelligence</span>
+                        Open-Source <br />
+                        <span className="italic text-gradient">Research Infrastructure</span>
                     </h2>
                 </Reveal>
 
                 <Reveal delay={0.1}>
                     <p className="text-center text-gray-500 text-lg max-w-2xl mx-auto mb-24">
-                        Built for complexity. Perception handles advanced reasoning, deep research, and non-linear conversations with ease.
+                        Built for self-hosted research workflows. Perception combines deep research, document search, branching conversations, and tool-using agents in one OSS workspace.
                     </p>
                 </Reveal>
 
@@ -107,10 +107,10 @@ export const Features = () => {
 
                             <div>
                                 <h3 className="text-4xl md:text-5xl text-white mb-4 leading-none tracking-tight font-serif">
-                                    Branch-Your-LLM <br />Technology
+                                    Branch-Your-LLM <br />Workflows
                                 </h3>
                                 <p className="text-white/70 text-lg leading-snug">
-                                    Fork any conversation instantly. Explore multiple potential paths without losing context or starting over.
+                                    Fork any conversation instantly. Explore alternative research directions without losing your original context or evidence trail.
                                 </p>
                             </div>
 
@@ -133,7 +133,7 @@ export const Features = () => {
                                     Deep Research <br />Mode
                                 </h3>
                                 <p className="text-gray-400 text-lg leading-snug">
-                                    Iterative, evidence-backed research that digs deeper. We verify claims and generate comprehensive reports.
+                                    Iterative, evidence-backed research with citations, progress tracking, and configurable model plus search providers.
                                 </p>
                             </div>
 

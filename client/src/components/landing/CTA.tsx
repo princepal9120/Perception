@@ -30,10 +30,10 @@ export const CTA = () => {
                 <Reveal>
                     <div className="max-w-4xl mx-auto text-center mb-16">
                         <h2 className="text-3xl md:text-5xl lg:text-6xl leading-tight text-white/90 mb-8 font-serif">
-                            We design the negative space where your AI truly lives.
+                            Ship a research stack people can inspect, fork, and run.
                         </h2>
                         <p className="text-xl md:text-2xl text-gray-500 leading-relaxed font-light">
-                            Elegance is execution. We remove the noise so your agent delivers with absolute clarity.
+                            Start with the local OSS path, wire in your own model, and make Deep Research the first workflow every new contributor can demo in minutes.
                         </p>
                     </div>
                 </Reveal>
@@ -46,16 +46,16 @@ export const CTA = () => {
                                 size="lg"
                                 className="bg-white text-black hover:bg-gray-200 h-14 px-10 rounded-full text-lg font-bold transition-all hover:scale-105"
                             >
-                                Get Started Now <ArrowRight className="ml-2 w-5 h-5" />
+                                Open the Workspace <ArrowRight className="ml-2 w-5 h-5" />
                             </Button>
                         </Link>
                     </div>
                 </Reveal>
 
-                {/* Client Logos */}
+                {/* Reference Stack */}
                 <Reveal delay={0.3}>
                     <div className="mt-24 grid grid-cols-2 md:grid-cols-4 gap-8 items-center justify-items-center opacity-40 grayscale hover:grayscale-0 hover:opacity-60 transition-all duration-500">
-                        {['ANTHROPIC', 'OPENAI', 'GEMINI', 'MISTRAL'].map((logo, i) => (
+                        {['OPENAI-COMPATIBLE', 'DUCKDUCKGO', 'LANGGRAPH', 'MCP'].map((logo) => (
                             <div key={logo} className="font-bold text-lg tracking-widest text-white/60">
                                 {logo}
                             </div>

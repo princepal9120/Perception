@@ -4,6 +4,8 @@ import { Mic, X, Loader2, Volume2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/use-auth";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+
 interface VoiceChatProps {
     isOpen: boolean;
     onClose: () => void;
@@ -93,7 +95,7 @@ export const VoiceChat = ({ isOpen, onClose, onTranscript, isStreaming, lastMess
         formData.append("file", audioBlob, "voice_input.webm");
 
         try {
-            const response = await fetch("http://localhost:8000/api/v1/voice/transcribe", {
+            const response = await fetch(`${API_BASE_URL}/voice/transcribe`, {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${token}`
@@ -121,7 +123,7 @@ export const VoiceChat = ({ isOpen, onClose, onTranscript, isStreaming, lastMess
         if (!token) return;
 
         try {
-            const response = await fetch("http://localhost:8000/api/v1/voice/synthesize", {
+            const response = await fetch(`${API_BASE_URL}/voice/synthesize`, {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${token}`,

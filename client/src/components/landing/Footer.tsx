@@ -16,9 +16,9 @@ export const Footer = () => {
                     {/* Links & Social */}
                     <div className="flex flex-col gap-8 text-right">
                         <div className="flex flex-col gap-4 text-gray-400">
-                            <a href="#" className="hover:text-white transition-colors duration-300">Features</a>
-                            <a href="#" className="hover:text-white transition-colors duration-300">Pricing</a>
-                            <a href="#" className="hover:text-white transition-colors duration-300">Documentation</a>
+                            <a href="#features" className="hover:text-white transition-colors duration-300">Features</a>
+                            <a href="#demo" className="hover:text-white transition-colors duration-300">Demo</a>
+                            <a href="https://github.com/princepal9120/Perception" className="hover:text-white transition-colors duration-300">GitHub</a>
                         </div>
 
                         <div className="flex justify-end gap-4">
@@ -33,7 +33,7 @@ export const Footer = () => {
                             </a>
                         </div>
 
-                        <p className="text-sm text-gray-600">© {new Date().getFullYear()} Perception AI. All rights reserved.</p>
+                        <p className="text-sm text-gray-600">© {new Date().getFullYear()} Perception. Open-source deep research workspace.</p>
                     </div>
                 </div>
             </div>

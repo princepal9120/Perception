@@ -6,6 +6,7 @@ import { SignIn, SignUp } from '@clerk/clerk-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, MessageCircle, Sparkles, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { isClerkAuthEnabled } from '@/lib/auth-config';
 
 interface AuthLimitModalProps {
     isOpen: boolean;
@@ -113,7 +114,7 @@ export function AuthLimitModal({ isOpen, onClose, messagesUsed }: AuthLimitModal
                                 </div>
                             )}
 
-                            {view === 'sign-in' && (
+                            {view === 'sign-in' && isClerkAuthEnabled && (
                                 <div className="p-4">
                                     <button
                                         onClick={() => setView('choice')}
@@ -135,7 +136,7 @@ export function AuthLimitModal({ isOpen, onClose, messagesUsed }: AuthLimitModal
                                 </div>
                             )}
 
-                            {view === 'sign-up' && (
+                            {view === 'sign-up' && isClerkAuthEnabled && (
                                 <div className="p-4">
                                     <button
                                         onClick={() => setView('choice')}
@@ -154,6 +155,24 @@ export function AuthLimitModal({ isOpen, onClose, messagesUsed }: AuthLimitModal
                                             },
                                         }}
                                     />
+                                </div>
+                            )}
+
+                            {!isClerkAuthEnabled && view !== 'choice' && (
+                                <div className="p-8 text-center">
+                                    <h3 className="text-lg font-semibold text-white mb-2">
+                                        Auth UI is not enabled in this build
+                                    </h3>
+                                    <p className="text-sm text-zinc-400 mb-6">
+                                        Switch `VITE_AUTH_MODE` to `clerk` to use hosted sign-in, or keep local mode enabled for the OSS demo flow.
+                                    </p>
+                                    <Button
+                                        onClick={() => setView('choice')}
+                                        variant="outline"
+                                        className="border-zinc-700 text-zinc-100 hover:bg-zinc-800"
+                                    >
+                                        Back
+                                    </Button>
                                 </div>
                             )}
                         </div>

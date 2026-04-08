@@ -77,7 +77,7 @@ export const Hero = () => {
                     <Reveal>
                         <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass-card mb-8">
                             <Sparkles className="w-4 h-4 text-ai-primary" />
-                            <span className="text-sm font-medium text-gray-300">Production-Ready Agentic AI</span>
+                            <span className="text-sm font-medium text-gray-300">Open-Source Deep Research Workspace</span>
                         </div>
                     </Reveal>
 
@@ -88,7 +88,7 @@ export const Hero = () => {
                             style={{ textShadow: '0 0 12px rgba(255,255,255,0.71)' }}
                         >
                             Perception. <br />
-                            <span className="italic font-light text-[#ffe0e0]">The intelligent platform.</span>
+                            <span className="italic font-light text-[#ffe0e0]">Bring your own model. Run your own research.</span>
                         </h1>
                     </Reveal>
 
@@ -98,7 +98,7 @@ export const Hero = () => {
                             className="text-base md:text-xl text-[#ffe0e0]/90 max-w-2xl mx-auto mb-12 font-light tracking-wide leading-relaxed mix-blend-overlay"
                             style={{ textShadow: '0 0 12px rgba(255,255,255,0.71)' }}
                         >
-                            A full-stack agentic AI platform powered by LangGraph. Feature-rich, scalable, and designed for complex reasoning and deep research.
+                            An open-source workspace for agentic search, document-grounded chat, and deep research. Self-host it, point it at your own model endpoint, and ship evidence-backed workflows locally.
                         </p>
                     </Reveal>
 
@@ -110,13 +110,13 @@ export const Hero = () => {
                                     size="lg"
                                     className="bg-white text-black hover:bg-gray-100 h-14 px-8 rounded-full text-lg font-semibold transition-all hover:scale-105"
                                 >
-                                    Start Free Trial <ArrowRight className="ml-2 w-5 h-5" />
+                                    Launch Local Demo <ArrowRight className="ml-2 w-5 h-5" />
                                 </Button>
                             </Link>
                             <a href="https://github.com/princepal9120/Perception" target="_blank" rel="noopener noreferrer" className="relative group cursor-pointer">
                                 <div className="absolute inset-0 bg-[#FF4500]/20 blur-xl rounded-full opacity-0 group-hover:opacity-50 transition-opacity duration-500" />
                                 <div className="relative border border-white/20 bg-white/5 backdrop-blur-sm px-6 py-3 rounded-full flex items-center gap-3 text-sm text-white/80 uppercase tracking-widest hover:bg-white/10 transition-colors duration-300">
-                                    <span>View Documentation</span>
+                                    <span>View on GitHub</span>
                                 </div>
                             </a>
                         </div>
@@ -129,7 +129,7 @@ export const Hero = () => {
                             <span className="w-px h-3 bg-white/20" />
                             <span>Deep Research</span>
                             <span className="w-px h-3 bg-white/20" />
-                            <span>MCP Connected</span>
+                            <span>BYO Model</span>
                         </div>
                     </Reveal>
                 </motion.div>

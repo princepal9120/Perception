@@ -2,6 +2,7 @@
 // Centralized authentication service following best practices
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+const AUTH_MODE = (import.meta.env.VITE_AUTH_MODE || "disabled").toLowerCase();
 
 // Storage keys
 const TOKEN_KEY = 'perception_auth_token';
@@ -26,6 +27,9 @@ export const AuthService = {
     // ==================== Token Management ====================
 
     getAccessToken(): string | null {
+        if (AUTH_MODE === 'disabled') {
+            return localStorage.getItem(TOKEN_KEY) || (import.meta.env.VITE_LOCAL_AUTH_TOKEN || 'perception-local-dev-token');
+        }
         return localStorage.getItem(TOKEN_KEY);
     },
 
@@ -33,7 +37,7 @@ export const AuthService = {
         return localStorage.getItem(REFRESH_TOKEN_KEY);
     },
 
-    getUser(): any | null {
+    getUser(): unknown | null {
         const userStr = localStorage.getItem(USER_KEY);
         if (!userStr) return null;
         try {
@@ -43,12 +47,30 @@ export const AuthService = {
         }
     },
 
-    setTokens(accessToken: string, refreshToken: string, user?: any): void {
+    setTokens(accessToken: string, refreshToken: string, user?: unknown): void {
         localStorage.setItem(TOKEN_KEY, accessToken);
         localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
         if (user) {
             localStorage.setItem(USER_KEY, JSON.stringify(user));
         }
+    },
+
+    setUser(user: unknown): void {
+        if (user) {
+            localStorage.setItem(USER_KEY, JSON.stringify(user));
+        } else {
+            localStorage.removeItem(USER_KEY);
+        }
+    },
+
+    setSession(accessToken: string, refreshToken: string | null, user?: unknown): void {
+        localStorage.setItem(TOKEN_KEY, accessToken);
+        if (refreshToken) {
+            localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+        } else {
+            localStorage.removeItem(REFRESH_TOKEN_KEY);
+        }
+        this.setUser(user ?? null);
     },
 
     clearTokens(): void {
@@ -86,7 +108,7 @@ export const AuthService = {
         }
 
         const refreshToken = this.getRefreshToken();
-        if (!refreshToken) {
+        if (AUTH_MODE !== 'jwt' || !refreshToken) {
             this.handleSessionExpired();
             return null;
         }
@@ -136,6 +158,9 @@ export const AuthService = {
      */
     handleSessionExpired(): void {
         console.warn('Session expired - logging out immediately');
+        if (AUTH_MODE === 'disabled') {
+            return;
+        }
         this.clearTokens();
         this.emit('SESSION_EXPIRED');
 
@@ -159,7 +184,7 @@ export const AuthService = {
                         'Authorization': `Bearer ${token}`,
                     },
                 });
-            } catch (e) {
+            } catch {
                 // Ignore errors
             }
         }

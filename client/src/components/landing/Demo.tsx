@@ -1,18 +1,17 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Database, GitBranch, User, Bot, Sparkles, RefreshCw, Copy, Check } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { GitBranch, User, Bot, Sparkles } from 'lucide-react';
 
 export const Demo = () => {
     return (
-        <section className="py-24 bg-[#050505] relative overflow-hidden">
+        <section id="demo" className="py-24 bg-[#050505] relative overflow-hidden">
             <div className="container mx-auto px-4">
                 <div className="text-center mb-16">
                     <h2 className="text-3xl md:text-5xl font-medium mb-6 text-white font-serif">
-                        Visualize Your <span className="italic text-gradient">Thinking</span>
+                        Visualize Your <span className="italic text-gradient">Research Graph</span>
                     </h2>
                     <p className="text-gray-400 max-w-2xl mx-auto text-lg font-light">
-                        Watch how Perception turns linear chats into branching trees of exploration.
+                        Watch how Perception turns one research question into a branching evidence trail you can revisit, compare, and extend.
                     </p>
                 </div>
 
