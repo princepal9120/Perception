@@ -11,6 +11,11 @@ from app.core.config import settings
 from app.models.tables import User
 from app.agents.deep_research_graph import DeepResearchGraph
 from app.services.provider_factory import create_chat_model
+from app.core.runtime_provider_config import (
+    RuntimeProviderConfig,
+    get_runtime_provider_config,
+    runtime_provider_config_context,
+)
 import json
 import asyncio
 
@@ -37,7 +42,8 @@ class DeepResearchRequest(BaseModel):
 @router.post("/stream")
 async def stream_deep_research(
     request: DeepResearchRequest,
-    current_user: User = Depends(get_current_user)
+    current_user: User = Depends(get_current_user),
+    runtime_provider_config: RuntimeProviderConfig | None = Depends(get_runtime_provider_config),
 ):
     """
     Stream deep research results via SSE.
@@ -61,52 +67,56 @@ async def stream_deep_research(
     async def generate_research_stream():
         """Generate SSE stream for research progress."""
         try:
-            # Initialize research graph
-            llm = create_chat_model(temperature=0.3)
-            research_graph = DeepResearchGraph(llm=llm)
-            
-            # Send start event
-            yield f'data: {json.dumps({"type": "start", "message": "Deep research initiated"})}\n\n'
-            
-            # Initialize state
-            initial_state = {
-                "topic": request.topic,
-                "depth": request.depth,
-                "iterations": request.iterations,
-                "current_iteration": 0,
-                "all_verified_claims": [],
-                "research_log": [],
-                "current_documents": "",
-                "current_queries": [],
-                "final_report": None,
-                "iteration_updates": []
-            }
-            
-            # Stream graph execution
-            iteration_count = 0
-            async for event in research_graph.graph.astream(initial_state):
-                # Check if we have iteration updates
-                for node_name, node_state in event.items():
-                    if isinstance(node_state, dict):
-                        # Send iteration updates
-                        iteration_updates = node_state.get("iteration_updates", [])
-                        
-                        # Only send new updates
-                        for update in iteration_updates[iteration_count:]:
-                            yield f'data: {json.dumps(update)}\n\n'
-                            iteration_count += 1
-                            await asyncio.sleep(0.1)  # Small delay for client processing
-                        
-                        # Check if final report is ready
-                        if node_state.get("final_report"):
-                            final_report = node_state["final_report"]
+            with runtime_provider_config_context(runtime_provider_config):
+                # Initialize research graph
+                llm = create_chat_model(temperature=0.3)
+                research_graph = DeepResearchGraph(
+                    llm=llm,
+                    runtime_provider_config=runtime_provider_config,
+                )
+                
+                # Send start event
+                yield f'data: {json.dumps({"type": "start", "message": "Deep research initiated"})}\n\n'
+                
+                # Initialize state
+                initial_state = {
+                    "topic": request.topic,
+                    "depth": request.depth,
+                    "iterations": request.iterations,
+                    "current_iteration": 0,
+                    "all_verified_claims": [],
+                    "research_log": [],
+                    "current_documents": "",
+                    "current_queries": [],
+                    "final_report": None,
+                    "iteration_updates": []
+                }
+                
+                # Stream graph execution
+                iteration_count = 0
+                async for event in research_graph.graph.astream(initial_state):
+                    # Check if we have iteration updates
+                    for _, node_state in event.items():
+                        if isinstance(node_state, dict):
+                            # Send iteration updates
+                            iteration_updates = node_state.get("iteration_updates", [])
                             
-                            # Send final report
-                            final_event = {
-                                "type": "final",
-                                "report": final_report
-                            }
-                            yield f'data: {json.dumps(final_event)}\n\n'
+                            # Only send new updates
+                            for update in iteration_updates[iteration_count:]:
+                                yield f'data: {json.dumps(update)}\n\n'
+                                iteration_count += 1
+                                await asyncio.sleep(0.1)  # Small delay for client processing
+                            
+                            # Check if final report is ready
+                            if node_state.get("final_report"):
+                                final_report = node_state["final_report"]
+                                
+                                # Send final report
+                                final_event = {
+                                    "type": "final",
+                                    "report": final_report
+                                }
+                                yield f'data: {json.dumps(final_event)}\n\n'
             
             # Send completion event
             yield f'data: {json.dumps({"type": "complete", "message": "Research complete"})}\n\n'

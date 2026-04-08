@@ -6,3 +6,4 @@ from langchain_core.messages import BaseMessage
 
 class ChatState(TypedDict):
     messages: Annotated[list[BaseMessage], add_messages]
+    runtime_provider_config: dict | None

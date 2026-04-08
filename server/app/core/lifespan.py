@@ -1,4 +1,5 @@
 """Application lifespan management and service initialization."""
+import inspect
 import os
 import logging
 from contextlib import asynccontextmanager
@@ -19,6 +20,13 @@ from app.graph.builder import build_graph
 logger = logging.getLogger(__name__)
 
 DATABASE_URL = os.getenv("DATABASE_URL")
+
+
+def _checkpoint_database_url() -> str | None:
+    """Convert SQLAlchemy async URLs into a PostgresSaver-compatible connection string."""
+    if not DATABASE_URL:
+        return None
+    return DATABASE_URL.replace("postgresql+asyncpg://", "postgresql://", 1)
 
 
 class ServiceManager:
@@ -117,13 +125,16 @@ async def lifespan(app: FastAPI):
         # Initialize PostgresSaver with context manager for chat
         logger.info("Connecting to PostgreSQL for LangGraph checkpointing...")
         try:
-            postgres_cm = PostgresSaver.from_conn_string(DATABASE_URL)
+            checkpoint_database_url = _checkpoint_database_url()
+            postgres_cm = PostgresSaver.from_conn_string(checkpoint_database_url)
             if hasattr(postgres_cm, "__aenter__"):
                 saver = await postgres_cm.__aenter__()
             else:
                 saver = postgres_cm.__enter__()
 
-            await saver.setup()
+            setup_result = saver.setup()
+            if inspect.isawaitable(setup_result):
+                await setup_result
             logger.info("LangGraph checkpoint tables set up successfully")
 
             graph = graph_builder.compile(checkpointer=saver)

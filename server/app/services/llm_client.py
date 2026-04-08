@@ -9,6 +9,7 @@ from uuid import uuid4
 from langchain_core.messages import HumanMessage, AIMessageChunk, ToolMessage
 from fastapi import HTTPException
 from app.prompts.prompt_library import get_prompt
+from app.core.runtime_provider_config import RuntimeProviderConfig
 
 
 logger = logging.getLogger(__name__)
@@ -45,7 +46,8 @@ class LLMClient:
         message: str,
         checkpoint_id: Optional[str] = None,
         document_context: Optional[dict] = None,
-        chat_id: Optional[int] = None
+        chat_id: Optional[int] = None,
+        runtime_provider_config: Optional[RuntimeProviderConfig] = None,
     ) -> AsyncGenerator[str, None]:
         """
         Stream chat responses from LangGraph.
@@ -75,7 +77,7 @@ class LLMClient:
                 config = {
                     "configurable": {
                         "thread_id": new_checkpoint_id,
-                        "chat_id": chat_id
+                        "chat_id": chat_id,
                     }
                 }
                 
@@ -88,7 +90,7 @@ class LLMClient:
                 config = {
                     "configurable": {
                         "thread_id": checkpoint_id,
-                        "chat_id": chat_id
+                        "chat_id": chat_id,
                     }
                 }
                 logger.info(f"Continuing chat with checkpoint: {checkpoint_id}")
@@ -170,8 +172,12 @@ class LLMClient:
                     enhanced_content = prompt_fn(message, doc_count, doc_list)
             
             # Stream events from graph
+            graph_input = {"messages": [HumanMessage(content=enhanced_content)]}
+            if runtime_provider_config is not None:
+                graph_input["runtime_provider_config"] = runtime_provider_config.model_dump(mode="json")
+
             events = self.graph.astream_events(
-                {"messages": [HumanMessage(content=enhanced_content)]},
+                graph_input,
                 version="v2",
                 config=config
             )

@@ -8,11 +8,8 @@ from langchain_core.tools import tool
 logger = logging.getLogger(__name__)
 import requests
 from app.prompts.prompt_library import get_prompt
-from app.services.provider_factory import (
-    create_duckduckgo_search_tool,
-    create_tavily_search_tool,
-    get_search_tools,
-)
+from app.core.runtime_provider_config import RuntimeProviderConfig
+from app.services.provider_factory import create_duckduckgo_search_tool, create_tavily_search_tool, get_search_tools
 
 # -----------------
 # Lazy Tool Initialization (for Docker compatibility)
@@ -104,10 +101,12 @@ def search_documents(query: str) -> dict:
 # Override the tool's description with our detailed one from the prompt library
 search_documents.description = SEARCH_DOCUMENTS_DESCRIPTION
 
-# -----------------
-# Export Tools
-# -----------------
-# Build tools list dynamically - include only configured search tools.
-_configured_search_tools = get_search_tools()
-_base_tools = [*_configured_search_tools, calculator, get_stock_price, search_documents]
-tools = [t for t in _base_tools if t is not None]
+def get_native_tools(runtime_config: RuntimeProviderConfig | None = None):
+    """Build the current native tool list, including request-scoped search tools."""
+    configured_search_tools = get_search_tools(runtime_config)
+    base_tools = [*configured_search_tools, calculator, get_stock_price, search_documents]
+    return [t for t in base_tools if t is not None]
+
+
+# Backward-compatible snapshot for older imports.
+tools = get_native_tools()

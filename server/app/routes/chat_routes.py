@@ -23,6 +23,11 @@ from app.models.schemas import (
 from app.services.chat_service import ChatService
 from app.services.llm_client import LLMClient
 from app.core.dependencies import get_current_active_user
+from app.core.runtime_provider_config import (
+    RuntimeProviderConfig,
+    get_runtime_provider_config,
+    runtime_provider_config_context,
+)
 from app.db.session import get_db
 
 
@@ -332,7 +337,8 @@ async def send_message(
     chat_id: int,
     message_data: MessageCreate,
     current_user: User = Depends(get_current_active_user),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
+    runtime_provider_config: RuntimeProviderConfig | None = Depends(get_runtime_provider_config),
 ):
     """
     Send a message in a chat and get AI response via streaming.
@@ -401,22 +407,24 @@ async def send_message(
         
         try:
             # Stream from LLM with document context
-            async for event in llm_client.stream_chat_response(
-                message_data.content,
-                current_checkpoint,
-                document_context,
-                chat_id=chat_id
-            ):
-                yield event
+            with runtime_provider_config_context(runtime_provider_config):
+                async for event in llm_client.stream_chat_response(
+                    message_data.content,
+                    current_checkpoint,
+                    document_context,
+                    chat_id=chat_id,
+                    runtime_provider_config=runtime_provider_config,
+                ):
+                    yield event
                 
-                # Collect assistant content
-                if '"type":"content"' in event:
-                    try:
-                        event_data = json.loads(event.replace("data: ", ""))
-                        if event_data.get("type") == "content":
-                            assistant_content.append(event_data.get("content", ""))
-                    except:
-                        pass
+                    # Collect assistant content
+                    if '"type":"content"' in event:
+                        try:
+                            event_data = json.loads(event.replace("data: ", ""))
+                            if event_data.get("type") == "content":
+                                assistant_content.append(event_data.get("content", ""))
+                        except:
+                            pass
                 
                 # Collect checkpoint_id if new conversation
                 if '"type":"checkpoint"' in event and not current_checkpoint:

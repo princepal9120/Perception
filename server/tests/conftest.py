@@ -1,5 +1,6 @@
 """Shared test fixtures for the backend test suite."""
 import asyncio
+from pathlib import Path
 import pytest
 import pytest_asyncio
 from typing import AsyncGenerator
@@ -16,6 +17,7 @@ from app.core.security import hash_password, create_access_token
 
 # Use SQLite for tests (fast, no external dependencies)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
+TEST_DATABASE_FILE = Path("test.db")
 
 
 @pytest.fixture(scope="session")
@@ -29,6 +31,8 @@ def event_loop():
 @pytest_asyncio.fixture(scope="function")
 async def db_engine():
     """Create a test database engine."""
+    if TEST_DATABASE_FILE.exists():
+        TEST_DATABASE_FILE.unlink()
     engine = create_async_engine(TEST_DATABASE_URL, echo=False)
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
@@ -36,6 +40,8 @@ async def db_engine():
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.drop_all)
     await engine.dispose()
+    if TEST_DATABASE_FILE.exists():
+        TEST_DATABASE_FILE.unlink()
 
 
 @pytest_asyncio.fixture(scope="function")

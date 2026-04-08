@@ -7,6 +7,7 @@ from typing import TypedDict, List, Dict, Any, Optional
 from langgraph.graph import StateGraph, END
 from app.chains.deep_research_chains import DeepResearchChains
 from app.services.provider_factory import create_chat_model, run_configured_search
+from app.core.runtime_provider_config import RuntimeProviderConfig
 
 logger = logging.getLogger(__name__)
 
@@ -45,14 +46,22 @@ class DeepResearchState(TypedDict):
 class DeepResearchGraph:
     """LangGraph-based deep research agent."""
     
-    def __init__(self, llm: Optional[Any] = None):
+    def __init__(
+        self,
+        llm: Optional[Any] = None,
+        runtime_provider_config: Optional[RuntimeProviderConfig] = None,
+    ):
         """
         Initialize deep research graph.
         
         Args:
             llm: Optional chat model instance
         """
-        self.llm = llm or create_chat_model(temperature=0.3)
+        self.runtime_provider_config = runtime_provider_config
+        self.llm = llm or create_chat_model(
+            temperature=0.3,
+            runtime_config=runtime_provider_config,
+        )
         
         # Initialize chains
         self.chains = DeepResearchChains(self.llm)
@@ -149,7 +158,10 @@ class DeepResearchGraph:
                 })
                 
                 try:
-                    results = await run_configured_search(query)
+                    results = await run_configured_search(
+                        query,
+                        runtime_config=self.runtime_provider_config,
+                    )
                     
                     # Format results as documents
                     if isinstance(results, list):
