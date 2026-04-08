@@ -11,6 +11,7 @@ import type {
     CompareNodesRequest,
 } from '../types/tree';
 import AuthService from './auth-service';
+import { getRuntimeConfigHeaders } from './runtime-config';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
@@ -28,6 +29,7 @@ apiClient.interceptors.request.use((config) => {
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
+    Object.assign(config.headers, getRuntimeConfigHeaders());
     return config;
 });
 
@@ -145,6 +147,7 @@ export const treeApi = {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
+                    ...getRuntimeConfigHeaders(),
                 },
                 body: JSON.stringify({
                     node_id: request.node_id,
@@ -248,6 +251,7 @@ export const treeApi = {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`,
+                    ...getRuntimeConfigHeaders(),
                 },
                 body: JSON.stringify({ chat_id: chatId }),
                 signal: controller.signal,

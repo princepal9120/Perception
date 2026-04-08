@@ -1,4 +1,6 @@
 // src/lib/chat-api.ts - Updated to work with new backend
+import AuthService from './auth-service';
+import { getRuntimeConfigHeaders } from './runtime-config';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
@@ -149,10 +151,6 @@ interface ErrorResponse {
   detail?: string;
 }
 
-// ==================== Token Management ====================
-
-import AuthService from './auth-service';
-
 // Use AuthService for all token operations
 const refreshAccessToken = () => AuthService.refreshAccessToken();
 
@@ -163,6 +161,7 @@ class ChatAPI {
   private getHeaders(token?: string): HeadersInit {
     const headers: HeadersInit = {
       "Content-Type": "application/json",
+      ...getRuntimeConfigHeaders(),
     };
 
     if (token) {

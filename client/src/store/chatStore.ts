@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { chatAPI, Chat, Message } from "@/lib/chat-api";
+import { getRuntimeConfigHeaders } from "@/lib/runtime-config";
 
 interface AgentProgressStep {
   type: 'thinking' | 'searching' | 'analyzing' | 'reading' | 'completed';
@@ -627,6 +628,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`,
+          ...getRuntimeConfigHeaders(),
         },
         body: JSON.stringify({ topic, depth, iterations }),
       });

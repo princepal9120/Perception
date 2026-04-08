@@ -14,6 +14,8 @@ import { X, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { WorkflowSyncVisualizer } from "@/components/tree/WorkflowSyncVisualizer";
+import { RuntimeSettingsDialog } from "@/components/chat/RuntimeSettingsDialog";
+import { hasSavedRuntimeConfig } from "@/lib/runtime-config";
 
 const Chat = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default closed on mobile
@@ -21,6 +23,8 @@ const Chat = () => {
   const [isTreeViewOpen, setIsTreeViewOpen] = useState(false);
   const [isMCPOpen, setIsMCPOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isRuntimeSettingsOpen, setIsRuntimeSettingsOpen] = useState(false);
+  const [runtimeSettingsConfigured, setRuntimeSettingsConfigured] = useState(() => hasSavedRuntimeConfig());
   const { token } = useAuth();
   const { currentChat } = useChat();
   const { loadTree } = useTreeStore();
@@ -100,6 +104,13 @@ const Chat = () => {
 
   const isPanelOpen = isTreeViewOpen || isMCPOpen;
 
+  const handleRuntimeSettingsOpenChange = (open: boolean) => {
+    setIsRuntimeSettingsOpen(open);
+    if (!open) {
+      setRuntimeSettingsConfigured(hasSavedRuntimeConfig());
+    }
+  };
+
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       {/* Sidebar */}
@@ -128,6 +139,8 @@ const Chat = () => {
             isTreeViewOpen={isTreeViewOpen}
             onOpenMCP={toggleMCP}
             isMCPOpen={isMCPOpen}
+            onOpenRuntimeSettings={() => setIsRuntimeSettingsOpen(true)}
+            hasRuntimeConfig={runtimeSettingsConfigured}
           />
 
           <div className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">
@@ -249,6 +262,11 @@ const Chat = () => {
           token={token}
         />
       )}
+
+      <RuntimeSettingsDialog
+        isOpen={isRuntimeSettingsOpen}
+        onOpenChange={handleRuntimeSettingsOpenChange}
+      />
     </div>
   );
 };

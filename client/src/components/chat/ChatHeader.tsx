@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Menu, GitBranch } from "lucide-react";
+import { Menu, GitBranch, Settings2 } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
   Tooltip,
@@ -15,6 +15,8 @@ interface ChatHeaderProps {
   isTreeViewOpen?: boolean;
   onOpenMCP?: () => void;
   isMCPOpen?: boolean;
+  onOpenRuntimeSettings?: () => void;
+  hasRuntimeConfig?: boolean;
 }
 
 export const ChatHeader = ({
@@ -23,7 +25,9 @@ export const ChatHeader = ({
   onOpenTreeView,
   isTreeViewOpen = false,
   onOpenMCP,
-  isMCPOpen = false
+  isMCPOpen = false,
+  onOpenRuntimeSettings,
+  hasRuntimeConfig = false,
 }: ChatHeaderProps) => {
   return (
     <header className="h-14 sm:h-16 border-b border-border flex items-center justify-between px-3 sm:px-6 bg-card/80 backdrop-blur-sm sticky top-0 z-10">
@@ -84,6 +88,30 @@ export const ChatHeader = ({
             </TooltipTrigger>
             <TooltipContent>
               {isMCPOpen ? "Close MCP Explorer" : "Open MCP Explorer"}
+            </TooltipContent>
+          </Tooltip>
+        )}
+
+        {onOpenRuntimeSettings && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "relative h-8 w-8 sm:h-10 sm:w-10 transition-colors",
+                  hasRuntimeConfig && "bg-primary/10 text-primary hover:bg-primary/20"
+                )}
+                onClick={onOpenRuntimeSettings}
+              >
+                <Settings2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                {hasRuntimeConfig && (
+                  <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-emerald-500" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              {hasRuntimeConfig ? "Edit runtime settings" : "Configure runtime settings"}
             </TooltipContent>
           </Tooltip>
         )}
