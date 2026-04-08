@@ -6,6 +6,7 @@ import { TypingIndicator } from "./TypingIndicator";
 import { WelcomeScreen } from "./WelcomeScreen";
 import { MessageSkeleton } from "./MessageSkeleton";
 import { useChat } from "@/hooks/use-chat";
+import type { Message } from "@/lib/chat-api";
 import { AgentProgressTracker } from "./AgentProgressTracker";
 import { DeepResearchFlow } from "./DeepResearchFlow";
 import { useNavigate } from "react-router-dom";
@@ -14,7 +15,6 @@ import { format, isToday, isYesterday } from "date-fns";
 
 import { MessageActions } from "./MessageActions";
 
-import { useTreeStore } from "@/store/treeStore";
 import { useChatStore } from "@/store/chatStore";
 
 // Format timestamp for display
@@ -45,8 +45,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
     agentProgress,
   } = useChat();
   const { sendMessage } = useChat();
-  const { setActiveNode } = useTreeStore();
-  const { setMessages, deepResearchState } = useChatStore();
+  const { deepResearchState } = useChatStore();
 
   // Check if deep research is active
   const isDeepResearchActive = deepResearchState.phase !== 'idle';
@@ -56,12 +55,12 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, streamingContent]);
 
-  const handleSuggestedPrompt = async (prompt: string, deepResearch?: boolean) => {
+  const handleSuggestedPrompt = async (prompt: string) => {
     await sendMessage(prompt);
   };
 
-  const handleFork = async (message: any) => {
-    const { currentChatId, branchFromMessage, loadMessages, chats } = useChatStore.getState();
+  const handleFork = async (message: Message) => {
+    const { currentChatId, branchFromMessage, loadMessages } = useChatStore.getState();
 
     if (!currentChatId) {
       toast.error("Cannot branch: no current chat");
@@ -81,15 +80,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
         await loadMessages(currentChatId);
         toast.info("Messages refreshed. Please try branching again.");
         return;
-      } catch (e) {
+      } catch {
         toast.error("Failed to refresh messages");
         return;
       }
     }
-
-    // Get current chat name for better UX
-    const currentChat = chats.find(c => c.id === currentChatId);
-    const chatName = currentChat?.title || "chat";
 
     try {
       toast.loading("Creating branch...", { id: "branch-loading" });
@@ -119,14 +114,14 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
         );
 
       }
-    } catch (e: any) {
+    } catch (error: unknown) {
       toast.dismiss("branch-loading");
-      toast.error(e.message || "Failed to create branch");
+      toast.error(error instanceof Error ? error.message : "Failed to create branch");
     }
   };
 
 
-  const handleRegenerate = async (message: any) => {
+  const handleRegenerate = async (message: Message) => {
     if (!message.metadata?.nodeId) return;
     // TODO: Implement regenerate logic
   };
@@ -151,7 +146,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
       ) : (
         <>
           {/* Render all completed messages */}
-          {messages.map((message, index) => (
+          {messages.map((message) => (
             <motion.div
               key={message.id}
               initial={{ opacity: 0, y: 10 }}
@@ -215,7 +210,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
           {/* Deep Research Flow UI */}
           {isDeepResearchActive && isStreaming && (
             <DeepResearchFlow
-              state={deepResearchState as any}
+              state={deepResearchState}
               isActive={isStreaming}
             />
           )}

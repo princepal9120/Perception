@@ -7,8 +7,33 @@ import type {
     TreeNodeData,
     ConversationNode,
     TreeStatistics,
+    TreeStreamEvent,
+    TreeWorkflowSyncState,
 } from '../types/tree';
 import { treeApi } from '../lib/tree-api';
+
+const getErrorMessage = (error: unknown, fallback: string): string => {
+    if (error instanceof Error && error.message) {
+        return error.message;
+    }
+
+    if (
+        typeof error === 'object' &&
+        error !== null &&
+        'response' in error &&
+        typeof error.response === 'object' &&
+        error.response !== null &&
+        'data' in error.response &&
+        typeof error.response.data === 'object' &&
+        error.response.data !== null &&
+        'detail' in error.response.data &&
+        typeof error.response.data.detail === 'string'
+    ) {
+        return error.response.data.detail;
+    }
+
+    return fallback;
+};
 
 interface TreeState {
     // Current tree data
@@ -49,7 +74,7 @@ interface TreeState {
     toggleTreeView: () => void;
     clearError: () => void;
     reset: () => void;
-    setWorkflowSync: (syncState: any) => void;
+    setWorkflowSync: (syncState: TreeWorkflowSyncState | null) => void;
 
     // Helper methods
     getNodeById: (nodeId: string) => TreeNodeData | null;
@@ -91,9 +116,17 @@ export const useTreeStore = create<TreeState>((set, get) => ({
                 currentChatId: chatId,
                 isLoading: false,
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             // If tree doesn't exist, try to migrate existing chat or initialize
-            if (error.response?.status === 404) {
+            if (
+                typeof error === 'object' &&
+                error !== null &&
+                'response' in error &&
+                typeof error.response === 'object' &&
+                error.response !== null &&
+                'status' in error.response &&
+                error.response.status === 404
+            ) {
                 try {
                     // Use migrateToTree to preserve existing messages
                     await treeApi.migrateToTree(chatId);
@@ -104,15 +137,15 @@ export const useTreeStore = create<TreeState>((set, get) => ({
                         currentChatId: chatId,
                         isLoading: false,
                     });
-                } catch (initError: any) {
+                } catch (initError: unknown) {
                     set({
-                        error: initError.message || 'Failed to initialize tree',
+                        error: getErrorMessage(initError, 'Failed to initialize tree'),
                         isLoading: false,
                     });
                 }
             } else {
                 set({
-                    error: error.message || 'Failed to load tree',
+                    error: getErrorMessage(error, 'Failed to load tree'),
                     isLoading: false,
                 });
             }
@@ -123,7 +156,7 @@ export const useTreeStore = create<TreeState>((set, get) => ({
         try {
             const stats = await treeApi.getTreeStatistics(chatId);
             set({ statistics: stats });
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Failed to load statistics:', error);
         }
     },
@@ -138,8 +171,8 @@ export const useTreeStore = create<TreeState>((set, get) => ({
 
             // Reload tree to update active states
             await get().loadTree(currentChatId);
-        } catch (error: any) {
-            set({ error: error.message || 'Failed to set active node' });
+        } catch (error: unknown) {
+            set({ error: getErrorMessage(error, 'Failed to set active node') });
         }
     },
 
@@ -154,9 +187,9 @@ export const useTreeStore = create<TreeState>((set, get) => ({
             // Reload tree
             await get().loadTree(currentChatId);
             set({ isLoading: false });
-        } catch (error: any) {
+        } catch (error: unknown) {
             set({
-                error: error.message || 'Failed to fork node',
+                error: getErrorMessage(error, 'Failed to fork node'),
                 isLoading: false,
             });
         }
@@ -177,7 +210,7 @@ export const useTreeStore = create<TreeState>((set, get) => ({
             await treeApi.sendMessage(
                 currentChatId,
                 { node_id: nodeId, message, regenerate },
-                (event) => {
+                (event: TreeStreamEvent) => {
                     // Handle new strict schema
                     if (event.node) {
                         // Content update
@@ -228,9 +261,9 @@ export const useTreeStore = create<TreeState>((set, get) => ({
                     }
                 }
             );
-        } catch (error: any) {
+        } catch (error: unknown) {
             set({
-                error: error.message || 'Failed to send message',
+                error: getErrorMessage(error, 'Failed to send message'),
                 isStreaming: false,
                 streamingNodeId: null,
             });
@@ -249,7 +282,7 @@ export const useTreeStore = create<TreeState>((set, get) => ({
         });
 
         try {
-            await treeApi.regenerateResponse(currentChatId, nodeId, (event) => {
+            await treeApi.regenerateResponse(currentChatId, nodeId, (event: TreeStreamEvent) => {
                 // Handle new strict schema
                 if (event.node) {
                     if (event.node.ai_response) {
@@ -284,9 +317,9 @@ export const useTreeStore = create<TreeState>((set, get) => ({
                     });
                 }
             });
-        } catch (error: any) {
+        } catch (error: unknown) {
             set({
-                error: error.message || 'Failed to regenerate response',
+                error: getErrorMessage(error, 'Failed to regenerate response'),
                 isStreaming: false,
                 streamingNodeId: null,
             });

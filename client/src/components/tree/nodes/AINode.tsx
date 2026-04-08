@@ -5,8 +5,9 @@ import ReactMarkdown from 'react-markdown';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import type { AITreeNodeData } from '@/types/tree';
 
-const AINode = ({ data }: { data: any }) => {
+const AINode = ({ data }: { data: AITreeNodeData }) => {
     const [copied, setCopied] = useState(false);
 
     const handleCopy = () => {

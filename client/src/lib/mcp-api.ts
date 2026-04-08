@@ -2,10 +2,14 @@ import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
 
+type MCPInputSchema = Record<string, unknown>;
+type MCPExecutionArgs = Record<string, unknown>;
+type MCPApiResponse = Record<string, unknown>;
+
 export interface MCPTool {
     name: string;
     description: string;
-    input_schema: any;
+    input_schema: MCPInputSchema;
     server: string;
 }
 
@@ -18,7 +22,7 @@ export interface MCPServer {
 
 export interface MCPToolResult {
     success: boolean;
-    result?: any;
+    result?: unknown;
     error?: string;
     server: string;
     tool: string;
@@ -44,7 +48,7 @@ export const mcpApi = {
     /**
      * Execute a specific MCP tool
      */
-    executeTool: async (server: string, tool: string, args: any): Promise<MCPToolResult> => {
+    executeTool: async (server: string, tool: string, args: MCPExecutionArgs): Promise<MCPToolResult> => {
         const response = await axios.post(`${API_BASE_URL}/mcp/execute`, {
             server,
             tool,
@@ -56,7 +60,7 @@ export const mcpApi = {
     /**
      * Connect to a specific server
      */
-    connectServer: async (serverName: string): Promise<any> => {
+    connectServer: async (serverName: string): Promise<MCPApiResponse> => {
         const response = await axios.post(`${API_BASE_URL}/mcp/connect/${serverName}`);
         return response.data;
     },
@@ -64,7 +68,7 @@ export const mcpApi = {
     /**
      * Refresh tools for a server
      */
-    refreshTools: async (serverName: string): Promise<any> => {
+    refreshTools: async (serverName: string): Promise<MCPApiResponse> => {
         const response = await axios.post(`${API_BASE_URL}/mcp/refresh/${serverName}`);
         return response.data;
     }

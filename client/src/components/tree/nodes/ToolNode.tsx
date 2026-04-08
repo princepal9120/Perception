@@ -4,6 +4,7 @@ import { Wrench, ChevronDown, ChevronUp, ExternalLink, Search, Calculator, Datab
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import type { ToolTreeNodeData } from '@/types/tree';
 
 const getToolIcon = (toolName: string) => {
     const name = toolName.toLowerCase();
@@ -14,7 +15,7 @@ const getToolIcon = (toolName: string) => {
     return Wrench;
 };
 
-const ToolNode = ({ data }: { data: any }) => {
+const ToolNode = ({ data }: { data: ToolTreeNodeData }) => {
     const [expanded, setExpanded] = useState(false);
     const Icon = getToolIcon(data.toolName || '');
 

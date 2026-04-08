@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect } from 'react';
 import ReactFlow, {
     Node,
     Edge,
@@ -7,7 +7,6 @@ import ReactFlow, {
     MiniMap,
     useNodesState,
     useEdgesState,
-    MarkerType,
     ConnectionLineType,
     Panel,
 } from 'reactflow';
@@ -19,10 +18,17 @@ import AINode from './nodes/AINode';
 import ToolNode from './nodes/ToolNode';
 import { DeepResearchLoader } from './DeepResearchLoader';
 import { Button } from '../ui/button';
-import { Layout, ZoomIn, ZoomOut, Maximize, Network } from 'lucide-react';
+import { Layout, Network } from 'lucide-react';
 
 import { useChatStore } from '../../store/chatStore';
 import { treeApi } from '../../lib/tree-api';
+import type { Message } from '../../lib/chat-api';
+import type {
+    AITreeNodeData,
+    TreeLineageNode,
+    TreeJsonObject,
+    UserTreeNodeData,
+} from '../../types/tree';
 
 const nodeTypes = {
     user: UserNode,
@@ -68,30 +74,44 @@ export const TreeVisualization: React.FC<TreeVisualizationProps> = ({ chatId }) 
                 const lineage = await treeApi.getNodeLineage(dbNodeId);
 
                 // Convert lineage to chat messages
-                const messages = lineage.flatMap((node: any, index: number) => {
-                    const msgs = [];
-                    if (node.user_message) {
+                const messages = lineage.flatMap((lineageNode: TreeLineageNode, index: number): Message[] => {
+                    const msgs: Message[] = [];
+                    if (lineageNode.user_message) {
                         msgs.push({
                             id: index * 2, // Temporary ID
                             role: 'user',
-                            content: node.user_message,
-                            created_at: node.created_at,
-                            metadata: { ...node.metadata, nodeId: node.id, parentId: node.parent_id, isUserNode: true }
+                            chat_id: chatId,
+                            user_id: 0,
+                            content: lineageNode.user_message,
+                            created_at: lineageNode.created_at,
+                            metadata: {
+                                ...(lineageNode.metadata ?? {}),
+                                nodeId: lineageNode.id,
+                                parentId: lineageNode.parent_id,
+                                isUserNode: true,
+                            } as TreeJsonObject,
                         });
                     }
-                    if (node.ai_message) {
+                    if (lineageNode.ai_message) {
                         msgs.push({
                             id: index * 2 + 1, // Temporary ID
                             role: 'assistant',
-                            content: node.ai_message,
-                            created_at: node.created_at,
-                            metadata: { ...node.metadata, nodeId: node.id, parentId: node.parent_id, isUserNode: false }
+                            chat_id: chatId,
+                            user_id: 0,
+                            content: lineageNode.ai_message,
+                            created_at: lineageNode.created_at,
+                            metadata: {
+                                ...(lineageNode.metadata ?? {}),
+                                nodeId: lineageNode.id,
+                                parentId: lineageNode.parent_id,
+                                isUserNode: false,
+                            } as TreeJsonObject,
                         });
                     }
                     return msgs;
                 });
 
-                setMessages(messages as any);
+                setMessages(messages);
             } catch (error) {
                 console.error('Failed to load branch:', error);
             }
@@ -127,6 +147,9 @@ export const TreeVisualization: React.FC<TreeVisualizationProps> = ({ chatId }) 
                     hasAI: !!node.ai_message,
                     aiMessage: node.ai_message,
                     metadata: node.metadata
+                } satisfies UserTreeNodeData & {
+                    aiMessage?: string | null;
+                    metadata?: TreeJsonObject | null;
                 },
                 position: { x: 0, y: 0 },
             });
@@ -222,7 +245,7 @@ export const TreeVisualization: React.FC<TreeVisualizationProps> = ({ chatId }) 
                 <Background color="#e4e4e7" gap={16} />
                 <Controls />
                 <MiniMap
-                    nodeColor={(node) => {
+                    nodeColor={(node: Node<UserTreeNodeData | AITreeNodeData>) => {
                         switch (node.type) {
                             case 'user':
                                 return '#71717a';

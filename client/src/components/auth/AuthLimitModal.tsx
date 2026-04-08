@@ -63,19 +63,19 @@ export function AuthLimitModal({ isOpen, onClose, messagesUsed }: AuthLimitModal
                                             <MessageCircle className="w-8 h-8 text-white" />
                                         </div>
                                         <h2 className="text-2xl font-bold text-white mb-2">
-                                            You've used {messagesUsed} free messages
+                                            Guest session limit reached
                                         </h2>
                                         <p className="text-zinc-400">
-                                            Create a free account to continue chatting with unlimited messages
+                                            You have used {messagesUsed} guest messages in this browser. Sign in to keep your chats, lift the guest cap, and continue in a saved workspace.
                                         </p>
                                     </div>
 
                                     {/* Benefits */}
                                     <div className="space-y-3 mb-8">
                                         {[
-                                            { icon: Sparkles, text: 'Unlimited conversations' },
-                                            { icon: MessageCircle, text: 'Save your chat history' },
-                                            { icon: Lock, text: 'Your data stays private' },
+                                            { icon: Sparkles, text: 'Continue beyond the guest cap' },
+                                            { icon: MessageCircle, text: 'Keep your conversation history' },
+                                            { icon: Lock, text: 'Use a protected workspace session' },
                                         ].map((benefit, index) => (
                                             <div
                                                 key={index}
@@ -97,7 +97,7 @@ export function AuthLimitModal({ isOpen, onClose, messagesUsed }: AuthLimitModal
                                             onClick={() => setView('sign-up')}
                                             className="w-full bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white shadow-lg shadow-violet-500/25 py-6 text-lg font-medium"
                                         >
-                                            Create Free Account
+                                            Create Workspace Account
                                         </Button>
                                         <Button
                                             onClick={() => setView('sign-in')}
@@ -109,7 +109,7 @@ export function AuthLimitModal({ isOpen, onClose, messagesUsed }: AuthLimitModal
                                     </div>
 
                                     <p className="text-center text-xs text-zinc-500 mt-6">
-                                        By continuing, you agree to our Terms of Service and Privacy Policy
+                                        Local OSS mode does not need this screen. This prompt only appears when the app is running with hosted or JWT auth.
                                     </p>
                                 </div>
                             )}

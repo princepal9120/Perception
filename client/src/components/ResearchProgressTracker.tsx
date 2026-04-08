@@ -14,7 +14,7 @@ interface ProgressUpdate {
     message?: string;
     notes?: string;
     status?: 'in_progress' | 'completed' | 'error';
-    data?: Record<string, any>;
+    data?: Record<string, string | number | boolean | null>;
 }
 
 interface ResearchProgressTrackerProps {

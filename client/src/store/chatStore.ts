@@ -1,6 +1,5 @@
 import { create } from "zustand";
 import { chatAPI, Chat, Message } from "@/lib/chat-api";
-import { useAuth } from "@/hooks/use-auth";
 
 interface AgentProgressStep {
   type: 'thinking' | 'searching' | 'analyzing' | 'reading' | 'completed';
@@ -47,6 +46,39 @@ export interface DeepResearchState {
   report?: string;
 }
 
+interface DeepResearchLogEntry {
+  iteration: number;
+  focus: string;
+  findings: string;
+  gaps_identified: string;
+}
+
+interface DeepResearchReportBody {
+  executive_summary?: string;
+  background?: string;
+  key_findings?: string[];
+  technical_details?: string;
+  opportunities_risks?: string;
+  applications?: string;
+  references?: string[];
+  research_log?: DeepResearchLogEntry[];
+}
+
+interface DeepResearchReportPayload {
+  topic: string;
+  depth: number;
+  iterations: number;
+  report: DeepResearchReportBody;
+}
+
+interface DeepResearchStreamEventBase {
+  type: "start" | "iteration" | "final" | "complete" | "error";
+  message?: string;
+  iteration?: number;
+  notes?: string;
+  report?: DeepResearchReportPayload;
+}
+
 interface ChatState {
   // State
   chats: Chat[];
@@ -75,7 +107,7 @@ interface ChatState {
 }
 
 // Helper function to format research report as markdown
-const formatResearchReport = (report: any): string => {
+const formatResearchReport = (report: DeepResearchReportPayload): string => {
   const depthLabels = ['Basic', 'Intermediate', 'Advanced', 'Expert', 'Research-Grade'];
   let markdown = `# 🔬 Deep Research Report\n\n`;
   markdown += `**Topic:** ${report.topic}\n`;
@@ -121,7 +153,7 @@ const formatResearchReport = (report: any): string => {
 
   if (report.report.research_log?.length > 0) {
     markdown += `## Research Log\n\n`;
-    report.report.research_log.forEach((log: any) => {
+    report.report.research_log.forEach((log: DeepResearchLogEntry) => {
       markdown += `### Iteration ${log.iteration}\n`;
       markdown += `- **Focus:** ${log.focus}\n`;
       markdown += `- **Findings:** ${log.findings}\n`;
@@ -325,7 +357,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   // Send a message and stream the response
   sendMessage: async (content: string) => {
-    let { currentChatId, currentEventSource } = get();
+    let { currentChatId } = get();
+    const { currentEventSource } = get();
     const token = getAuthToken();
 
     if (!token) {
@@ -372,7 +405,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       }));
 
       // Add initial thinking step
-      set((state) => ({
+      set(() => ({
         agentProgress: [
           {
             type: 'thinking',
@@ -610,10 +643,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
-      let researchLog: string[] = [];
-      let finalReport: any = null;
+      const researchLog: string[] = [];
       let currentAreaIndex = 0;
-      let progressIncrement = 100 / (iterations * 2);
+      const progressIncrement = 100 / (iterations * 2);
 
       const cancelFn = () => {
         reader.cancel();
@@ -637,7 +669,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
             const data = line.slice(6);
 
             try {
-              const event = JSON.parse(data);
+              const event = JSON.parse(data) as DeepResearchStreamEventBase;
 
               switch (event.type) {
                 case 'start':
@@ -650,7 +682,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
                   }));
                   break;
 
-                case 'iteration':
+                case 'iteration': {
                   const iterationLog = `**Iteration ${event.iteration}**\n${event.notes}\n\n`;
                   researchLog.push(iterationLog);
 
@@ -693,11 +725,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
                     };
                   });
                   break;
+                }
 
                 case 'final':
                   if (event.report) {
-                    finalReport = event.report;
-
                     // Extract sources from report if available
                     const sources: ResearchSource[] = (event.report.report?.references || []).map((ref: string, idx: number) => ({
                       url: ref.startsWith('http') ? ref : `https://source-${idx}.example.com`,

@@ -2,14 +2,27 @@
  * TypeScript types for conversation tree
  */
 
+export type TreeJsonObject = Record<string, unknown>;
+
+export interface TreeToolCall {
+    [key: string]: unknown;
+}
+
+export interface TreeWorkflowSyncState {
+    status: 'draft' | 'updated';
+    change_summary: string;
+    linked_nodes: string[];
+    last_updated: number;
+}
+
 export interface NodeMetadata {
     model?: string;
     tokens_used?: number;
     tools_used?: string[];
     search_queries?: string[];
     temperature?: number;
-    custom_data?: Record<string, any>;
-    tool_calls?: any[];
+    custom_data?: TreeJsonObject;
+    tool_calls?: TreeToolCall[];
     token_count?: number;
 }
 
@@ -79,7 +92,7 @@ export interface MessageSendRequest {
 
 export interface StreamEvent {
     type: string;
-    data?: Record<string, any>;
+    data?: TreeJsonObject;
     content?: string;
 }
 
@@ -118,5 +131,50 @@ export interface ReactFlowEdge {
     target: string;
     type?: string;
     animated?: boolean;
-    style?: Record<string, any>;
+    style?: TreeJsonObject;
+}
+
+export interface TreeStreamNodePayload {
+    id?: string;
+    type?: string;
+    ai_response?: string;
+    branch_of?: string | null;
+}
+
+export interface TreeStreamEvent {
+    type?: string;
+    node?: TreeStreamNodePayload;
+    workflow_sync?: Omit<TreeWorkflowSyncState, 'last_updated'>;
+}
+
+export interface TreeLineageNode {
+    id: string;
+    parent_id: string | null;
+    user_message: string | null;
+    ai_message: string | null;
+    created_at: string;
+    metadata?: NodeMetadata | null;
+}
+
+export interface TreeBaseNodeData {
+    isActive?: boolean;
+    timestamp?: string;
+}
+
+export interface UserTreeNodeData extends TreeBaseNodeData {
+    label: string;
+    hasAI?: boolean;
+}
+
+export interface AITreeNodeData extends TreeBaseNodeData {
+    label: string;
+    isStreaming?: boolean;
+    tokens?: number;
+}
+
+export interface ToolTreeNodeData extends TreeBaseNodeData {
+    toolName?: string;
+    status?: 'running' | 'completed' | 'error' | string;
+    args?: TreeJsonObject;
+    output?: unknown;
 }

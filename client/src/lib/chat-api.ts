@@ -24,7 +24,7 @@ export interface Message {
   role: "user" | "assistant" | "system" | "tool";
   content: string;
   created_at: string;
-  metadata?: any;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface CreateChatRequest {
@@ -114,7 +114,7 @@ export interface SearchResultsEventData {
 
 export interface ToolOutputEventData {
   type: "tool_output";
-  output: any;
+  output: unknown;
 }
 
 export interface ErrorEventData {
@@ -139,10 +139,14 @@ export interface StreamCallbacks {
   onContent: (content: string) => void;
   onSearchStart: (query: string) => void;
   onSearchResults: (urls: string[]) => void;
-  onToolOutput: (output: any) => void;
+  onToolOutput: (output: unknown) => void;
   onCheckpoint: (checkpointId: string) => void;
   onEnd: () => void;
   onError: (error: Error) => void;
+}
+
+interface ErrorResponse {
+  detail?: string;
 }
 
 // ==================== Token Management ====================
@@ -174,7 +178,7 @@ class ChatAPI {
   private async fetchWithTokenRefresh(
     url: string,
     options: RequestInit,
-    originalToken: string
+    _originalToken: string
   ): Promise<Response> {
     let response = await fetch(url, options);
 
@@ -459,13 +463,14 @@ class ChatAPI {
                   callbacks.onSearchStart(data.query);
                   break;
 
-                case "search_results":
+                case "search_results": {
                   const urls =
                     typeof data.urls === "string"
-                      ? JSON.parse(data.urls)
+                      ? (JSON.parse(data.urls) as string[])
                       : data.urls;
                   callbacks.onSearchResults(urls);
                   break;
+                }
 
                 case "tool_output":
                   callbacks.onToolOutput(data.output);
@@ -543,16 +548,16 @@ class ChatAPI {
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
-            const response = JSON.parse(xhr.responseText);
+            const response = JSON.parse(xhr.responseText) as DocumentUploadResponse;
             resolve(response);
-          } catch (e) {
+          } catch {
             reject(new Error("Failed to parse response"));
           }
         } else {
           try {
-            const error = JSON.parse(xhr.responseText);
+            const error = JSON.parse(xhr.responseText) as ErrorResponse;
             reject(new Error(error.detail || "Failed to upload documents"));
-          } catch (e) {
+          } catch {
             reject(new Error(`Upload failed with status ${xhr.status}`));
           }
         }

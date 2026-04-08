@@ -1,8 +1,9 @@
 import { memo } from 'react';
 import { Handle, Position } from 'reactflow';
 import { User } from 'lucide-react';
+import type { UserTreeNodeData } from '@/types/tree';
 
-const UserNode = ({ data }: { data: any }) => {
+const UserNode = ({ data }: { data: UserTreeNodeData }) => {
     return (
         <div className="relative group">
             <Handle type="target" position={Position.Top} className="!bg-muted-foreground !w-2 !h-2" />

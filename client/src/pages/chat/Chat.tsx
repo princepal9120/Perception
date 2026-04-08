@@ -65,9 +65,24 @@ const Chat = () => {
 
       // Reload tree
       await loadTree(currentChat.id);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[Sync] Failed to sync:', error);
-      toast.error(error.response?.data?.detail || error.message || 'Failed to sync chat to tree');
+      const errorMessage =
+        typeof error === "object" &&
+        error !== null &&
+        "response" in error &&
+        typeof error.response === "object" &&
+        error.response !== null &&
+        "data" in error.response &&
+        typeof error.response.data === "object" &&
+        error.response.data !== null &&
+        "detail" in error.response.data &&
+        typeof error.response.data.detail === "string"
+          ? error.response.data.detail
+          : error instanceof Error
+            ? error.message
+            : 'Failed to sync chat to tree';
+      toast.error(errorMessage);
     } finally {
       setIsSyncing(false);
     }
