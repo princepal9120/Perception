@@ -1,17 +1,19 @@
-# Perception AI - System Architecture
+# Perception Architecture
 
-This document provides a comprehensive overview of the Perception AI system architecture, covering the backend, frontend, and specific feature implementations like Voice Mode and Chat.
+Perception is an open-source deep research and agentic search workspace.
 
-## 🏗️ High-Level Architecture
+This document explains the current OSS MVP architecture: the local-first reference stack, the runtime boundaries for auth/model/search providers, and the main product flows that new contributors should preserve.
+
+## 🏗️ High-level architecture
 
 ```mermaid
 graph TD
-    Client[Client (React/Next.js)]
+    Client[Client (React/Vite)]
     LB[Load Balancer]
     API[FastAPI Backend]
     DB[(PostgreSQL)]
     Redis[(Redis Cache)]
-    LLM[LangGraph + Groq]
+    LLM[LangGraph + Configured Model Provider]
     STT[OpenAI Whisper]
     TTS[OpenAI TTS / ElevenLabs]
 
@@ -24,83 +26,132 @@ graph TD
     API -->|Synthesize| TTS
 ```
 
----
+## Reference OSS stack
 
-## 🖥️ Frontend Architecture
+The default documented setup is:
 
-### Project Structure
-```
+- `AUTH_MODE=disabled`
+- `MODEL_PROVIDER=openai_compatible`
+- `EMBEDDING_PROVIDER=openai_compatible`
+- `SEARCH_PROVIDER=duckduckgo`
+
+That path should work without Clerk and without code edits.
+
+Optional integrations stay available behind configuration:
+
+- `AUTH_MODE=jwt`
+- `AUTH_MODE=clerk`
+- `MODEL_PROVIDER=groq|google`
+- `SEARCH_PROVIDER=tavily|both`
+
+## 🖥️ Frontend architecture
+
+### Project structure
+
+```text
 client/src/
 ├── lib/
 │   ├── chat-api.ts          # API client for chat streaming
-│   └── auth-api.ts          # API client for authentication
-├── services/
-│   └── chat.service.ts      # Business logic layer
-├── store/
-│   └── chatStore.ts         # Global state (Zustand)
+│   ├── auth-api.ts          # API client for authentication
+│   └── auth-config.ts       # Frontend auth mode selection
 ├── hooks/
 │   ├── use-chat.ts          # Chat logic hook
 │   └── use-auth.tsx         # Authentication hook
+├── store/
+│   ├── chatStore.ts         # Chat and Deep Research state
+│   └── treeStore.ts         # Conversation tree state
 └── components/
-    └── chat/                # Chat UI components
+    ├── chat/                # Chat UI and Deep Research entry points
+    ├── landing/             # OSS marketing surface
+    └── tree/                # Branching conversation UI
 ```
 
-### Key Layers
-1.  **API Layer**: Direct communication with backend (Axios/Fetch). Handles SSE for streaming.
-2.  **Service Layer**: Manages business logic (e.g., stream lifecycle).
-3.  **State Management**: Zustand for global state (user, conversations, messages).
-4.  **Hooks**: Custom hooks (`useChat`, `useAuth`) to expose logic to components.
-5.  **UI Components**: Presentation layer (Shadcn UI + Tailwind).
+### Key layers
 
-### Chat Data Flow
-```
-User Input (ChatInput) 
+1. **API layer**: direct communication with the backend, including SSE streaming.
+2. **State layer**: Zustand stores for chat, Deep Research, and tree state.
+3. **Hooks**: `useChat` and `useAuth` expose runtime behavior to components.
+4. **UI layer**: chat workspace, landing page, auth surfaces, and tree visualization.
+
+### Frontend auth modes
+
+- **disabled**: local OSS demo mode, injects a stable local user and token
+- **jwt**: self-hosted protected mode using backend-issued tokens
+- **clerk**: optional hosted auth integration
+
+The client should degrade cleanly when Clerk is not active.
+
+### Chat data flow
+
+```text
+User Input (ChatInput)
     ↓
-Custom Hook (use-chat) 
+Custom Hook (use-chat)
     ↓
-Store Action (sendMessage) 
+Store Action (sendMessage)
     ↓
-API Layer (streamChat) 
+API Layer (streamChat)
     ↓
-Backend API (SSE Stream) 
+Backend API (SSE Stream)
     ↓
-Callbacks (onContent, onCheckpoint) 
+Callbacks (onContent, onCheckpoint)
     ↓
 UI Updates (ChatMessages)
 ```
 
----
+## ⚙️ Backend architecture
 
-## ⚙️ Backend Architecture
+### Tech stack
 
-### Tech Stack
-- **Framework**: FastAPI (Async)
-- **Database**: PostgreSQL (Neon.tech) + SQLModel
-- **Caching**: Redis (aioredis)
-- **AI Engine**: LangGraph + Groq (Llama 3)
-- **Auth**: JWT (Access + Refresh Tokens)
+- **Framework**: FastAPI (async)
+- **Database**: PostgreSQL + SQLModel
+- **Caching**: Redis / Upstash
+- **AI engine**: LangGraph + config-driven model/search providers
+- **Auth**: disabled, JWT, or Clerk
 
-### System Components
+### Runtime provider boundaries
 
-#### 1. Authentication Flow
+Perception keeps the OSS MVP abstractions narrow on purpose:
+
+- **Auth provider**: selected by `AUTH_MODE`
+- **Chat model provider**: selected by `MODEL_PROVIDER`
+- **Embedding provider**: selected by `EMBEDDING_PROVIDER`
+- **Search provider**: selected by `SEARCH_PROVIDER`
+
+Those selections are normalized in `server/app/core/config.py` and instantiated in `server/app/services/provider_factory.py`.
+
+### System components
+
+#### 1. Authentication flow
+
 ```mermaid
 sequenceDiagram
     participant Client
     participant API
     participant DB
 
-    Client->>API: POST /auth/login
-    API->>DB: Verify Credentials
-    DB-->>API: User Data
-    API-->>Client: {access_token, refresh_token}
-    
-    Note over Client, API: Subsequent Requests
-    Client->>API: Request + Bearer Token
-    API->>API: Validate Token
-    API-->>Client: Response
+    alt AUTH_MODE=disabled
+        Client->>API: Request with local dev token
+        API->>DB: Find or create local OSS user
+        API-->>Client: Response
+    else AUTH_MODE=jwt
+        Client->>API: POST /auth/login
+        API->>DB: Verify credentials
+        DB-->>API: User data
+        API-->>Client: {access_token, refresh_token}
+        Client->>API: Request + Bearer token
+        API->>API: Validate JWT
+        API-->>Client: Response
+    else AUTH_MODE=clerk
+        Client->>API: Request + Clerk token
+        API->>API: Decode Clerk claims
+        API->>DB: Find or create mapped user
+        API-->>Client: Response
+    end
 ```
 
-#### 2. Chat Message Flow (Streaming)
+#### 2. Chat message flow
+
 ```mermaid
 sequenceDiagram
     participant Client
@@ -110,20 +161,21 @@ sequenceDiagram
     participant DB
 
     Client->>API: POST /chats/{id}/message
-    API->>Redis: Check Rate Limit
-    API->>DB: Save User Message
-    API->>LangGraph: Invoke Agent
-    
-    loop Streaming Response
-        LangGraph-->>API: Chunk (Content/Tool)
-        API-->>Client: SSE Event
+    API->>Redis: Check rate limit
+    API->>DB: Save user message
+    API->>LangGraph: Invoke agent with configured providers
+
+    loop Streaming response
+        LangGraph-->>API: Chunk (content/tool)
+        API-->>Client: SSE event
     end
-    
-    API->>DB: Save AI Message
-    API->>Redis: Cache Message
+
+    API->>DB: Save AI message
+    API->>Redis: Cache message
 ```
 
-#### 3. Voice Mode Architecture
+#### 3. Voice mode architecture
+
 ```mermaid
 sequenceDiagram
     participant User
@@ -132,131 +184,102 @@ sequenceDiagram
     participant LangGraph
     participant TTS
 
-    User->>VoiceChat: Click Mic & Speak
+    User->>VoiceChat: Click mic and speak
     VoiceChat->>Backend: POST /transcribe (audio)
     Backend-->>VoiceChat: {text: "..."}
     VoiceChat->>LangGraph: sendMessage(text)
-    LangGraph-->>VoiceChat: AI Response
+    LangGraph-->>VoiceChat: AI response
     VoiceChat->>Backend: POST /synthesize (text)
     Backend->>TTS: Convert to audio
     Backend-->>VoiceChat: Audio stream
     VoiceChat->>User: Play audio
 ```
 
----
+## 🌳 Conversation tree architecture
 
-## 🌳 Conversation Tree Architecture
+The branching conversation system enables non-linear research sessions using a tree data structure.
 
-The **Branch-Your-LLM** system enables non-linear conversations using a tree data structure.
+### Data model
 
-### Data Model
-- **ConversationNode**: Represents a single message exchange (User + AI).
-  - `parent_id`: Links to previous node.
-  - `branch_name`: Identifies the branch (e.g., "Main", "Main.2").
-  - `depth`: Distance from root.
-- **ConversationTree**: Metadata for the entire chat.
-  - `active_node_id`: Tracks the user's current position in the tree.
-- **NodeRelationship**: Denormalized table for efficient traversal.
+- **ConversationNode**: a single message exchange
+  - `parent_id`: previous node
+  - `branch_name`: branch label
+  - `depth`: distance from root
+- **ConversationTree**: metadata for the whole chat
+  - `active_node_id`: current user position
+- **NodeRelationship**: denormalized traversal helper
 
-### Logic Flow
-1.  **Message Sending**:
-    -   User sends message from `active_node`.
-    -   System creates new `ConversationNode` as child.
-    -   **Lineage Construction**: System walks up the tree from the new node to root to build the conversation history context.
-    -   **LangGraph**: Receives the linear history and generates response.
-2.  **Branching**:
-    -   **Fork**: User creates a sibling node at any point.
-    -   **Regenerate**: System creates a sibling AI node.
-3.  **Visualization**:
-    -   Frontend fetches the full tree structure.
-    -   **ReactFlow** renders the graph.
-    -   User clicks nodes to change `active_node_id`.
+### Logic flow
 
-### Database Schema (Tree)
-```sql
-CREATE TABLE conversation_nodes (
-    id VARCHAR(36) PRIMARY KEY,
-    parent_id VARCHAR(36) REFERENCES conversation_nodes,
-    user_message TEXT,
-    ai_message TEXT,
-    branch_name VARCHAR(100),
-    depth INTEGER
-);
-```
+1. **Message sending**
+   - user sends a message from the `active_node`
+   - the system creates a child node
+   - lineage is rebuilt from that node to root
+   - LangGraph receives the linearized history and responds
+2. **Branching**
+   - users can fork a branch from any node
+   - regenerate creates a sibling AI node
+3. **Visualization**
+   - the frontend fetches the full tree
+   - React Flow renders the graph
+   - clicking a node changes `active_node_id`
 
-## � Deep Research Architecture
+## 🔎 Deep Research architecture
 
-Deep Research Mode performs iterative, evidence-backed research using a specialized LangGraph agent.
+Deep Research is the headline OSS workflow. It performs iterative, evidence-backed research using a specialized LangGraph agent plus the configured search provider.
 
-### Core Components
+### Core components
 
-1.  **DeepResearchGraph**: A LangGraph-based agent that orchestrates the research process.
-    -   **Nodes**: `retriever`, `extract_claims`, `verify_claims`, `gap_analysis`, `synthesis`.
-    -   **Flow**: Iterative loop (Retrieve → Extract → Verify → Gap Analysis) → Final Synthesis.
+1. **DeepResearchGraph** orchestrates the loop.
+   - nodes: `retriever`, `extract_claims`, `verify_claims`, `gap_analysis`, `synthesis`
+   - flow: Retrieve → Extract → Verify → Gap Analysis → Synthesis
+2. **Research chains** handle extraction, verification, gap analysis, and final report generation.
 
-2.  **Research Chains**: Specialized LangChain chains for specific tasks.
-    -   `extraction_chain`: Extracts factual claims from documents.
-    -   `verification_chain`: Verifies claims against sources.
-    -   `gap_chain`: Identifies knowledge gaps.
-    -   `synthesis_chain`: Generates the final structured report.
-
-### Data Flow
+### Data flow
 
 ```mermaid
 graph TD
     User[User Request] --> API[FastAPI Endpoint]
     API -->|SSE Stream| Client[Frontend]
     API --> Agent[DeepResearchGraph]
-    
+
     subgraph Research Loop
-        Agent --> Retrieve[Tavily Search]
+        Agent --> Retrieve[Configured Search Provider]
         Retrieve --> Extract[Extract Claims]
         Extract --> Verify[Verify Claims]
         Verify --> Gap[Gap Analysis]
         Gap -->|Next Iteration| Retrieve
     end
-    
+
     Gap -->|Complete| Synthesis[Final Report]
     Synthesis -->|Stream| Client
 ```
 
-### Output Structure
+### Output structure
+
 The final report is a structured JSON object containing:
--   Executive Summary
--   Background
--   Key Findings
--   Technical Details
--   Opportunities & Risks
--   Applications
--   References
--   Research Log
 
-## �🗄️ Database Schema
+- Executive Summary
+- Background
+- Key Findings
+- Technical Details
+- Opportunities and Risks
+- Applications
+- References
+- Research Log
 
-### Users
-- `id`: PK
-- `username`: Unique
-- `email`: Unique
-- `password_hash`: Bcrypt hash
+### Extension points that matter for contributors
 
-### Chats
-- `id`: PK
-- `user_id`: FK -> Users
-- `title`: String
-- `checkpoint_id`: LangGraph State ID
+- `server/app/core/config.py`: env-driven runtime contract
+- `server/app/services/provider_factory.py`: chat, embedding, and search provider wiring
+- `server/app/core/dependencies.py`: auth mode behavior
+- `server/app/routes/deep_research_routes.py`: Deep Research streaming path
+- `client/src/lib/auth-config.ts`: frontend auth mode selection
+- `client/src/components/chat/DeepResearchModal.tsx`: first-run Deep Research entry point
 
-### Messages
-- `id`: PK
-- `chat_id`: FK -> Chats
-- `role`: user/assistant
-- `content`: Text
-- `metadata`: JSON (for tools/search info)
+## 🗄️ Deployment architecture
 
----
-
-## 🚀 Deployment Architecture
-
-```
+```text
                     Internet
                        │
                        ▼

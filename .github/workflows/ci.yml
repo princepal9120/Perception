@@ -7,6 +7,35 @@ on:
     branches: [main, main-2]
 
 jobs:
+  docs-sanity:
+    name: Docs Sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify OSS docs and contribution templates
+        run: |
+          test -f README.md
+          test -f SETUP.md
+          test -f ARCHITECTURE.md
+          test -f CONTRIBUTING.md
+          test -f CODE_OF_CONDUCT.md
+          test -f ROADMAP.md
+          test -f .github/ISSUE_TEMPLATE/bug_report.md
+          test -f .github/ISSUE_TEMPLATE/feature_request.md
+          test -f .github/pull_request_template.md
+
+          grep -q "open-source deep research and agentic search workspace" README.md
+          grep -q "AUTH_MODE=disabled" README.md
+          grep -q "MODEL_PROVIDER=openai_compatible" README.md
+          grep -q "SEARCH_PROVIDER=duckduckgo" README.md
+          grep -q "Deep Research" README.md
+
+          grep -q "AUTH_MODE=disabled" SETUP.md
+          grep -q "MODEL_PROVIDER=openai_compatible" SETUP.md
+          grep -q "SEARCH_PROVIDER=duckduckgo" SETUP.md
+          grep -q "Clerk mode" SETUP.md
+
   # Backend checks
   backend-lint:
     name: Backend Lint & Type Check
