@@ -12,6 +12,12 @@ export interface RuntimeProviderConfig {
 
 const RUNTIME_CONFIG_KEY = "perception_runtime_provider_config";
 const RUNTIME_CONFIG_HEADER = "X-Perception-Runtime-Config";
+const LOCAL_BASE_URL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0"]);
+
+export interface RuntimeConfigValidationResult {
+  errors: string[];
+  warnings: string[];
+}
 
 const DEFAULT_RUNTIME_CONFIG: RuntimeProviderConfig = {
   modelProvider: "openai_compatible",
@@ -36,6 +42,76 @@ export const normalizeRuntimeConfig = (
   baseUrl: config?.baseUrl?.trim() || DEFAULT_RUNTIME_CONFIG.baseUrl,
   tavilyApiKey: config?.tavilyApiKey?.trim() || "",
 });
+
+export const isLikelyLocalBaseUrl = (baseUrl?: string): boolean => {
+  if (!baseUrl) return false;
+
+  try {
+    const url = new URL(baseUrl);
+    return LOCAL_BASE_URL_HOSTS.has(url.hostname);
+  } catch {
+    return false;
+  }
+};
+
+export const getRuntimeConfigValidation = (
+  config: RuntimeProviderConfig,
+): RuntimeConfigValidationResult => {
+  const normalized = normalizeRuntimeConfig(config);
+  const errors: string[] = [];
+  const warnings: string[] = [];
+
+  if (!normalized.modelName) {
+    errors.push("Model name is required.");
+  }
+
+  if (normalized.modelProvider === "openai_compatible") {
+    if (!normalized.baseUrl) {
+      errors.push("Base URL is required for OpenAI-compatible providers.");
+    } else {
+      try {
+        // eslint-disable-next-line no-new
+        new URL(normalized.baseUrl);
+      } catch {
+        errors.push("Base URL must be a valid URL.");
+      }
+    }
+
+    if (!isLikelyLocalBaseUrl(normalized.baseUrl) && !normalized.apiKey) {
+      errors.push("API key is required for hosted OpenAI-compatible endpoints.");
+    }
+
+    if (isLikelyLocalBaseUrl(normalized.baseUrl) && !normalized.apiKey) {
+      warnings.push("No API key set. This is fine for many local servers like Ollama or LM Studio.");
+    }
+  }
+
+  if (normalized.modelProvider === "groq") {
+    if (!normalized.apiKey) {
+      errors.push("Groq API key is required.");
+    } else if (!normalized.apiKey.startsWith("gsk_")) {
+      warnings.push("Groq API keys usually start with gsk_. Double-check the key if testing fails.");
+    }
+  }
+
+  if (normalized.modelProvider === "google") {
+    if (!normalized.apiKey) {
+      errors.push("Google API key is required.");
+    } else if (!normalized.apiKey.startsWith("AIza")) {
+      warnings.push("Google AI Studio keys usually start with AIza. Double-check the key if testing fails.");
+    }
+  }
+
+  if (normalized.searchProvider === "tavily" || normalized.searchProvider === "both") {
+    if (!normalized.tavilyApiKey) {
+      errors.push("Tavily API key is required when Tavily search is enabled.");
+    } else if (!normalized.tavilyApiKey.startsWith("tvly-")) {
+      warnings.push("Tavily keys usually start with tvly-. Double-check the key if testing fails.");
+    }
+  }
+
+  return { errors, warnings };
+};
 
 export const getRuntimeConfig = (): RuntimeProviderConfig | null => {
   if (typeof window === "undefined") return null;
@@ -63,28 +139,8 @@ export const clearRuntimeConfig = (): void => {
   }
 };
 
-export const validateRuntimeConfig = (config: RuntimeProviderConfig): string[] => {
-  const normalized = normalizeRuntimeConfig(config);
-  const errors: string[] = [];
-
-  if (!normalized.modelName) {
-    errors.push("Model name is required.");
-  }
-
-  if (normalized.modelProvider === "openai_compatible" && !normalized.baseUrl) {
-    errors.push("Base URL is required for OpenAI-compatible providers.");
-  }
-
-  if ((normalized.modelProvider === "groq" || normalized.modelProvider === "google") && !normalized.apiKey) {
-    errors.push(`API key is required for ${normalized.modelProvider} providers.`);
-  }
-
-  if ((normalized.searchProvider === "tavily" || normalized.searchProvider === "both") && !normalized.tavilyApiKey) {
-    errors.push("Tavily API key is required when Tavily search is enabled.");
-  }
-
-  return errors;
-};
+export const validateRuntimeConfig = (config: RuntimeProviderConfig): string[] =>
+  getRuntimeConfigValidation(config).errors;
 
 const encodeBase64Url = (value: string): string => {
   if (typeof window !== "undefined" && typeof window.btoa === "function") {
@@ -103,13 +159,15 @@ const encodeBase64Url = (value: string): string => {
   return value;
 };
 
-export const getRuntimeConfigHeaders = (): Record<string, string> => {
-  const config = getRuntimeConfig();
-  if (!config) {
+export const buildRuntimeConfigHeaders = (
+  config?: RuntimeProviderConfig | null,
+): Record<string, string> => {
+  const activeConfig = config ? normalizeRuntimeConfig(config) : getRuntimeConfig();
+  if (!activeConfig) {
     return {};
   }
 
-  const errors = validateRuntimeConfig(config);
+  const errors = validateRuntimeConfig(activeConfig);
   if (errors.length > 0) {
     return {};
   }
@@ -117,15 +175,18 @@ export const getRuntimeConfigHeaders = (): Record<string, string> => {
   return {
     [RUNTIME_CONFIG_HEADER]: encodeBase64Url(
       JSON.stringify({
-        model_provider: config.modelProvider,
-        model_name: config.modelName,
-        api_key: config.apiKey || undefined,
-        base_url: config.baseUrl || undefined,
-        search_provider: config.searchProvider,
-        tavily_api_key: config.tavilyApiKey || undefined,
+        model_provider: activeConfig.modelProvider,
+        model_name: activeConfig.modelName,
+        api_key: activeConfig.apiKey || undefined,
+        base_url: activeConfig.baseUrl || undefined,
+        search_provider: activeConfig.searchProvider,
+        tavily_api_key: activeConfig.tavilyApiKey || undefined,
       }),
     ),
   };
 };
+
+export const getRuntimeConfigHeaders = (): Record<string, string> =>
+  buildRuntimeConfigHeaders();
 
 export const hasSavedRuntimeConfig = (): boolean => !!getRuntimeConfig();

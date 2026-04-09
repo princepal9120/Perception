@@ -1,19 +1,16 @@
 """Shared test fixtures for the backend test suite."""
+
 import asyncio
+from collections.abc import AsyncGenerator
 from pathlib import Path
+
 import pytest
 import pytest_asyncio
-from typing import AsyncGenerator
-from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, timezone
-
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlmodel import SQLModel
-from httpx import AsyncClient, ASGITransport
 
-from app.models.tables import User, Chat, Message
-from app.core.security import hash_password, create_access_token
-
+from app.core.security import create_access_token, hash_password
+from app.models.tables import Chat, Message, User
 
 # Use SQLite for tests (fast, no external dependencies)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
@@ -87,12 +84,14 @@ async def test_chat(db_session: AsyncSession, test_user: User) -> Chat:
 async def test_messages(db_session: AsyncSession, test_user: User, test_chat: Chat) -> list[Message]:
     """Create test messages in a chat."""
     messages = []
-    for i, (role, content) in enumerate([
-        ("user", "Hello, AI!"),
-        ("assistant", "Hello! How can I help you today?"),
-        ("user", "What is Python?"),
-        ("assistant", "Python is a high-level programming language."),
-    ]):
+    for _i, (role, content) in enumerate(
+        [
+            ("user", "Hello, AI!"),
+            ("assistant", "Hello! How can I help you today?"),
+            ("user", "What is Python?"),
+            ("assistant", "Python is a high-level programming language."),
+        ]
+    ):
         msg = Message(
             chat_id=test_chat.id,
             user_id=test_user.id,

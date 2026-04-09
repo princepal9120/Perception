@@ -1,5 +1,7 @@
 """Test Pinecone connection"""
+
 import os
+
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -13,9 +15,10 @@ print(f"PINECONE_INDEX_NAME: {index_name}")
 if api_key:
     try:
         from pinecone import Pinecone
+
         pc = Pinecone(api_key=api_key)
         indexes = pc.list_indexes()
-        print(f"\n✅ Pinecone connection successful!")
+        print("\n✅ Pinecone connection successful!")
         print(f"Available indexes: {[i.name for i in indexes]}")
     except Exception as e:
         print(f"\n❌ Pinecone connection failed: {type(e).__name__}: {str(e)}")

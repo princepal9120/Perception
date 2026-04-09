@@ -1,11 +1,12 @@
 """Tests for Pydantic request/response schemas."""
+
 import pytest
 from pydantic import ValidationError
+
 from app.models.schemas import (
-    UserSignup,
-    UserLogin,
     ChatCreate,
     MessageCreate,
+    UserSignup,
 )
 
 

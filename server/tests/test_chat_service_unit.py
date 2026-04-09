@@ -1,4 +1,5 @@
 """Unit tests for the ChatService."""
+
 import sys
 from unittest.mock import MagicMock
 
@@ -6,13 +7,15 @@ from unittest.mock import MagicMock
 _mock_upstash = MagicMock()
 sys.modules.setdefault("upstash_redis", _mock_upstash)
 
-import pytest
-import pytest_asyncio
-from unittest.mock import AsyncMock, patch
-from app.services.chat_service import ChatService
-from app.models.tables import User, Chat, Message
-from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import HTTPException
+from unittest.mock import AsyncMock, patch  # noqa: E402
+
+import pytest  # noqa: E402
+import pytest_asyncio  # noqa: E402
+from fastapi import HTTPException  # noqa: E402
+from sqlalchemy.ext.asyncio import AsyncSession  # noqa: E402
+
+from app.models.tables import Chat, User  # noqa: E402
+from app.services.chat_service import ChatService  # noqa: E402
 
 
 @pytest.mark.asyncio

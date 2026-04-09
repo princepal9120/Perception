@@ -1,6 +1,7 @@
-import os
 import logging
+import os
 from datetime import datetime
+
 import structlog
 
 
@@ -43,13 +44,14 @@ class CustomLogger:
                 structlog.processors.TimeStamper(fmt="iso", utc=True, key="timestamp"),
                 structlog.processors.add_log_level,
                 structlog.processors.EventRenamer(to="event"),
-                structlog.processors.JSONRenderer()
+                structlog.processors.JSONRenderer(),
             ],
             logger_factory=structlog.stdlib.LoggerFactory(),
             cache_logger_on_first_use=True,
         )
 
         return structlog.get_logger(logger_name)
+
 
 # Create global logger instance
 _custom_logger = CustomLogger()

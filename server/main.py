@@ -4,29 +4,29 @@ FastAPI application entry point.
 Configures middleware, routers, and top-level endpoints.
 """
 
-import os
 import logging
+import os
 
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from starlette.middleware.sessions import SessionMiddleware
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.sessions import SessionMiddleware
 
 from app.core.config import settings
 from app.core.lifespan import lifespan, service_manager
 from app.core.logging_config import setup_logging
 from app.core.middleware import RequestIDMiddleware, RequestLoggingMiddleware, SecurityHeadersMiddleware
-from app.services.redis_utils import redis_client
 
 # Route imports
 from app.routes.auth_routes import router as auth_router
 from app.routes.chat_routes import router as chat_router
-from app.routes.document_routes import router as document_router
-from app.routes.voice_routes import router as voice_router
-from app.routes.tree_routes import router as tree_router
 from app.routes.deep_research_routes import router as deep_research_router
+from app.routes.document_routes import router as document_router
 from app.routes.mcp_routes import router as mcp_router
+from app.routes.tree_routes import router as tree_router
+from app.routes.voice_routes import router as voice_router
+from app.services.redis_utils import redis_client
 
 # Configure structured logging with request ID correlation
 setup_logging(debug=settings.DEBUG)

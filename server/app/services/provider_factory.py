@@ -1,10 +1,11 @@
 """
 Provider factory for OSS-friendly runtime configuration.
 """
+
 from __future__ import annotations
 
 import warnings
-from typing import Any, Dict, List
+from typing import Any
 
 from langchain_community.tools import DuckDuckGoSearchResults
 from langchain_community.tools.tavily_search import TavilySearchResults
@@ -17,7 +18,6 @@ from app.core.runtime_provider_config import (
     RuntimeProviderConfig,
     get_current_runtime_provider_config,
 )
-
 
 DEFAULT_GROQ_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
 DEFAULT_GOOGLE_MODEL = "gemini-2.0-flash"
@@ -152,7 +152,7 @@ def create_duckduckgo_search_tool() -> DuckDuckGoSearchResults:
     )
 
 
-def get_search_tools(runtime_config: RuntimeProviderConfig | None = None) -> List[Any]:
+def get_search_tools(runtime_config: RuntimeProviderConfig | None = None) -> list[Any]:
     """Return the configured web-search tools."""
     search_provider = _effective_search_provider(runtime_config)
 
@@ -164,7 +164,7 @@ def get_search_tools(runtime_config: RuntimeProviderConfig | None = None) -> Lis
         return [create_duckduckgo_search_tool()]
 
     if search_provider == "both":
-        tools: List[Any] = [create_duckduckgo_search_tool()]
+        tools: list[Any] = [create_duckduckgo_search_tool()]
         tavily_tool = create_tavily_search_tool(runtime_config)
         if tavily_tool is not None:
             tools.insert(0, tavily_tool)
@@ -176,7 +176,7 @@ def get_search_tools(runtime_config: RuntimeProviderConfig | None = None) -> Lis
 async def run_configured_search(
     query: str,
     runtime_config: RuntimeProviderConfig | None = None,
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Run a search query and normalize the results."""
     tool = get_search_tools(runtime_config)[0]
     with warnings.catch_warnings():
@@ -188,7 +188,7 @@ async def run_configured_search(
         raw = await tool.ainvoke({"query": query})
 
     if isinstance(raw, list):
-        normalized: List[Dict[str, Any]] = []
+        normalized: list[dict[str, Any]] = []
         for item in raw:
             if isinstance(item, dict):
                 normalized.append(

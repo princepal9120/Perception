@@ -1,21 +1,21 @@
 """Application lifespan management and service initialization."""
+
 import inspect
-import os
 import logging
+import os
 from contextlib import asynccontextmanager
-from typing import List
 
 from fastapi import FastAPI
 from langgraph.checkpoint.postgres import PostgresSaver
 
-from app.db.session import create_tables, check_database_connection, close_database_connection
 from app.core.config import settings
-from app.services.redis_utils import redis_client
-from app.services.mcp_client_manager import mcp_manager
-from app.models.mcp_schemas import MCPServerConfig
-from app.services.llm_service import LLMService
-from app.routes.chat_routes import set_llm_client
+from app.db.session import check_database_connection, close_database_connection, create_tables
 from app.graph.builder import build_graph
+from app.models.mcp_schemas import MCPServerConfig
+from app.routes.chat_routes import set_llm_client
+from app.services.llm_service import LLMService
+from app.services.mcp_client_manager import mcp_manager
+from app.services.redis_utils import redis_client
 
 logger = logging.getLogger(__name__)
 
@@ -46,9 +46,7 @@ class ServiceManager:
             self.llm_service = LLMService(graph_instance, self.service_config)
             set_llm_client(self.llm_service)
             logger.info("Services initialized successfully")
-            logger.info(
-                f"Available industries: {self.llm_service.service_factory.get_available_industries()}"
-            )
+            logger.info(f"Available industries: {self.llm_service.service_factory.get_available_industries()}")
         except Exception as e:
             logger.error(f"Failed to initialize services: {e}")
             raise
@@ -70,7 +68,18 @@ class ServiceManager:
 service_manager = ServiceManager()
 
 
-def _get_default_mcp_servers() -> List[MCPServerConfig]:
+def _supports_async_checkpoint_reads(saver: PostgresSaver) -> bool:
+    """Return True when the installed PostgresSaver supports async checkpoint reads.
+
+    The currently installed langgraph postgres saver in this environment still
+    raises NotImplementedError from aget_tuple during async streaming requests,
+    so we intentionally keep runtime requests on MemorySaver until an async-safe
+    saver is available.
+    """
+    return False
+
+
+def _get_default_mcp_servers() -> list[MCPServerConfig]:
     """Get default MCP server configurations."""
     return [
         MCPServerConfig(
@@ -136,6 +145,11 @@ async def lifespan(app: FastAPI):
             if inspect.isawaitable(setup_result):
                 await setup_result
             logger.info("LangGraph checkpoint tables set up successfully")
+
+            if not _supports_async_checkpoint_reads(saver):
+                raise NotImplementedError(
+                    "Installed PostgresSaver lacks async checkpoint reads; falling back to in-memory saver"
+                )
 
             graph = graph_builder.compile(checkpointer=saver)
             logger.info("Graph compiled with PostgreSQL checkpointer")

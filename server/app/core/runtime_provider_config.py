@@ -1,4 +1,5 @@
 """Request-scoped runtime provider configuration for OSS local settings UI."""
+
 from __future__ import annotations
 
 import base64

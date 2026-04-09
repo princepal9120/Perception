@@ -1,16 +1,17 @@
+import io
 import logging
-from fastapi import APIRouter, UploadFile, File, HTTPException, Body
-from fastapi.responses import JSONResponse, StreamingResponse
-from app.core.config import settings
+import os
+import tempfile
+
 import openai
 import requests
-import tempfile
-import os
-import io
+from fastapi import APIRouter, Body, File, HTTPException, UploadFile
+from fastapi.responses import JSONResponse, StreamingResponse
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import HumanMessage, SystemMessage
-from utils.tools import get_tavily_tool, duck_tool
 from langgraph.prebuilt import create_react_agent
+
+from app.core.config import settings
+from utils.tools import duck_tool, get_tavily_tool
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -21,21 +22,20 @@ openai_client = openai.OpenAI(api_key=settings.OPENAI_API_KEY) if settings.OPENA
 # Initialize Agent with Tools (lazy initialization)
 agent_executor = None
 
+
 def get_agent_executor():
     global agent_executor
     if agent_executor is None:
         if not settings.GOOGLE_API_KEY:
             return None
-        llm = ChatGoogleGenerativeAI(
-            model="gemini-2.0-flash",
-            api_key=settings.GOOGLE_API_KEY
-        )
+        llm = ChatGoogleGenerativeAI(model="gemini-2.0-flash", api_key=settings.GOOGLE_API_KEY)
         # Build tools list, filtering out None
         tools = [t for t in [get_tavily_tool(), duck_tool] if t is not None]
         if not tools:
             return None
         agent_executor = create_react_agent(llm, tools)
     return agent_executor
+
 
 @router.post("/transcribe")
 async def transcribe_audio(file: UploadFile = File(...)):
@@ -54,10 +54,7 @@ async def transcribe_audio(file: UploadFile = File(...)):
 
         try:
             with open(temp_audio_path, "rb") as audio_file:
-                transcript_response = openai_client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=audio_file
-                )
+                transcript_response = openai_client.audio.transcriptions.create(model="whisper-1", file=audio_file)
             text = transcript_response.text
         finally:
             if os.path.exists(temp_audio_path):
@@ -78,18 +75,18 @@ async def chat_with_agent(text: str = Body(..., embed=True)):
     executor = get_agent_executor()
     if executor is None:
         raise HTTPException(status_code=503, detail="Agent not available. Check GROQ_API_KEY and tool configuration.")
-    
+
     try:
         # Run the agent
         inputs = {"messages": [("user", text)]}
         result = await executor.ainvoke(inputs)
-        
+
         # Get the last message content
         last_message = result["messages"][-1]
         response_text = last_message.content
-        
+
         return JSONResponse(content={"text": response_text})
-        
+
     except Exception as e:
         logger.error(f"Agent error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -106,22 +103,16 @@ async def synthesize_speech(text: str = Body(..., embed=True)):
 
     try:
         audio_content = None
-        
+
         # Try ElevenLabs first if key is present
         if settings.ELEVENLABS_API_KEY:
             try:
-                url = "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM" # Rachel voice
-                headers = {
-                    "xi-api-key": settings.ELEVENLABS_API_KEY,
-                    "Content-Type": "application/json"
-                }
+                url = "https://api.elevenlabs.io/v1/text-to-speech/21m00Tcm4TlvDq8ikWAM"  # Rachel voice
+                headers = {"xi-api-key": settings.ELEVENLABS_API_KEY, "Content-Type": "application/json"}
                 data = {
                     "text": text,
                     "model_id": "eleven_monolingual_v1",
-                    "voice_settings": {
-                        "stability": 0.5,
-                        "similarity_boost": 0.5
-                    }
+                    "voice_settings": {"stability": 0.5, "similarity_boost": 0.5},
                 }
                 response = requests.post(url, json=data, headers=headers)
                 if response.status_code == 200:
@@ -129,14 +120,10 @@ async def synthesize_speech(text: str = Body(..., embed=True)):
             except Exception as e:
                 logger.error(f"ElevenLabs error: {e}")
                 # Fallback to OpenAI
-        
+
         if not audio_content:
             # OpenAI TTS Fallback
-            response = openai_client.audio.speech.create(
-                model="tts-1",
-                voice="alloy",
-                input=text
-            )
+            response = openai_client.audio.speech.create(model="tts-1", voice="alloy", input=text)
             audio_content = response.content
 
         return StreamingResponse(io.BytesIO(audio_content), media_type="audio/mpeg")

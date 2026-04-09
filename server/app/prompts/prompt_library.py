@@ -2,32 +2,42 @@
 Central Prompt Library for Perception AI
 All prompts used across services should be defined here for maintainability.
 """
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 # =============================================================================
 # RAG-RELATED PROMPTS
 # =============================================================================
 
-contextualize_question_prompt = ChatPromptTemplate.from_messages([
-    ("system", (
-         "Given a conversation history and the most recent user query, rewrite the query as a standalone question "
-         "that makes sense without relying on the previous context. Do not provide an answer—only reformulate the "
-         "question if necessary; otherwise, return it unchanged."
-    )),
-    MessagesPlaceholder("chat_history"),
-    ("human", "{input}")
-])
+contextualize_question_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            (
+                "Given a conversation history and the most recent user query, rewrite the query as a standalone question "
+                "that makes sense without relying on the previous context. Do not provide an answer—only reformulate the "
+                "question if necessary; otherwise, return it unchanged."
+            ),
+        ),
+        MessagesPlaceholder("chat_history"),
+        ("human", "{input}"),
+    ]
+)
 
-context_qa_prompt = ChatPromptTemplate.from_messages([
-    ("system", (
-        "You are an assistant designed to answer questions using the provided context. Rely only on the retrieved "
-        "information to form your response. If the answer is not found in the context, respond with 'I don't know.' "
-        "Keep your answer concise and no longer than three sentences.\n\n{context}"
-    )),
-    MessagesPlaceholder("chat_history"),
-    ("human", "{input}"),
-])
+context_qa_prompt = ChatPromptTemplate.from_messages(
+    [
+        (
+            "system",
+            (
+                "You are an assistant designed to answer questions using the provided context. Rely only on the retrieved "
+                "information to form your response. If the answer is not found in the context, respond with 'I don't know.' "
+                "Keep your answer concise and no longer than three sentences.\n\n{context}"
+            ),
+        ),
+        MessagesPlaceholder("chat_history"),
+        ("human", "{input}"),
+    ]
+)
 
 
 # =============================================================================
@@ -264,6 +274,7 @@ Question: {question}"""
 # CONTEXT INJECTION PROMPTS (for llm_client.py)
 # =============================================================================
 
+
 def get_document_context_prompt(message: str, doc_count: int, doc_list: str, retrieved_context: str) -> str:
     """Generate prompt with injected document context."""
     return f"""{message}
@@ -294,6 +305,7 @@ def get_retrieval_error_context_prompt(message: str, doc_count: int, doc_list: s
 [NOTE]: The user has uploaded {doc_count} document(s): {doc_list}. 
 The documents are in the system but there was a technical issue retrieving context.
 Please acknowledge the uploaded documents and try to help with their question."""
+
 
 DEEP_RESEARCH_PROMPT = """You are Perception Deep Research Engine.
 You generate high-quality evidence-backed research reports using iterative deepening.
@@ -395,21 +407,17 @@ PROMPT_REGISTRY = {
     # RAG prompts
     "contextualize_question": contextualize_question_prompt,
     "context_qa": context_qa_prompt,
-    
     # System prompts
     "perception_system": PERCEPTION_SYSTEM_PROMPT,
     "voice_system": VOICE_SYSTEM_PROMPT,
     "tree_system": TREE_SYSTEM_PROMPT,
-    
     # Document prompts
     "document_summary": DOCUMENT_SUMMARY_PROMPT,
     "document_qa": DOCUMENT_QA_PROMPT,
-    
     # Context injection functions (for llm_client)
     "document_context_prompt": get_document_context_prompt,
     "no_results_context_prompt": get_no_results_context_prompt,
     "retrieval_error_context_prompt": get_retrieval_error_context_prompt,
-    
     # Tool descriptions
     "search_documents_tool": SEARCH_DOCUMENTS_TOOL_DESCRIPTION,
 }
@@ -418,18 +426,18 @@ PROMPT_REGISTRY = {
 def get_prompt(prompt_name: str):
     """
     Retrieve a prompt from the registry.
-    
+
     Args:
         prompt_name: Name of the prompt to retrieve
-        
+
     Returns:
         The prompt template or string
-        
+
     Raises:
         KeyError: If prompt_name is not found in registry
     """
     if prompt_name not in PROMPT_REGISTRY:
-        raise KeyError(f"Prompt '{prompt_name}' not found in registry. Available prompts: {list(PROMPT_REGISTRY.keys())}")
+        raise KeyError(
+            f"Prompt '{prompt_name}' not found in registry. Available prompts: {list(PROMPT_REGISTRY.keys())}"
+        )
     return PROMPT_REGISTRY[prompt_name]
-
-    

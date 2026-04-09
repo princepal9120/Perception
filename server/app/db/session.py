@@ -1,14 +1,15 @@
 """
 Database session management and connection pooling.
 """
-from typing import AsyncGenerator
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.pool import NullPool
-from sqlalchemy import text
-from sqlmodel import SQLModel
-from app.core.config import settings
-import logging
 
+import logging
+from collections.abc import AsyncGenerator
+
+from sqlalchemy import text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+from sqlmodel import SQLModel
+
+from app.core.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -23,13 +24,10 @@ engine = create_async_engine(
     pool_recycle=3600,  # Recycle connections after 1 hour
     pool_timeout=30,  # Timeout for getting connection from pool
     connect_args={
-        "server_settings": {
-            "application_name": "perception_api",
-            "jit": "off"
-        },
+        "server_settings": {"application_name": "perception_api", "jit": "off"},
         "timeout": 10,  # Connection timeout
         "command_timeout": 30,  # Command execution timeout
-    }
+    },
 )
 
 # Create session factory with proper settings
@@ -46,7 +44,7 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """
     Dependency to get database session.
     Ensures proper connection cleanup even on exceptions.
-    
+
     Yields:
         AsyncSession: Database session
     """
@@ -77,7 +75,7 @@ async def create_tables():
 async def check_database_connection() -> bool:
     """
     Check if database connection is working.
-    
+
     Returns:
         bool: True if connection is successful, False otherwise
     """

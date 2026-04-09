@@ -1,10 +1,13 @@
-from pathlib import Path
 import os
+from pathlib import Path
+
 import yaml
+
 
 def _project_root() -> Path:
     # .../utils/config_loader.py -> parents[1] == project root
     return Path(__file__).resolve().parents[1]
+
 
 def load_config(config_path: str | None = None) -> dict:
     """
@@ -23,5 +26,5 @@ def load_config(config_path: str | None = None) -> dict:
     if not path.exists():
         raise FileNotFoundError(f"Config file not found: {path}")
 
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}

@@ -1,6 +1,8 @@
 """Structured logging configuration."""
+
 import logging
 import sys
+
 from app.core.middleware import request_id_var
 
 

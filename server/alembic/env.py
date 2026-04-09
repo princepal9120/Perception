@@ -1,15 +1,17 @@
 """Alembic environment configuration for async SQLAlchemy."""
+
 import asyncio
 from logging.config import fileConfig
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-from alembic import context
 from sqlmodel import SQLModel
 
+from alembic import context
+
 # Import all models so metadata is populated
-from app.models.tables import User, Chat, Message, Document  # noqa: F401
+from app.models.tables import Chat, Document, Message, User  # noqa: F401
 
 # Try to import conversation tree models if they exist
 try:
