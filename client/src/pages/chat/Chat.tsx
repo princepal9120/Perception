@@ -12,10 +12,12 @@ import { useChat } from "@/hooks/use-chat";
 import { useTreeStore } from "@/store/treeStore";
 import { X, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { toast } from "sonner";
 import { WorkflowSyncVisualizer } from "@/components/tree/WorkflowSyncVisualizer";
 import { RuntimeSettingsDialog } from "@/components/chat/RuntimeSettingsDialog";
 import {
+  getApiTargetLabel,
   getRuntimeConfig,
   getRuntimeConfigValidation,
   hasUsableRuntimeConfig,
@@ -29,15 +31,20 @@ const Chat = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isRuntimeSettingsOpen, setIsRuntimeSettingsOpen] = useState(false);
   const [runtimeSettingsConfigured, setRuntimeSettingsConfigured] = useState(() => hasUsableRuntimeConfig());
+  const [runtimeConfigErrors, setRuntimeConfigErrors] = useState<string[]>([]);
   const { token } = useAuth();
   const { currentChat } = useChat();
   const { loadTree } = useTreeStore();
 
   useEffect(() => {
     const runtimeConfig = getRuntimeConfig();
-    if (!runtimeConfig) return;
+    if (!runtimeConfig) {
+      setRuntimeConfigErrors([]);
+      return;
+    }
 
     const { errors } = getRuntimeConfigValidation(runtimeConfig);
+    setRuntimeConfigErrors(errors);
     if (errors.length > 0) {
       toast.error("Saved runtime settings are invalid", {
         description: errors.join(" "),
@@ -124,6 +131,8 @@ const Chat = () => {
     setIsRuntimeSettingsOpen(open);
     if (!open) {
       setRuntimeSettingsConfigured(hasUsableRuntimeConfig());
+      const runtimeConfig = getRuntimeConfig();
+      setRuntimeConfigErrors(runtimeConfig ? getRuntimeConfigValidation(runtimeConfig).errors : []);
     }
   };
 
@@ -157,10 +166,29 @@ const Chat = () => {
             isMCPOpen={isMCPOpen}
             onOpenRuntimeSettings={() => setIsRuntimeSettingsOpen(true)}
             hasRuntimeConfig={runtimeSettingsConfigured}
+            apiTargetLabel={getApiTargetLabel()}
+            runtimeConfigInvalid={runtimeConfigErrors.length > 0}
           />
 
           <div className="flex-1 overflow-y-auto overflow-x-hidden relative scroll-smooth">
             <div className="min-h-full flex flex-col">
+              {runtimeConfigErrors.length > 0 && (
+                <div className="px-4 pt-4">
+                  <Alert className="mx-auto max-w-3xl border-amber-500/30 bg-amber-500/5">
+                    <AlertTitle>Saved runtime settings are invalid</AlertTitle>
+                    <AlertDescription>
+                      <div className="space-y-2">
+                        <ul className="list-disc pl-5">
+                          {runtimeConfigErrors.map((error) => (
+                            <li key={error}>{error}</li>
+                          ))}
+                        </ul>
+                        <p>Open Runtime settings from the header to fix them before chatting.</p>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              )}
               <ChatMessages isTreeViewOpen={isTreeViewOpen} />
               <div className="h-32 md:h-48 flex-shrink-0" /> {/* Spacer for floating input */}
             </div>

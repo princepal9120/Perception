@@ -6,6 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 
 interface ChatHeaderProps {
@@ -17,6 +18,8 @@ interface ChatHeaderProps {
   isMCPOpen?: boolean;
   onOpenRuntimeSettings?: () => void;
   hasRuntimeConfig?: boolean;
+  apiTargetLabel?: string;
+  runtimeConfigInvalid?: boolean;
 }
 
 export const ChatHeader = ({
@@ -28,6 +31,8 @@ export const ChatHeader = ({
   isMCPOpen = false,
   onOpenRuntimeSettings,
   hasRuntimeConfig = false,
+  apiTargetLabel,
+  runtimeConfigInvalid = false,
 }: ChatHeaderProps) => {
   return (
     <header className="h-14 sm:h-16 border-b border-border flex items-center justify-between px-3 sm:px-6 bg-card/80 backdrop-blur-sm sticky top-0 z-10">
@@ -44,6 +49,18 @@ export const ChatHeader = ({
           <h1 className="text-base sm:text-xl font-semibold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
             Perception
           </h1>
+          {apiTargetLabel && (
+            <div className="mt-0.5 flex items-center gap-2">
+              <Badge variant={apiTargetLabel.toLowerCase().includes("remote") ? "destructive" : "secondary"}>
+                {apiTargetLabel}
+              </Badge>
+              {runtimeConfigInvalid && (
+                <Badge variant="outline" className="border-amber-500/40 text-amber-600 dark:text-amber-300">
+                  Runtime settings need attention
+                </Badge>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
