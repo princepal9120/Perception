@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/use-auth";
+import { chatAPI } from "@/lib/chat-api";
 import {
   Dialog,
   DialogContent,
@@ -20,14 +22,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  getApiBaseUrl,
+  getApiTargetLabel,
+  getRuntimeConfigValidation,
   clearRuntimeConfig,
   getDefaultRuntimeConfig,
   getRuntimeConfig,
+  isLocalApiTarget,
+  RuntimeConfigError,
   RuntimeProviderConfig,
   RuntimeModelProvider,
   RuntimeSearchProvider,
   saveRuntimeConfig,
-  validateRuntimeConfig,
 } from "@/lib/runtime-config";
 
 interface RuntimeSettingsDialogProps {
@@ -46,14 +52,19 @@ export const RuntimeSettingsDialog = ({
   onOpenChange,
 }: RuntimeSettingsDialogProps) => {
   const [formState, setFormState] = useState<RuntimeProviderConfig>(getDefaultRuntimeConfig());
+  const [isTesting, setIsTesting] = useState(false);
+  const [testResult, setTestResult] = useState<string | null>(null);
+  const { token } = useAuth();
 
   useEffect(() => {
     if (isOpen) {
       setFormState(getRuntimeConfig() || getDefaultRuntimeConfig());
+      setTestResult(null);
     }
   }, [isOpen]);
 
-  const errors = useMemo(() => validateRuntimeConfig(formState), [formState]);
+  const validation = useMemo(() => getRuntimeConfigValidation(formState), [formState]);
+  const { errors, warnings } = validation;
   const canSave = errors.length === 0;
 
   const updateField = <K extends keyof RuntimeProviderConfig>(
@@ -79,6 +90,32 @@ export const RuntimeSettingsDialog = ({
     toast.success("Runtime settings cleared", {
       description: "Perception will fall back to the backend environment defaults.",
     });
+    setTestResult(null);
+  };
+
+  const handleTestConnection = async () => {
+    try {
+      setIsTesting(true);
+      setTestResult(null);
+      const result = await chatAPI.testRuntimeConfiguration(formState, token || undefined);
+      setTestResult(
+        `Connected to ${result.provider} using ${result.model}. Preview response: ${result.preview}`,
+      );
+      toast.success("Runtime connection test passed");
+    } catch (error) {
+      const description =
+        error instanceof RuntimeConfigError
+          ? error.details.join(" ")
+          : error instanceof Error
+            ? error.message
+            : "Runtime connection test failed.";
+      setTestResult(description);
+      toast.error("Runtime connection test failed", {
+        description,
+      });
+    } finally {
+      setIsTesting(false);
+    }
   };
 
   return (
@@ -92,6 +129,18 @@ export const RuntimeSettingsDialog = ({
         </DialogHeader>
 
         <div className="space-y-6">
+          <div className="rounded-md border bg-muted/40 p-3 text-sm">
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant={isLocalApiTarget() ? "secondary" : "destructive"}>
+                {getApiTargetLabel()}
+              </Badge>
+              <span className="font-mono text-xs break-all">{getApiBaseUrl()}</span>
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">
+              If this points to production, your browser will use the deployed API, not your local backend.
+            </p>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="model-provider">Model provider</Label>
@@ -197,6 +246,23 @@ export const RuntimeSettingsDialog = ({
               </ul>
             </div>
           )}
+
+          {warnings.length > 0 && (
+            <div className="rounded-md border border-amber-500/20 bg-amber-500/5 p-3 text-sm text-amber-700 dark:text-amber-300">
+              <p className="font-medium">Heads up:</p>
+              <ul className="mt-2 list-disc pl-5">
+                {warnings.map((warning) => (
+                  <li key={warning}>{warning}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {testResult && (
+            <div className="rounded-md border bg-muted/40 p-3 text-sm">
+              {testResult}
+            </div>
+          )}
         </div>
 
         <DialogFooter>
@@ -205,6 +271,9 @@ export const RuntimeSettingsDialog = ({
               Clear saved settings
             </Button>
             <div className="flex items-center gap-2">
+              <Button variant="outline" onClick={handleTestConnection} disabled={!canSave || isTesting}>
+                {isTesting ? "Testing..." : "Test connection"}
+              </Button>
               <Button variant="ghost" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>

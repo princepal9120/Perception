@@ -168,9 +168,11 @@ class LLMClient:
                     enhanced_content = prompt_fn(message, doc_count, doc_list)
 
             # Stream events from graph
-            events = self.graph.astream_events(
-                {"messages": [HumanMessage(content=enhanced_content)]}, version="v2", config=config
-            )
+            graph_input = {"messages": [HumanMessage(content=enhanced_content)]}
+            if runtime_provider_config is not None:
+                graph_input["runtime_provider_config"] = runtime_provider_config.model_dump(mode="json")
+
+            events = self.graph.astream_events(graph_input, version="v2", config=config)
 
             async for event in events:
                 event_type = event["event"]

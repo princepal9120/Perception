@@ -19,6 +19,16 @@ export interface RuntimeConfigValidationResult {
   warnings: string[];
 }
 
+export class RuntimeConfigError extends Error {
+  details: string[];
+
+  constructor(message: string, details: string[]) {
+    super(message);
+    this.name = "RuntimeConfigError";
+    this.details = details;
+  }
+}
+
 const DEFAULT_RUNTIME_CONFIG: RuntimeProviderConfig = {
   modelProvider: "openai_compatible",
   modelName: "gpt-4o-mini",
@@ -70,7 +80,6 @@ export const getRuntimeConfigValidation = (
       errors.push("Base URL is required for OpenAI-compatible providers.");
     } else {
       try {
-        // eslint-disable-next-line no-new
         new URL(normalized.baseUrl);
       } catch {
         errors.push("Base URL must be a valid URL.");
@@ -112,6 +121,13 @@ export const getRuntimeConfigValidation = (
 
   return { errors, warnings };
 };
+
+export const getApiBaseUrl = (): string =>
+  import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
+
+export const isLocalApiTarget = (): boolean => isLikelyLocalBaseUrl(getApiBaseUrl());
+
+export const getApiTargetLabel = (): string => (isLocalApiTarget() ? "Local API target" : "Remote API target");
 
 export const getRuntimeConfig = (): RuntimeProviderConfig | null => {
   if (typeof window === "undefined") return null;
@@ -161,14 +177,18 @@ const encodeBase64Url = (value: string): string => {
 
 export const buildRuntimeConfigHeaders = (
   config?: RuntimeProviderConfig | null,
+  options?: { strictInvalid?: boolean },
 ): Record<string, string> => {
   const activeConfig = config ? normalizeRuntimeConfig(config) : getRuntimeConfig();
   if (!activeConfig) {
     return {};
   }
 
-  const errors = validateRuntimeConfig(activeConfig);
+  const { errors } = getRuntimeConfigValidation(activeConfig);
   if (errors.length > 0) {
+    if (options?.strictInvalid) {
+      throw new RuntimeConfigError("Runtime settings are invalid.", errors);
+    }
     return {};
   }
 
@@ -187,6 +207,11 @@ export const buildRuntimeConfigHeaders = (
 };
 
 export const getRuntimeConfigHeaders = (): Record<string, string> =>
-  buildRuntimeConfigHeaders();
+  buildRuntimeConfigHeaders(undefined, { strictInvalid: true });
 
 export const hasSavedRuntimeConfig = (): boolean => !!getRuntimeConfig();
+
+export const hasUsableRuntimeConfig = (): boolean => {
+  const config = getRuntimeConfig();
+  return !!config && getRuntimeConfigValidation(config).errors.length === 0;
+};

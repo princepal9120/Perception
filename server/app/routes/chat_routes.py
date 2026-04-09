@@ -7,6 +7,7 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
+from langchain_core.messages import HumanMessage
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -31,6 +32,7 @@ from app.models.schemas import (
 from app.models.tables import User
 from app.services.chat_service import ChatService
 from app.services.llm_client import LLMClient
+from app.services.provider_factory import create_chat_model, get_search_tools
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/chats", tags=["Chats"])
@@ -43,6 +45,40 @@ def set_llm_client(client: LLMClient):
     """Set the global LLM client instance."""
     global llm_client
     llm_client = client
+
+
+@router.post("/runtime-test", responses={400: {"model": ErrorResponse}, 401: {"model": ErrorResponse}})
+async def test_runtime_configuration(
+    current_user: User = Depends(get_current_active_user),
+    runtime_provider_config: RuntimeProviderConfig | None = Depends(get_runtime_provider_config),
+):
+    """Test a runtime provider configuration supplied via header."""
+    if runtime_provider_config is None:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Runtime settings are required for this connection test.",
+        )
+
+    try:
+        with runtime_provider_config_context(runtime_provider_config):
+            llm = create_chat_model(temperature=0)
+            result = await llm.ainvoke([HumanMessage(content="Reply with exactly: connected")])
+            search_tools = get_search_tools(runtime_provider_config)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Runtime connection test failed: {exc}",
+        ) from exc
+
+    return {
+        "status": "ok",
+        "provider": runtime_provider_config.model_provider,
+        "model": runtime_provider_config.model_name,
+        "search_provider": runtime_provider_config.search_provider,
+        "search_tool_count": len(search_tools),
+        "preview": getattr(result, "content", str(result)),
+        "user_id": current_user.id,
+    }
 
 
 @router.post(

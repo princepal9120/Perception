@@ -1,6 +1,10 @@
 // src/lib/chat-api.ts - Updated to work with new backend
 import AuthService from './auth-service';
-import { getRuntimeConfigHeaders } from './runtime-config';
+import {
+  buildRuntimeConfigHeaders,
+  getRuntimeConfigHeaders,
+  RuntimeProviderConfig,
+} from './runtime-config';
 
 const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
@@ -532,6 +536,9 @@ class ChatAPI {
       const xhr = new XMLHttpRequest();
       xhr.open("POST", `${API_BASE_URL}/documents/upload/${chatId}`);
       xhr.setRequestHeader("Authorization", `Bearer ${token}`);
+      Object.entries(getRuntimeConfigHeaders()).forEach(([key, value]) => {
+        xhr.setRequestHeader(key, value);
+      });
 
       if (onProgress) {
         xhr.upload.onprogress = (event) => {
@@ -683,10 +690,43 @@ class ChatAPI {
   async checkDocumentHealth(): Promise<{ status: string; service: string }> {
     const response = await fetch(`${API_BASE_URL}/documents/health`, {
       method: "GET",
+      headers: getRuntimeConfigHeaders(),
     });
 
     if (!response.ok) {
       throw new Error("Document service health check failed");
+    }
+
+    return response.json();
+  }
+
+  async testRuntimeConfiguration(
+    config: RuntimeProviderConfig,
+    token?: string,
+  ): Promise<{
+    status: string;
+    provider: string;
+    model: string;
+    search_provider: string;
+    preview: string;
+  }> {
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+      ...buildRuntimeConfigHeaders(config, { strictInvalid: true }),
+    };
+
+    if (token) {
+      (headers as Record<string, string>).Authorization = `Bearer ${token}`;
+    }
+
+    const response = await fetch(`${API_BASE_URL}/chats/runtime-test`, {
+      method: "POST",
+      headers,
+    });
+
+    if (!response.ok) {
+      const error = (await response.json()) as ErrorResponse;
+      throw new Error(error.detail || "Failed to test runtime settings");
     }
 
     return response.json();

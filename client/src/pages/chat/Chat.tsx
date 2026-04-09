@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatHeader } from "@/components/chat/ChatHeader";
@@ -15,7 +15,11 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { WorkflowSyncVisualizer } from "@/components/tree/WorkflowSyncVisualizer";
 import { RuntimeSettingsDialog } from "@/components/chat/RuntimeSettingsDialog";
-import { hasSavedRuntimeConfig } from "@/lib/runtime-config";
+import {
+  getRuntimeConfig,
+  getRuntimeConfigValidation,
+  hasUsableRuntimeConfig,
+} from "@/lib/runtime-config";
 
 const Chat = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Default closed on mobile
@@ -24,10 +28,22 @@ const Chat = () => {
   const [isMCPOpen, setIsMCPOpen] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
   const [isRuntimeSettingsOpen, setIsRuntimeSettingsOpen] = useState(false);
-  const [runtimeSettingsConfigured, setRuntimeSettingsConfigured] = useState(() => hasSavedRuntimeConfig());
+  const [runtimeSettingsConfigured, setRuntimeSettingsConfigured] = useState(() => hasUsableRuntimeConfig());
   const { token } = useAuth();
   const { currentChat } = useChat();
   const { loadTree } = useTreeStore();
+
+  useEffect(() => {
+    const runtimeConfig = getRuntimeConfig();
+    if (!runtimeConfig) return;
+
+    const { errors } = getRuntimeConfigValidation(runtimeConfig);
+    if (errors.length > 0) {
+      toast.error("Saved runtime settings are invalid", {
+        description: errors.join(" "),
+      });
+    }
+  }, []);
 
   // Listen for custom event to open document manager
   useState(() => {
@@ -107,7 +123,7 @@ const Chat = () => {
   const handleRuntimeSettingsOpenChange = (open: boolean) => {
     setIsRuntimeSettingsOpen(open);
     if (!open) {
-      setRuntimeSettingsConfigured(hasSavedRuntimeConfig());
+      setRuntimeSettingsConfigured(hasUsableRuntimeConfig());
     }
   };
 
