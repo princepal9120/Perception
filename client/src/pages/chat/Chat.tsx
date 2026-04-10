@@ -19,6 +19,7 @@ import { RuntimeSettingsDialog } from "@/components/chat/RuntimeSettingsDialog";
 import {
   getApiTargetLabel,
   getRuntimeConfig,
+  RUNTIME_CONFIG_CHANGED_EVENT,
   getRuntimeConfigValidation,
   hasUsableRuntimeConfig,
 } from "@/lib/runtime-config";
@@ -50,6 +51,22 @@ const Chat = () => {
         description: errors.join(" "),
       });
     }
+  }, []);
+
+  useEffect(() => {
+    const syncRuntimeConfigState = () => {
+      setRuntimeSettingsConfigured(hasUsableRuntimeConfig());
+      const runtimeConfig = getRuntimeConfig();
+      setRuntimeConfigErrors(runtimeConfig ? getRuntimeConfigValidation(runtimeConfig).errors : []);
+    };
+
+    window.addEventListener(RUNTIME_CONFIG_CHANGED_EVENT, syncRuntimeConfigState);
+    window.addEventListener("focus", syncRuntimeConfigState);
+
+    return () => {
+      window.removeEventListener(RUNTIME_CONFIG_CHANGED_EVENT, syncRuntimeConfigState);
+      window.removeEventListener("focus", syncRuntimeConfigState);
+    };
   }, []);
 
   // Listen for custom event to open document manager
@@ -194,7 +211,10 @@ const Chat = () => {
             </div>
           </div>
 
-          <ChatInput isTreeViewOpen={isTreeViewOpen} />
+          <ChatInput
+            isTreeViewOpen={isTreeViewOpen}
+            onOpenRuntimeSettings={() => setIsRuntimeSettingsOpen(true)}
+          />
 
           {/* Workflow Sync Visualizer - Always visible in chat area */}
           <WorkflowSyncVisualizer />

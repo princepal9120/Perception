@@ -33,7 +33,7 @@ export const CTA = () => {
                             Ship a research stack people can inspect, fork, and run.
                         </h2>
                         <p className="text-xl md:text-2xl text-gray-500 leading-relaxed font-light">
-                            Start with the local OSS path, wire in your own model, and make Deep Research the first workflow every new contributor can demo in minutes.
+                            Start with 3 free OSS chat turns, then let contributors bring their own key and keep the onboarding fast, local, and open.
                         </p>
                     </div>
                 </Reveal>

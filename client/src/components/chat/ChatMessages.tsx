@@ -16,6 +16,8 @@ import { format, isToday, isYesterday } from "date-fns";
 import { MessageActions } from "./MessageActions";
 
 import { useChatStore } from "@/store/chatStore";
+import { hasUsableRuntimeConfig } from "@/lib/runtime-config";
+import { useGuestChatLimit } from "@/hooks/useGuestChatLimit";
 
 // Format timestamp for display
 const formatMessageTime = (dateString: string): string => {
@@ -51,6 +53,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
   } = useChat();
   const { sendMessage } = useChat();
   const { currentChatId, deepResearchState, loadMessages, updateMessageFeedback } = useChatStore();
+  const { remainingTurns } = useGuestChatLimit();
 
   // Check if deep research is active
   const isDeepResearchActive = deepResearchState.phase !== 'idle';
@@ -167,7 +170,11 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
     <div className="w-full max-w-3xl mx-auto px-4 py-6 space-y-6">
       {/* Welcome screen when no messages */}
       {messages.length === 0 && !isStreaming ? (
-        <WelcomeScreen onSuggestedPrompt={handleSuggestedPrompt} />
+        <WelcomeScreen
+          onSuggestedPrompt={handleSuggestedPrompt}
+          remainingFreeTurns={remainingTurns}
+          hasRuntimeConfig={hasUsableRuntimeConfig()}
+        />
       ) : (
         <>
           {/* Render all completed messages */}

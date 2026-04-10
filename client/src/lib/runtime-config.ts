@@ -13,6 +13,7 @@ export interface RuntimeProviderConfig {
 const RUNTIME_CONFIG_KEY = "perception_runtime_provider_config";
 const RUNTIME_CONFIG_HEADER = "X-Perception-Runtime-Config";
 const LOCAL_BASE_URL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0"]);
+export const RUNTIME_CONFIG_CHANGED_EVENT = "perception-runtime-config-changed";
 
 export interface RuntimeConfigValidationResult {
   errors: string[];
@@ -145,6 +146,7 @@ export const saveRuntimeConfig = (config: RuntimeProviderConfig): RuntimeProvide
   const normalized = normalizeRuntimeConfig(config);
   if (typeof window !== "undefined") {
     window.localStorage.setItem(RUNTIME_CONFIG_KEY, JSON.stringify(normalized));
+    window.dispatchEvent(new Event(RUNTIME_CONFIG_CHANGED_EVENT));
   }
   return normalized;
 };
@@ -152,6 +154,7 @@ export const saveRuntimeConfig = (config: RuntimeProviderConfig): RuntimeProvide
 export const clearRuntimeConfig = (): void => {
   if (typeof window !== "undefined") {
     window.localStorage.removeItem(RUNTIME_CONFIG_KEY);
+    window.dispatchEvent(new Event(RUNTIME_CONFIG_CHANGED_EVENT));
   }
 };
 

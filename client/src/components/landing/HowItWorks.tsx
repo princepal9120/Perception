@@ -6,8 +6,8 @@ const steps = [
     {
         id: 1,
         icon: CheckCircle,
-        title: "Clone and Configure",
-        description: "Run the stack locally, set your auth mode, and point Perception at your preferred model and search providers.",
+        title: "Try It First",
+        description: "Open the workspace, use the OSS onboarding path for 3 free chat turns, then add your own key when you want to keep going.",
         color: "text-blue-400"
     },
     {

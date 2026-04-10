@@ -1,35 +1,35 @@
 // src/hooks/useGuestChatLimit.ts
-// Tracks guest chat count in localStorage for unauthenticated users
+// Tracks the number of free OSS chat turns in localStorage
 
 import { useState, useEffect, useCallback } from 'react';
 
 const GUEST_CHAT_COUNT_KEY = 'perception_guest_chat_count';
-const MAX_GUEST_MESSAGES = 3;
+export const MAX_FREE_CHAT_TURNS = 5;
 
 interface GuestChatLimitHook {
-    messagesUsed: number;
+    turnsUsed: number;
     hasReachedLimit: boolean;
     incrementCount: () => void;
     resetCount: () => void;
-    remainingMessages: number;
+    remainingTurns: number;
 }
 
 export function useGuestChatLimit(): GuestChatLimitHook {
-    const [messagesUsed, setMessagesUsed] = useState(() => {
+    const [turnsUsed, setTurnsUsed] = useState(() => {
         if (typeof window === 'undefined') return 0;
         const stored = localStorage.getItem(GUEST_CHAT_COUNT_KEY);
         return stored ? parseInt(stored, 10) : 0;
     });
 
-    const hasReachedLimit = messagesUsed >= MAX_GUEST_MESSAGES;
-    const remainingMessages = Math.max(0, MAX_GUEST_MESSAGES - messagesUsed);
+    const hasReachedLimit = turnsUsed >= MAX_FREE_CHAT_TURNS;
+    const remainingTurns = Math.max(0, MAX_FREE_CHAT_TURNS - turnsUsed);
 
     useEffect(() => {
-        localStorage.setItem(GUEST_CHAT_COUNT_KEY, messagesUsed.toString());
-    }, [messagesUsed]);
+        localStorage.setItem(GUEST_CHAT_COUNT_KEY, turnsUsed.toString());
+    }, [turnsUsed]);
 
     const incrementCount = useCallback(() => {
-        setMessagesUsed((prev) => {
+        setTurnsUsed((prev) => {
             const newCount = prev + 1;
             localStorage.setItem(GUEST_CHAT_COUNT_KEY, newCount.toString());
             return newCount;
@@ -37,15 +37,15 @@ export function useGuestChatLimit(): GuestChatLimitHook {
     }, []);
 
     const resetCount = useCallback(() => {
-        setMessagesUsed(0);
+        setTurnsUsed(0);
         localStorage.removeItem(GUEST_CHAT_COUNT_KEY);
     }, []);
 
     return {
-        messagesUsed,
+        turnsUsed,
         hasReachedLimit,
         incrementCount,
         resetCount,
-        remainingMessages,
+        remainingTurns,
     };
 }

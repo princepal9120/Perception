@@ -4,9 +4,11 @@ import { Button } from "@/components/ui/button";
 
 interface WelcomeScreenProps {
     onSuggestedPrompt: (prompt: string, deepResearch?: boolean) => void;
+    remainingFreeTurns?: number;
+    hasRuntimeConfig?: boolean;
 }
 
-export const WelcomeScreen = ({ onSuggestedPrompt }: WelcomeScreenProps) => {
+export const WelcomeScreen = ({ onSuggestedPrompt, remainingFreeTurns = 3, hasRuntimeConfig = false }: WelcomeScreenProps) => {
     const suggestedPrompts = [
         {
             icon: TrendingUp,
@@ -59,8 +61,29 @@ export const WelcomeScreen = ({ onSuggestedPrompt }: WelcomeScreenProps) => {
                         Welcome to Perception
                     </h1>
                     <p className="text-sm sm:text-base text-muted-foreground max-w-md mx-auto">
-                        Your AI research copilot. Ask anything or try deep research mode for comprehensive answers.
+                        Open-source research copilot onboarding: try a few chats immediately, then bring your own key when you're ready.
                     </p>
+                </div>
+            </motion.div>
+
+            <motion.div
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.15 }}
+                className="w-full max-w-3xl mb-6"
+            >
+                <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4 sm:p-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                            <p className="text-sm font-semibold text-foreground">Best OSS onboarding path</p>
+                            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                                1. Ask up to 3 free chat turns. 2. Open Runtime settings. 3. Add your own key and keep going.
+                            </p>
+                        </div>
+                        <div className="rounded-full bg-background/80 px-3 py-1 text-xs font-medium text-foreground border border-border/60">
+                            {hasRuntimeConfig ? "Your runtime settings are active" : `${remainingFreeTurns} free chat turns left`}
+                        </div>
+                    </div>
                 </div>
             </motion.div>
 

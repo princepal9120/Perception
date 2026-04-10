@@ -18,29 +18,37 @@ import { useTreeStore } from "@/store/treeStore";
 import { useChatStore } from "@/store/chatStore";
 import { useGuestChatLimit } from "@/hooks/useGuestChatLimit";
 import { AuthLimitModal } from "@/components/auth/AuthLimitModal";
+import {
+  hasUsableRuntimeConfig,
+  RUNTIME_CONFIG_CHANGED_EVENT,
+} from "@/lib/runtime-config";
 
 interface ChatInputProps {
   isTreeViewOpen?: boolean;
+  onOpenRuntimeSettings?: () => void;
 }
 
-export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) => {
+export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false, onOpenRuntimeSettings }) => {
   const [message, setMessage] = useState("");
   const [isDeepResearchModalOpen, setIsDeepResearchModalOpen] = useState(false);
   const [attachedDocuments, setAttachedDocuments] = useState<Document[]>([]);
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [hasRuntimeConfig, setHasRuntimeConfig] = useState(() => hasUsableRuntimeConfig());
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { sendMessage, isStreaming, stopStreaming, currentChat, messages } = useChat();
   const { sendDeepResearch, loadChats, selectChat } = useChatStore();
-  const { token, isAuthenticated } = useAuth();
+  const { token, authMode } = useAuth();
   const [isVoiceChatOpen, setIsVoiceChatOpen] = useState(false);
   const deepResearchMode = false;
 
-  // Guest chat limit tracking
-  const { messagesUsed, hasReachedLimit, incrementCount } = useGuestChatLimit();
+  const isOpenSourceMode = authMode === "disabled";
+
+  // Free OSS onboarding tracking
+  const { turnsUsed, hasReachedLimit, incrementCount, remainingTurns } = useGuestChatLimit();
 
   const { activeNodeId, treeStructure, loadTree } = useTreeStore();
 
@@ -60,14 +68,29 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
     }
   }, [message]);
 
+  useEffect(() => {
+    const syncRuntimeConfig = () => {
+      setHasRuntimeConfig(hasUsableRuntimeConfig());
+    };
+
+    window.addEventListener(RUNTIME_CONFIG_CHANGED_EVENT, syncRuntimeConfig);
+    window.addEventListener("focus", syncRuntimeConfig);
+
+    return () => {
+      window.removeEventListener(RUNTIME_CONFIG_CHANGED_EVENT, syncRuntimeConfig);
+      window.removeEventListener("focus", syncRuntimeConfig);
+    };
+  }, []);
+
   const handleVoiceTranscript = (text: string) => {
     sendMessage(text);
   };
 
   const handleSend = async () => {
     if (message.trim() && !isStreaming) {
+      const shouldGateOnByok = isOpenSourceMode && !hasRuntimeConfig;
 
-      if (!isAuthenticated && hasReachedLimit) {
+      if (shouldGateOnByok && hasReachedLimit) {
         setIsAuthModalOpen(true);
         return;
       }
@@ -76,7 +99,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
       setMessage("");
 
 
-      if (!isAuthenticated) {
+      if (shouldGateOnByok) {
         incrementCount();
       }
 
@@ -335,6 +358,11 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
           <p className="text-xs text-gray-400">
             Perception can make mistakes. Consider checking important information.
           </p>
+          <p className="text-xs text-gray-400/80">
+            {hasRuntimeConfig
+              ? "Runtime settings active, you're chatting with your own model configuration."
+              : `OSS onboarding, ${remainingTurns} of 3 free chat turns left before you add your own key.`}
+          </p>
           <p className="text-xs text-gray-400/70 hidden sm:block">
             <kbd className="px-1.5 py-0.5 bg-gray-100 dark:bg-gray-800 rounded text-[10px] font-mono">Enter</kbd>
             {" "}to send
@@ -362,7 +390,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({ isTreeViewOpen = false }) 
       <AuthLimitModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        messagesUsed={messagesUsed}
+        turnsUsed={turnsUsed}
+        onOpenRuntimeSettings={() => onOpenRuntimeSettings?.()}
       />
     </div>
   );
