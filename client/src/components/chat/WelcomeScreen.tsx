@@ -4,11 +4,17 @@ import { Button } from "@/components/ui/button";
 
 interface WelcomeScreenProps {
     onSuggestedPrompt: (prompt: string, deepResearch?: boolean) => void;
+    onOpenRuntimeSettings?: () => void;
     remainingFreeTurns?: number;
     hasRuntimeConfig?: boolean;
 }
 
-export const WelcomeScreen = ({ onSuggestedPrompt, remainingFreeTurns = 3, hasRuntimeConfig = false }: WelcomeScreenProps) => {
+export const WelcomeScreen = ({
+    onSuggestedPrompt,
+    onOpenRuntimeSettings,
+    remainingFreeTurns = 3,
+    hasRuntimeConfig = false,
+}: WelcomeScreenProps) => {
     const suggestedPrompts = [
         {
             icon: TrendingUp,
@@ -87,11 +93,34 @@ export const WelcomeScreen = ({ onSuggestedPrompt, remainingFreeTurns = 3, hasRu
                 </div>
             </motion.div>
 
+            {!hasRuntimeConfig && onOpenRuntimeSettings && (
+                <motion.div
+                    initial={{ opacity: 0, y: 12 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                    className="w-full max-w-3xl mb-6"
+                >
+                    <div className="rounded-2xl border border-border/60 bg-card/80 p-4 sm:p-5">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                                <p className="text-sm font-semibold text-foreground">Want to start with your own model?</p>
+                                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                                    Open Runtime settings now and add your API key before you send the first message.
+                                </p>
+                            </div>
+                            <Button onClick={onOpenRuntimeSettings} className="sm:min-w-40">
+                                Add API key
+                            </Button>
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+
             {/* Suggested Prompts */}
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
                 className="w-full max-w-3xl"
             >
                 <div className="flex items-center gap-2 mb-4">

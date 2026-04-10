@@ -39,9 +39,13 @@ const isMessageLiked = (message: Message): boolean => message.metadata?.feedback
 
 interface ChatMessagesProps {
   isTreeViewOpen?: boolean;
+  onOpenRuntimeSettings?: () => void;
 }
 
-export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = false }) => {
+export const ChatMessages: React.FC<ChatMessagesProps> = ({
+  isTreeViewOpen = false,
+  onOpenRuntimeSettings,
+}) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const {
@@ -172,6 +176,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
       {messages.length === 0 && !isStreaming ? (
         <WelcomeScreen
           onSuggestedPrompt={handleSuggestedPrompt}
+          onOpenRuntimeSettings={onOpenRuntimeSettings}
           remainingFreeTurns={remainingTurns}
           hasRuntimeConfig={hasUsableRuntimeConfig()}
         />

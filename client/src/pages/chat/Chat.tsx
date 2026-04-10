@@ -206,7 +206,10 @@ const Chat = () => {
                   </Alert>
                 </div>
               )}
-              <ChatMessages isTreeViewOpen={isTreeViewOpen} />
+              <ChatMessages
+                isTreeViewOpen={isTreeViewOpen}
+                onOpenRuntimeSettings={() => setIsRuntimeSettingsOpen(true)}
+              />
               <div className="h-32 md:h-48 flex-shrink-0" /> {/* Spacer for floating input */}
             </div>
           </div>

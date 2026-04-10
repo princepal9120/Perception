@@ -4,7 +4,7 @@
 import { useState, useEffect, useCallback } from 'react';
 
 const GUEST_CHAT_COUNT_KEY = 'perception_guest_chat_count';
-export const MAX_FREE_CHAT_TURNS = 5;
+export const MAX_FREE_CHAT_TURNS = 3;
 
 interface GuestChatLimitHook {
     turnsUsed: number;
