@@ -22,8 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  getDefaultModelNameForProvider,
   getApiBaseUrl,
   getApiTargetLabel,
+  getRuntimeModelSuggestions,
   getRuntimeConfigValidation,
   clearRuntimeConfig,
   getDefaultRuntimeConfig,
@@ -56,6 +58,11 @@ export const RuntimeSettingsDialog = ({
   const [testResult, setTestResult] = useState<string | null>(null);
   const { token } = useAuth();
 
+  const modelSuggestions = useMemo(
+    () => getRuntimeModelSuggestions(formState.modelProvider),
+    [formState.modelProvider],
+  );
+
   useEffect(() => {
     if (isOpen) {
       setFormState(getRuntimeConfig() || getDefaultRuntimeConfig());
@@ -72,6 +79,25 @@ export const RuntimeSettingsDialog = ({
     value: RuntimeProviderConfig[K],
   ) => {
     setFormState((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleProviderChange = (provider: RuntimeModelProvider) => {
+    setFormState((current) => {
+      const nextDefaultModel = getDefaultModelNameForProvider(provider);
+      const currentSuggestions = getRuntimeModelSuggestions(current.modelProvider).map(
+        (suggestion) => suggestion.value,
+      );
+      const shouldReplaceModel =
+        !current.modelName.trim() ||
+        currentSuggestions.includes(current.modelName) ||
+        current.modelName === getDefaultModelNameForProvider(current.modelProvider);
+
+      return {
+        ...current,
+        modelProvider: provider,
+        modelName: shouldReplaceModel ? nextDefaultModel : current.modelName,
+      };
+    });
   };
 
   const handleSave = () => {
@@ -146,7 +172,7 @@ export const RuntimeSettingsDialog = ({
               <Label htmlFor="model-provider">Model provider</Label>
               <Select
                 value={formState.modelProvider}
-                onValueChange={(value) => updateField("modelProvider", value as RuntimeModelProvider)}
+                onValueChange={(value) => handleProviderChange(value as RuntimeModelProvider)}
               >
                 <SelectTrigger id="model-provider">
                   <SelectValue placeholder="Select provider" />
@@ -168,6 +194,32 @@ export const RuntimeSettingsDialog = ({
                 onChange={(event) => updateField("modelName", event.target.value)}
                 placeholder={formState.modelProvider === "google" ? "gemini-2.0-flash" : formState.modelProvider === "groq" ? "llama-3.3-70b-versatile" : "gpt-4o-mini"}
               />
+              <div className="rounded-md border bg-muted/30 p-3">
+                <p className="text-xs font-medium text-foreground">Suggested models for this provider</p>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {modelSuggestions.map((suggestion) => {
+                    const isActive = formState.modelName === suggestion.value;
+                    return (
+                      <Button
+                        key={suggestion.value}
+                        type="button"
+                        variant={isActive ? "default" : "outline"}
+                        size="sm"
+                        className="h-auto whitespace-normal py-2 text-left"
+                        onClick={() => updateField("modelName", suggestion.value)}
+                      >
+                        <span className="flex flex-col items-start">
+                          <span>{suggestion.label}</span>
+                          <span className="text-[11px] opacity-80">{suggestion.hint}</span>
+                        </span>
+                      </Button>
+                    );
+                  })}
+                </div>
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Pick one of these or type any compatible model name manually.
+                </p>
+              </div>
             </div>
           </div>
 

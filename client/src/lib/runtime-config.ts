@@ -10,6 +10,12 @@ export interface RuntimeProviderConfig {
   tavilyApiKey?: string;
 }
 
+export interface RuntimeModelSuggestion {
+  label: string;
+  value: string;
+  hint: string;
+}
+
 const RUNTIME_CONFIG_KEY = "perception_runtime_provider_config";
 const RUNTIME_CONFIG_HEADER = "X-Perception-Runtime-Config";
 const LOCAL_BASE_URL_HOSTS = new Set(["localhost", "127.0.0.1", "0.0.0.0"]);
@@ -39,9 +45,76 @@ const DEFAULT_RUNTIME_CONFIG: RuntimeProviderConfig = {
   tavilyApiKey: "",
 };
 
+const MODEL_SUGGESTIONS: Record<RuntimeModelProvider, RuntimeModelSuggestion[]> = {
+  openai_compatible: [
+    {
+      label: "GPT-4o mini",
+      value: "gpt-4o-mini",
+      hint: "Fast default for OpenAI-compatible endpoints.",
+    },
+    {
+      label: "GPT-4.1 mini",
+      value: "gpt-4.1-mini",
+      hint: "Balanced quality and speed for chat.",
+    },
+    {
+      label: "GPT-4.1",
+      value: "gpt-4.1",
+      hint: "Stronger reasoning on hosted OpenAI-compatible APIs.",
+    },
+    {
+      label: "Llama 3.2 3B",
+      value: "llama3.2:3b",
+      hint: "Good local Ollama / LM Studio starter model.",
+    },
+  ],
+  groq: [
+    {
+      label: "Llama 3.3 70B",
+      value: "llama-3.3-70b-versatile",
+      hint: "Great general-purpose Groq default.",
+    },
+    {
+      label: "Llama 3.1 8B",
+      value: "llama-3.1-8b-instant",
+      hint: "Fast, low-latency Groq option.",
+    },
+    {
+      label: "Mixtral 8x7B",
+      value: "mixtral-8x7b-32768",
+      hint: "Strong long-context Groq model.",
+    },
+  ],
+  google: [
+    {
+      label: "Gemini 2.0 Flash",
+      value: "gemini-2.0-flash",
+      hint: "Fast Google AI Studio default.",
+    },
+    {
+      label: "Gemini 2.5 Flash",
+      value: "gemini-2.5-flash",
+      hint: "Fast Gemini option with newer capabilities.",
+    },
+    {
+      label: "Gemini 2.5 Pro",
+      value: "gemini-2.5-pro",
+      hint: "Higher-quality Gemini reasoning model.",
+    },
+  ],
+};
+
 export const getDefaultRuntimeConfig = (): RuntimeProviderConfig => ({
   ...DEFAULT_RUNTIME_CONFIG,
 });
+
+export const getRuntimeModelSuggestions = (
+  provider: RuntimeModelProvider,
+): RuntimeModelSuggestion[] => MODEL_SUGGESTIONS[provider];
+
+export const getDefaultModelNameForProvider = (
+  provider: RuntimeModelProvider,
+): string => getRuntimeModelSuggestions(provider)[0]?.value || DEFAULT_RUNTIME_CONFIG.modelName;
 
 export const normalizeRuntimeConfig = (
   config?: Partial<RuntimeProviderConfig> | null,
