@@ -23,6 +23,15 @@ export interface Chat {
   message_count?: number;
 }
 
+export interface MessageFeedback {
+  liked?: boolean;
+  updated_at?: string;
+}
+
+export type MessageMetadata = Record<string, unknown> & {
+  feedback?: MessageFeedback;
+};
+
 export interface Message {
   id: number;
   chat_id: number;
@@ -30,7 +39,7 @@ export interface Message {
   role: "user" | "assistant" | "system" | "tool";
   content: string;
   created_at: string;
-  metadata?: Record<string, unknown> | null;
+  metadata?: MessageMetadata | null;
 }
 
 export interface CreateChatRequest {
@@ -50,6 +59,10 @@ export interface MessageListResponse {
   messages: Message[];
   total: number;
   chat_id: number;
+}
+
+export interface MessageFeedbackUpdateRequest {
+  liked: boolean;
 }
 
 // ==================== Document Interfaces ====================
@@ -348,6 +361,30 @@ class ChatAPI {
     if (!response.ok) {
       const error = await response.json();
       throw new Error(error.detail || "Failed to fetch messages");
+    }
+
+    return response.json();
+  }
+
+  async updateMessageFeedback(
+    chatId: number,
+    messageId: number,
+    feedback: MessageFeedbackUpdateRequest,
+    token: string
+  ): Promise<Message> {
+    const response = await this.fetchWithTokenRefresh(
+      `${API_BASE_URL}/chats/${chatId}/messages/${messageId}/feedback`,
+      {
+        method: "PATCH",
+        headers: this.getHeaders(token),
+        body: JSON.stringify(feedback),
+      },
+      token
+    );
+
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.detail || "Failed to update message feedback");
     }
 
     return response.json();

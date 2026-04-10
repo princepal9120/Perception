@@ -139,6 +139,12 @@ class MessageCreate(BaseModel):
     content: str = Field(..., min_length=1, max_length=10000)
 
 
+class MessageFeedbackUpdate(BaseModel):
+    """Schema for storing lightweight feedback on an assistant response."""
+
+    liked: bool
+
+
 class MessageResponse(BaseModel):
     """Schema for message response."""
 

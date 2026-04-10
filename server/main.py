@@ -154,6 +154,7 @@ async def root():
                 "update": "PATCH /api/v1/chats/{id}",
                 "delete": "DELETE /api/v1/chats/{id}",
                 "messages": "GET /api/v1/chats/{id}/messages",
+                "message_feedback": "PATCH /api/v1/chats/{id}/messages/{message_id}/feedback",
                 "send_message": "POST /api/v1/chats/{id}/message",
             },
             "documents": {

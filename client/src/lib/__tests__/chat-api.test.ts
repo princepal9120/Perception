@@ -15,6 +15,7 @@ describe('ChatAPI', () => {
     expect(typeof chatAPI.updateChat).toBe('function')
     expect(typeof chatAPI.deleteChat).toBe('function')
     expect(typeof chatAPI.getMessages).toBe('function')
+    expect(typeof chatAPI.updateMessageFeedback).toBe('function')
     expect(typeof chatAPI.sendMessageStream).toBe('function')
   })
 

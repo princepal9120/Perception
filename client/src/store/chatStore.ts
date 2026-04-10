@@ -100,12 +100,22 @@ interface ChatState {
   deleteChat: (chatId: number) => Promise<void>;
   branchFromMessage: (chatId: number, messageId: number) => Promise<Chat | null>;
   loadMessages: (chatId: number) => Promise<void>;
+  updateMessageFeedback: (messageId: number, liked: boolean) => Promise<void>;
   sendMessage: (content: string) => Promise<void>;
   sendDeepResearch: (topic: string, depth: number, iterations: number) => Promise<void>;
   stopStreaming: () => void;
   clearCurrentChat: () => void;
   setMessages: (messages: Message[]) => void;
 }
+
+const buildMessageFeedbackMetadata = (message: Message, liked: boolean) => ({
+  ...(message.metadata ?? {}),
+  feedback: {
+    ...(message.metadata?.feedback ?? {}),
+    liked,
+    updated_at: new Date().toISOString(),
+  },
+});
 
 // Helper function to format research report as markdown
 const formatResearchReport = (report: DeepResearchReportPayload): string => {
@@ -352,6 +362,53 @@ export const useChatStore = create<ChatState>((set, get) => ({
       set({ messages: response.messages });
     } catch (error) {
       console.error("Failed to load messages:", error);
+      throw error;
+    }
+  },
+
+  updateMessageFeedback: async (messageId: number, liked: boolean) => {
+    const token = getAuthToken();
+    const { currentChatId, messages } = get();
+
+    if (!token) {
+      console.error("No authentication token found");
+      return;
+    }
+
+    if (!currentChatId) {
+      console.error("No current chat selected");
+      return;
+    }
+
+    const previousMessages = messages;
+
+    set((state) => ({
+      messages: state.messages.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              metadata: buildMessageFeedbackMetadata(message, liked),
+            }
+          : message
+      ),
+    }));
+
+    try {
+      const updatedMessage = await chatAPI.updateMessageFeedback(
+        currentChatId,
+        messageId,
+        { liked },
+        token
+      );
+
+      set((state) => ({
+        messages: state.messages.map((message) =>
+          message.id === messageId ? updatedMessage : message
+        ),
+      }));
+    } catch (error) {
+      set({ messages: previousMessages });
+      console.error("Failed to update message feedback:", error);
       throw error;
     }
   },

@@ -24,6 +24,7 @@ from app.models.schemas import (
     ChatResponse,
     ChatUpdate,
     ErrorResponse,
+    MessageFeedbackUpdate,
     MessageCreate,
     MessageListResponse,
     MessageResponse,
@@ -311,6 +312,42 @@ async def get_messages(
     ]
 
     return MessageListResponse(messages=message_responses, total=total, chat_id=chat_id)
+
+
+@router.patch(
+    "/{chat_id}/messages/{message_id}/feedback",
+    response_model=MessageResponse,
+    responses={
+        400: {"model": ErrorResponse},
+        401: {"model": ErrorResponse},
+        403: {"model": ErrorResponse},
+        404: {"model": ErrorResponse},
+    },
+)
+async def update_message_feedback(
+    chat_id: int,
+    message_id: int,
+    feedback_data: MessageFeedbackUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Save lightweight feedback for an assistant response.
+
+    Currently supports a chat-level "like" toggle similar to hover feedback in chat UIs.
+    """
+    service = ChatService(db, current_user)
+    message = await service.update_message_feedback(chat_id, message_id, feedback_data.liked)
+
+    return MessageResponse(
+        id=message.id,
+        chat_id=message.chat_id,
+        user_id=message.user_id,
+        role=message.role,
+        content=message.content,
+        created_at=message.created_at,
+        metadata=json.loads(message.metadata_json) if message.metadata_json else None,
+    )
 
 
 @router.post(

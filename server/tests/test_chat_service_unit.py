@@ -97,3 +97,32 @@ class TestChatService:
         await service.create_message(chat.id, "user", "Msg 2")
         count = await service.get_message_count(chat.id)
         assert count == 2
+
+    async def test_update_message_feedback(self, service: ChatService):
+        chat = await service.create_chat("Chat")
+        await service.create_message(chat.id, "user", "Hello!")
+        assistant = await service.create_message(
+            chat.id,
+            "assistant",
+            "Hi!",
+            metadata={"source_count": 2},
+        )
+
+        updated = await service.update_message_feedback(chat.id, assistant.id, liked=True)
+
+        messages, _ = await service.get_messages(chat.id, use_cache=False)
+        refreshed = next(message for message in messages if message.id == assistant.id)
+
+        assert updated.metadata_json is not None
+        assert refreshed.metadata_json is not None
+        assert '"source_count": 2' in refreshed.metadata_json
+        assert '"liked": true' in refreshed.metadata_json
+
+    async def test_update_message_feedback_rejects_user_messages(self, service: ChatService):
+        chat = await service.create_chat("Chat")
+        user_message = await service.create_message(chat.id, "user", "Hello!")
+
+        with pytest.raises(HTTPException) as exc_info:
+            await service.update_message_feedback(chat.id, user_message.id, liked=True)
+
+        assert exc_info.value.status_code == 400

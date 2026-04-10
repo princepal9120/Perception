@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from app.models.schemas import (
     ChatCreate,
+    MessageFeedbackUpdate,
     MessageCreate,
     UserSignup,
 )
@@ -67,3 +68,9 @@ class TestMessageCreate:
     def test_content_max_length(self):
         with pytest.raises(ValidationError):
             MessageCreate(content="x" * 10001)
+
+
+class TestMessageFeedbackUpdate:
+    def test_valid_feedback(self):
+        feedback = MessageFeedbackUpdate(liked=True)
+        assert feedback.liked is True

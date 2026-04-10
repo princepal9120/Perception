@@ -29,6 +29,11 @@ const formatMessageTime = (dateString: string): string => {
   return format(date, 'MMM d, h:mm a');
 };
 
+const MAX_VALID_DB_ID = 2147483647;
+
+const isPersistedMessageId = (messageId: number): boolean => messageId > 0 && messageId <= MAX_VALID_DB_ID;
+
+const isMessageLiked = (message: Message): boolean => message.metadata?.feedback?.liked === true;
 
 interface ChatMessagesProps {
   isTreeViewOpen?: boolean;
@@ -45,7 +50,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
     agentProgress,
   } = useChat();
   const { sendMessage } = useChat();
-  const { deepResearchState } = useChatStore();
+  const { currentChatId, deepResearchState, loadMessages, updateMessageFeedback } = useChatStore();
 
   // Check if deep research is active
   const isDeepResearchActive = deepResearchState.phase !== 'idle';
@@ -60,8 +65,6 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
   };
 
   const handleFork = async (message: Message) => {
-    const { currentChatId, branchFromMessage, loadMessages } = useChatStore.getState();
-
     if (!currentChatId) {
       toast.error("Cannot branch: no current chat");
       return;
@@ -72,9 +75,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
       return;
     }
 
-    // Check if message.id is a temporary Date.now() ID (too large for database int32)
-    const MAX_VALID_DB_ID = 2147483647;
-    if (message.id > MAX_VALID_DB_ID) {
+    if (!isPersistedMessageId(message.id)) {
       toast.info("Refreshing messages...");
       try {
         await loadMessages(currentChatId);
@@ -90,6 +91,7 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
       toast.loading("Creating branch...", { id: "branch-loading" });
 
       // Create a new chat branched from this message
+      const { branchFromMessage } = useChatStore.getState();
       const newChat = await branchFromMessage(currentChatId, message.id);
 
       if (newChat) {
@@ -124,6 +126,29 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
   const handleRegenerate = async (message: Message) => {
     if (!message.metadata?.nodeId) return;
     // TODO: Implement regenerate logic
+  };
+
+  const handleToggleLike = async (message: Message) => {
+    if (!currentChatId) {
+      toast.error("Cannot save feedback without an active chat");
+      return;
+    }
+
+    if (!isPersistedMessageId(message.id)) {
+      toast.info("Finishing sync before saving feedback...");
+      try {
+        await loadMessages(currentChatId);
+      } catch {
+        toast.error("Failed to refresh the latest messages");
+      }
+      return;
+    }
+
+    try {
+      await updateMessageFeedback(message.id, !isMessageLiked(message));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Failed to save feedback");
+    }
   };
 
   // Prevent duplicate rendering when assistant message is already completed
@@ -190,7 +215,10 @@ export const ChatMessages: React.FC<ChatMessagesProps> = ({ isTreeViewOpen = fal
                       messageId={message.id}
                       role={message.role as "user" | "assistant"}
                       content={message.content}
+                      isLiked={isMessageLiked(message)}
+                      canLike={isPersistedMessageId(message.id)}
                       isTreeMode={isTreeViewOpen}
+                      onToggleLike={() => handleToggleLike(message)}
                       onFork={() => handleFork(message)}
                       onRegenerate={() => handleRegenerate(message)}
                     />

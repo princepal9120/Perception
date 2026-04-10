@@ -5,6 +5,7 @@ Chat service for managing chats and messages with caching and rate limiting.
 import json
 import logging
 from datetime import UTC, datetime
+from json import JSONDecodeError
 
 from fastapi import HTTPException, status
 from sqlalchemy import func, select
@@ -255,6 +256,55 @@ class ChatService:
         await redis_client.add_message_to_cache(chat_id, message_dict)
 
         logger.info(f"Created message {message.id} in chat {chat_id}")
+        return message
+
+    async def update_message_feedback(self, chat_id: int, message_id: int, liked: bool) -> Message:
+        """
+        Persist per-message feedback for an assistant response.
+
+        Args:
+            chat_id: Chat ID
+            message_id: Message ID
+            liked: Whether the assistant response is liked
+
+        Returns:
+            Updated message
+        """
+        await self.get_chat(chat_id)
+
+        result = await self.db.execute(select(Message).where(Message.id == message_id, Message.chat_id == chat_id))
+        message = result.scalar_one_or_none()
+
+        if message is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Message not found in this chat")
+
+        if message.role != "assistant":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Feedback is only supported for assistant messages",
+            )
+
+        try:
+            metadata = json.loads(message.metadata_json) if message.metadata_json else {}
+        except JSONDecodeError:
+            metadata = {}
+
+        if not isinstance(metadata, dict):
+            metadata = {}
+
+        existing_feedback = metadata.get("feedback")
+        feedback = existing_feedback.copy() if isinstance(existing_feedback, dict) else {}
+        feedback["liked"] = liked
+        feedback["updated_at"] = datetime.now(UTC).isoformat()
+        metadata["feedback"] = feedback
+
+        message.metadata_json = json.dumps(metadata)
+        await self.db.commit()
+        await self.db.refresh(message)
+
+        await redis_client.delete(redis_client.get_session_key(chat_id))
+
+        logger.info(f"Updated feedback for message {message_id} in chat {chat_id}: liked={liked}")
         return message
 
     async def check_rate_limit(self) -> bool:

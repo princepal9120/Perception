@@ -1,10 +1,10 @@
 /**
- * Message Action Buttons - Fork, Regenerate, Copy
+ * Message Action Buttons - Like, Fork, Regenerate, Copy
  * Shows on hover for desktop, always visible on mobile (touch devices)
  */
 import React, { memo } from 'react';
 import { Button } from '../ui/button';
-import { GitBranch, RefreshCw, Copy, Check } from 'lucide-react';
+import { GitBranch, RefreshCw, Copy, Check, ThumbsUp } from 'lucide-react';
 import {
     Tooltip,
     TooltipContent,
@@ -16,7 +16,10 @@ interface MessageActionsProps {
     messageId: number;
     role: 'user' | 'assistant';
     content: string;
+    isLiked?: boolean;
+    canLike?: boolean;
     onFork?: () => void;
+    onToggleLike?: () => void;
     onRegenerate?: () => void;
     isTreeMode?: boolean;
 }
@@ -25,7 +28,10 @@ export const MessageActions: React.FC<MessageActionsProps> = memo(({
     messageId: _messageId,
     role,
     content,
+    isLiked = false,
+    canLike = true,
     onFork,
+    onToggleLike,
     onRegenerate,
     isTreeMode = false,
 }) => {
@@ -40,6 +46,26 @@ export const MessageActions: React.FC<MessageActionsProps> = memo(({
     return (
         // Visible by default on mobile (sm:opacity-0), shows on hover for desktop
         <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity" role="group" aria-label="Message actions">
+            {role === 'assistant' && (
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className={`h-8 w-8 sm:h-7 sm:w-7 ${isLiked ? 'text-primary bg-primary/10 hover:bg-primary/15' : ''}`}
+                            onClick={onToggleLike}
+                            aria-label={isLiked ? 'Unlike message' : 'Like message'}
+                            disabled={!canLike}
+                        >
+                            <ThumbsUp className={`h-4 w-4 sm:h-3.5 sm:w-3.5 ${isLiked ? 'fill-current' : ''}`} />
+                        </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        {!canLike ? 'Available once the response finishes syncing' : isLiked ? 'Unlike response' : 'Like response'}
+                    </TooltipContent>
+                </Tooltip>
+            )}
+
             {/* Copy Button */}
             <Tooltip>
                 <TooltipTrigger asChild>
